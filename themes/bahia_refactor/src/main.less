@@ -1,0 +1,29 @@
+@import '../node_modules/semantic-ui-css/semantic.css';
+@import "../assets/css/base.css";
+
+/* Variáveis customizadas */
+@bahia-azul: #0066cc;
+@bahia-verde: #00a651;
+@bahia-laranja: #f39200;
+
+/* Header */
+.site-header {
+  background: @bahia-azul;
+  padding: 1rem 0;
+}
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* Botões customizados */
+.bt-menu-mobile {
+  display: none;
+  
+  @media (max-width: 768px) {
+      display: block;
+  }
+}

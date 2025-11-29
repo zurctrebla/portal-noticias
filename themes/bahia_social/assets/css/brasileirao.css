@@ -1,0 +1,183 @@
+table.tableClassificacao {
+    font-size: 15px !important;
+}
+table.tableNumRodada {
+    font-size: 15px !important;
+}
+.divJogosRodadas {
+    font-size: 16px;
+    width: 100%;
+}
+.divDataJogo {
+    text-align: center;
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-family: "Roboto", sans-serif;
+}
+.divTime1 {
+    width: 34%;
+    padding-left: 5%;
+    font-size: 20px;
+    float: left;
+}
+.divNomeTime1 {
+    float: left;
+    margin-top: 5%;
+    font-size: 95%;
+}
+.divBrasaoTime1 {
+    float: left;
+    padding-left: 10px;
+}
+.divPlacar {
+    width: 30%;
+    text-align: center;
+    padding-right: 0.7%;
+    float: left;
+}
+.spanPlacar1 {
+    font-size: 28px;
+    line-height: 28px;
+    font-weight: 700;
+}
+.spanVersus {
+    font-size: 24px;
+    line-height: 28px;
+    margin-left: 5px;
+    margin-right: 5px;
+}
+.spanPlacar2 {
+    font-size: 28px;
+    line-height: 28px;
+    font-weight: 700;
+}
+.divTime2 {
+    width: 35%;
+    padding-left: 5%;
+    font-size: 20px;
+    float: left;
+}
+.divNomeTime2 {
+    float: left;
+    margin-right: 10px;
+    font-size: 95%;
+}
+.divBrasaoTime2 {
+    float: left;
+    margin-top: 5%;
+}
+.divLocalJogo {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 12px;
+    font-family: "Roboto", sans-serif;
+}
+.tdBrasao {
+    width: 1px;
+}
+.tdPontos .tdJogos .tdVitorias .tdEmpates .tdDerrotas .tdGolsPro .tdGolsContra .tdSaldoGols .tdAproveitamento {
+    width: 50px !important;
+    max-width: 50px !important;
+}
+.colorGrey {
+    color: #ccc;
+}
+.destaqueBaVi td {
+    font-weight: 800;
+}
+.destaqueLibertadores {
+    border-right: 2px solid blue;
+    color: blue;
+}
+.destaqueSulAmericana {
+    border-right: 2px solid orange;
+    color: orange;
+}
+.destaqueRebaixamento {
+    border-right: 2px solid red;
+    color: red;
+}
+.destaqueBahia {
+    background-color: #e5efff !important;
+}
+.destaqueVitoria {
+    background-color: #fff0f0 !important;
+}
+.tituloBrasileirao2017 {
+    font-size: 16px;
+    font-weight: 500;
+    color: #15559e !important;
+    font-weight: bold !important;
+}
+.tituloBrasileirao2017 a {
+    color: inherit;
+}
+.tituloTabelaCompleta {
+    font-size: 13px;
+    color: #15559e !important;
+    font-weight: 800;
+    line-height: 30px;
+    /*float: right;*/
+}
+.tituloTabelaCompleta a {
+    color: inherit;
+    /*text-decoration: underline;*/
+}
+.tituloTabelaCompleta a {
+    color: inherit;
+}
+.footTableClassificacao tr th {
+    font-size: 12px !important;
+    /*background-color: white !important;*/
+}
+
+.tabBrasileirao2017 div {
+    margin-top: 100px !important;
+}
+.ui.tabular.menu .active.item {
+    background-color: #DDD !important;
+    background-color: #f3f3f3 !important;
+}
+.tabClassificacao {
+    width: 50% !important;
+    display: table-cell !important;
+    text-align: center !important;
+}
+.tabRodadas {
+    width: 50% !important;
+    display: table-cell !important;
+    text-align: center !important;
+}
+.legendaTabela {
+    float: left;
+    padding: 5px 10px;
+}
+.legendaTabela label {
+    font-weight: 500;
+}
+.btnRodadaLeft {
+    width: 10% !important;
+    cursor: pointer !important;
+    border-right: 1px solid rgba(34,36,38,.15) !important;
+}
+.btnRodadaLeft:active {
+    background-color: #f3f3f3 !important;
+    -webkit-tap-highlight-color:rgba(0,0,0,0);
+}
+.btnRodadaRight {
+    width: 10% !important;
+    cursor: pointer !important;
+    border-left: 1px solid rgba(34,36,38,.15) !important;
+}
+.btnRodadaRight:active {
+    background-color: #f3f3f3 !important;
+    -webkit-tap-highlight-color:rgba(0,0,0,0);
+}
+.bodyTableClassificacao .imgLoading {
+    display: block !important;
+    margin: auto !important;
+}
+.divRod .imgLoading {
+    display: block !important;
+    margin: auto !important;
+}
