@@ -68,6 +68,9 @@ $(function () {
 
     // Inicializa funcionalidades personalizadas do tema
     initTheme();
+
+    // Inicializa menu mobile responsivo
+    initMobileMenu();
 });
 
 
@@ -121,6 +124,74 @@ function initSmoothScroll() {
 
     console.log('✅ Smooth scroll inicializado');
 }
+
+function initMobileMenu() {
+    const $menuToggle = $('.menu-toggle');
+    const $mainNav = $('.main-navigation');
+
+    if ($menuToggle.length && $mainNav.length) {
+        // Toggle menu ao clicar no botão
+        $menuToggle.on('click', function (e) {
+            e.preventDefault();
+            $mainNav.toggleClass('active');
+            $(this).toggleClass('active');
+
+            // Adiciona aria-expanded para acessibilidade
+            const isExpanded = $mainNav.hasClass('active');
+            $(this).attr('aria-expanded', isExpanded);
+        });
+
+        // Fecha menu ao clicar em um link (em mobile)
+        $mainNav.find('a').on('click', function () {
+            if (window.innerWidth <= 768) {
+                $mainNav.removeClass('active');
+                $menuToggle.removeClass('active').attr('aria-expanded', 'false');
+            }
+        });
+
+        // Fecha menu ao redimensionar para desktop
+        let resizeTimer;
+        $(window).on('resize', function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function () {
+                if (window.innerWidth > 768) {
+                    $mainNav.removeClass('active');
+                    $menuToggle.removeClass('active').attr('aria-expanded', 'false');
+                }
+            }, 250);
+        });
+
+        // Fecha menu ao clicar fora (em mobile)
+        $(document).on('click', function (e) {
+            if (window.innerWidth <= 768) {
+                if (!$(e.target).closest('.site-header').length) {
+                    $mainNav.removeClass('active');
+                    $menuToggle.removeClass('active').attr('aria-expanded', 'false');
+                }
+            }
+        });
+
+        console.log('✅ Menu mobile responsivo inicializado');
+    }
+}
+
+// Detectar orientação e ajustar viewport em mobile
+function handleOrientationChange() {
+    if (window.matchMedia('(max-width: 768px)').matches) {
+        // Adiciona classe ao body para CSS específico
+        if (window.orientation === 0 || window.orientation === 180) {
+            $('body').removeClass('landscape').addClass('portrait');
+        } else {
+            $('body').removeClass('portrait').addClass('landscape');
+        }
+    }
+}
+
+// Listener para mudança de orientação
+$(window).on('orientationchange resize', handleOrientationChange);
+
+// Executa na carga
+handleOrientationChange();
 
 
 // ============================================

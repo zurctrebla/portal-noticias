@@ -1,36 +1,139 @@
-// Header do tema
+// Header do tema - Responsivo
 .site-header {
     background: @primary-color;
-    padding: 20px 0;
-    
+    padding: 15px 0;
+    position: relative;
+
+    // Container interno
+    .header-container {
+        .flex-between();
+        .container-responsive();
+    }
+
+    // Logo/Título
     .site-title {
         color: white;
-        font-size: 24px;
+        font-size: 20px;
         font-weight: bold;
         text-decoration: none;
-        
+        transition: opacity 0.3s ease;
+
         &:hover {
             opacity: 0.8;
         }
+
+        // Tablet e desktop
+        .tablet-up({
+            font-size: 24px;
+        });
     }
-    
+
+    // Menu Mobile Toggle
+    .menu-toggle {
+        display: block;
+        background: transparent;
+        border: 2px solid white;
+        color: white;
+        padding: 8px 15px;
+        cursor: pointer;
+        font-size: 16px;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        // Esconder no tablet/desktop
+        .tablet-up({
+            display: none;
+        });
+    }
+
+    // Navegação Principal
     .main-navigation {
+        // Mobile: Menu hamburguer
+        .mobile-only({
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: @primary-color;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+            &.active {
+                max-height: 500px;
+            }
+        });
+
         ul {
             list-style: none;
             margin: 0;
             padding: 0;
-            display: flex;
-            
+
+            // Mobile: vertical
+            .mobile-only({
+                flex-direction: column;
+                padding: 10px 0;
+            });
+
+            // Tablet+: horizontal
+            .tablet-up({
+                display: flex;
+                align-items: center;
+            });
+
             li {
-                margin: 0 15px;
-                
+                // Mobile
+                .mobile-only({
+                    margin: 0;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+                    &:last-child {
+                        border-bottom: none;
+                    }
+                });
+
+                // Tablet+
+                .tablet-up({
+                    margin: 0 10px;
+
+                    &:first-child {
+                        margin-left: 0;
+                    }
+
+                    &:last-child {
+                        margin-right: 0;
+                    }
+                });
+
                 a {
                     color: white;
                     text-decoration: none;
-                    
-                    &:hover {
-                        text-decoration: underline;
-                    }
+                    transition: all 0.3s ease;
+
+                    // Mobile
+                    .mobile-only({
+                        display: block;
+                        padding: 12px 20px;
+
+                        &:hover {
+                            background: rgba(255, 255, 255, 0.1);
+                        }
+                    });
+
+                    // Tablet+
+                    .tablet-up({
+                        padding: 8px 12px;
+                        border-radius: 4px;
+
+                        &:hover {
+                            background: rgba(255, 255, 255, 0.1);
+                        }
+                    });
                 }
             }
         }
