@@ -46,8 +46,8 @@ export default defineConfig({
 
         terserOptions: {
             compress: {
-                drop_console: false,
-                drop_debugger: false,
+                drop_console: true, // Remove console.log em produção
+                drop_debugger: true, // Remove debugger statements
             }
         },
 
@@ -129,7 +129,6 @@ export default defineConfig({
                         );
 
                         file.source = css;
-                        console.log(`✅ Caminhos do Semantic UI corrigidos em: ${fileName}`);
                     }
                 }
             }
@@ -154,7 +153,6 @@ export default defineConfig({
                         const src = resolve(semanticFonts, font);
                         const dest = resolve(outDir, font);
                         copyFileSync(src, dest);
-                        console.log(`📦 Fonte copiada: ${font}`);
                     });
                 }
             }
@@ -163,17 +161,7 @@ export default defineConfig({
         {
             name: 'wordpress-theme-build',
             writeBundle(options, bundle) {
-                console.log('✅ Build do tema WordPress concluído!');
-                console.log('📁 Arquivos gerados em:', options.dir || 'dist/');
-                console.log('🎨 CSS: dist/css/theme.min.css');
-                console.log('⚙️  JS: dist/js/theme.min.js');
-
-                // Lista todos os assets gerados
-                Object.keys(bundle).forEach(fileName => {
-                    if (bundle[fileName].type === 'asset') {
-                        console.log(`📦 Asset: dist/${fileName}`);
-                    }
-                });
+                // Build silencioso - sem logs
             }
         },
 
@@ -187,7 +175,6 @@ export default defineConfig({
                 const screenshot = resolve(__dirname, 'screenshot.png');
                 if (existsSync(screenshot)) {
                     copyFileSync(screenshot, resolve(outDir, 'screenshot.png'));
-                    console.log('📸 Screenshot copiado');
                 }
 
                 // Copia jquery-timing.min.js (script legado)
@@ -198,7 +185,6 @@ export default defineConfig({
                         require('fs').mkdirSync(destDir, { recursive: true });
                     }
                     copyFileSync(jqueryTiming, resolve(destDir, 'jquery-timing.min.js'));
-                    console.log('📦 jquery-timing.min.js copiado');
                 }
 
                 // Copia base.js (script legado)
@@ -209,7 +195,6 @@ export default defineConfig({
                         require('fs').mkdirSync(destDir, { recursive: true });
                     }
                     copyFileSync(baseJs, resolve(destDir, 'base.js'));
-                    console.log('📦 base.js copiado');
                 }
             }
         }

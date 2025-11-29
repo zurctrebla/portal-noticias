@@ -33,5 +33,5 @@ jobs:
             npm run theme:build
 
             cd /srv/portal-noticias-wp-content
-            docker ps | grep wordpress-homolog && docker restart wordpress-homolog || true
+            docker ps | grep wordpress && docker restart wordpress || true
             
