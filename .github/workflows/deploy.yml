@@ -29,5 +29,12 @@ jobs:
               git reset --hard origin/develop
             fi
 
+            # Instalar dependências e fazer build do tema
+            cd themes/bahia_refactor
+            npm ci --production=false
+            npm run theme:build
+
+            # Voltar para o diretório raiz e reiniciar o container
+            cd /srv/portal-noticias-wp-content
             docker ps | grep wordpress-homolog && docker restart wordpress-homolog || true
             
