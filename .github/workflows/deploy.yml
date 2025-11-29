@@ -1,0 +1,33 @@
+name: Deploy wp-content (homolog)
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  deploy-homolog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to homolog via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 195.200.2.113
+          username: root
+          key: ${{ secrets.HOMOLOG_SSH_KEY }}
+          # port: 22  # se for outra porta, coloca aqui
+          script: |
+            mkdir -p /srv/portal-noticias-wp-content
+            cd /srv/portal-noticias-wp-content
+
+            if [ ! -d .git ]; then
+              git clone https://github.com/zurctrebla/portal-noticias.git .
+              git checkout develop
+            else
+              git fetch origin
+              git reset --hard origin/develop
+            fi
+
+            docker ps | grep wordpress-homolog && docker restart wordpress-homolog || true
+            
