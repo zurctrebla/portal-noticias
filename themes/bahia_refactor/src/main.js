@@ -11,17 +11,12 @@ import '../assets/js/infinite-scroll-editoria';
 window.$ = $;
 window.jQuery = $;
 
-// Log para debug
-console.log('✅ jQuery carregado:', $.fn.jquery);
-
-
 // ============================================
 // 2. SEMANTIC UI
 // ============================================
 
 // Semantic UI JS (depende do jQuery)
 import 'semantic-ui-css/semantic.js';
-console.log('✅ Semantic UI JS carregado');
 
 
 // ============================================
@@ -30,26 +25,21 @@ console.log('✅ Semantic UI JS carregado');
 
 // Aguarda o DOM estar pronto
 $(function () {
-    console.log('🚀 DOM pronto! Inicializando componentes...');
-
     // Inicializa componentes do Semantic UI
     try {
         // Dropdowns
         if ($.fn.dropdown) {
             $('.ui.dropdown').dropdown();
-            console.log('✅ Dropdowns inicializados');
         }
 
         // Modals
         if ($.fn.modal) {
             $('.ui.modal').modal();
-            console.log('✅ Modals inicializados');
         }
 
         // Sidebar (menu mobile)
         if ($.fn.sidebar) {
             $('.ui.sidebar').sidebar('attach events', '.mobile-button');
-            console.log('✅ Sidebar inicializado');
         }
 
         // Accordion
@@ -63,7 +53,8 @@ $(function () {
         }
 
     } catch (error) {
-        console.error('❌ Erro ao inicializar Semantic UI:', error);
+        // Mantém apenas erros críticos
+        console.error('Erro ao inicializar Semantic UI:', error);
     }
 
     // Inicializa funcionalidades personalizadas do tema
@@ -79,8 +70,6 @@ $(function () {
 // ============================================
 
 function initTheme() {
-    console.log('🎨 Inicializando tema Bahia...');
-
     // Botão voltar ao topo
     initBackToTop();
 
@@ -104,8 +93,6 @@ function initBackToTop() {
             e.preventDefault();
             $('html, body').animate({ scrollTop: 0 }, 600);
         });
-
-        console.log('✅ Botão "voltar ao topo" inicializado');
     }
 }
 
@@ -121,8 +108,6 @@ function initSmoothScroll() {
             }, 600);
         }
     });
-
-    console.log('✅ Smooth scroll inicializado');
 }
 
 function initMobileMenu() {
@@ -170,8 +155,6 @@ function initMobileMenu() {
                 }
             }
         });
-
-        console.log('✅ Menu mobile responsivo inicializado');
     }
 }
 
@@ -230,5 +213,3 @@ window.BahiaTheme = {
     backToTop: initBackToTop,
     version: '1.0.0'
 };
-
-console.log('🎉 Tema Bahia carregado com sucesso!');
