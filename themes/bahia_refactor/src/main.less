@@ -1,29 +1,202 @@
+/**
+ * Main LESS File - Tema Bahia.Ba Refactor
+ * Responsividade gerenciada pelo build process
+ */
+
+// ==========================================================================
+// 1. Frameworks e Bibliotecas
+// ==========================================================================
 @import '../node_modules/semantic-ui-css/semantic.css';
 @import "../assets/css/base.css";
 
-/* Variáveis customizadas */
+// ==========================================================================
+// 2. Variáveis e Configurações
+// ==========================================================================
+@import "./styles/variables.less";
+
+// ==========================================================================
+// 3. Mixins e Funções
+// ==========================================================================
+@import "./styles/mixins.less";
+
+// ==========================================================================
+// 4. Variáveis Customizadas do Tema
+// ==========================================================================
 @bahia-azul: #0066cc;
 @bahia-verde: #00a651;
 @bahia-laranja: #f39200;
 
-/* Header */
-.site-header {
-  background: @bahia-azul;
-  padding: 1rem 0;
+// ==========================================================================
+// 5. Reset e Base Styles
+// ==========================================================================
+
+* {
+    box-sizing: border-box;
 }
 
-/* Container */
+html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: @font-family;
+    font-size: @base-font-size;
+    line-height: @line-height;
+    margin: 0;
+    padding: 0;
+}
+
+// ==========================================================================
+// 6. Layout Responsivo
+// ==========================================================================
+
 .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0;
+    .container-responsive();
 }
 
-/* Botões customizados */
-.bt-menu-mobile {
-  display: none;
-  
-  @media (max-width: 768px) {
-      display: block;
-  }
+// Wrapper principal
+.site-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .site-content {
+        flex: 1;
+    }
+}
+
+// ==========================================================================
+// 7. Componentes
+// ==========================================================================
+@import "./styles/header.less";
+@import "./styles/footer.less";
+
+// ==========================================================================
+// 8. Utilitários Responsivos
+// ==========================================================================
+
+// Visibility helpers
+.hide-mobile {
+    .mobile-only({
+        display: none !important;
+    });
+}
+
+.hide-tablet {
+    .tablet-only({
+        display: none !important;
+    });
+}
+
+.hide-desktop {
+    .desktop-only({
+        display: none !important;
+    });
+}
+
+.show-mobile {
+    display: none !important;
+
+    .mobile-only({
+        display: block !important;
+    });
+}
+
+.show-tablet {
+    display: none !important;
+
+    .tablet-only({
+        display: block !important;
+    });
+}
+
+.show-desktop {
+    display: none !important;
+
+    .desktop-only({
+        display: block !important;
+    });
+}
+
+// Text alignment
+.text-center-mobile {
+    .mobile-only({
+        text-align: center !important;
+    });
+}
+
+.text-left-desktop {
+    .desktop-up({
+        text-align: left !important;
+    });
+}
+
+// Spacing
+.no-padding-mobile {
+    .mobile-only({
+        padding: 0 !important;
+    });
+}
+
+.no-margin-mobile {
+    .mobile-only({
+        margin: 0 !important;
+    });
+}
+
+// ==========================================================================
+// 9. Images e Media Responsivos
+// ==========================================================================
+
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+iframe,
+video {
+    max-width: 100%;
+}
+
+// ==========================================================================
+// 10. WordPress Core Responsive
+// ==========================================================================
+
+.wp-block-image {
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+}
+
+.alignleft,
+.alignright {
+    .mobile-only({
+        float: none;
+        margin: 0 auto 20px;
+        display: block;
+    });
+}
+
+.alignleft {
+    .tablet-up({
+        float: left;
+        margin: 0 20px 20px 0;
+    });
+}
+
+.alignright {
+    .tablet-up({
+        float: right;
+        margin: 0 0 20px 20px;
+    });
+}
+
+.aligncenter {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
 }

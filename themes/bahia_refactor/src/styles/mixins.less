@@ -1,0 +1,75 @@
+// Mixins de Responsividade
+
+// Mobile First - Acima de mobile (tablet+)
+.mobile-up(@rules) {
+    @media (min-width: (@mobile + 1px)) {
+        @rules();
+    }
+}
+
+// Tablet e acima
+.tablet-up(@rules) {
+    @media (min-width: (@tablet + 1px)) {
+        @rules();
+    }
+}
+
+// Desktop e acima
+.desktop-up(@rules) {
+    @media (min-width: (@desktop + 1px)) {
+        @rules();
+    }
+}
+
+// Mobile apenas
+.mobile-only(@rules) {
+    @media (max-width: @mobile) {
+        @rules();
+    }
+}
+
+// Tablet apenas
+.tablet-only(@rules) {
+    @media (min-width: (@mobile + 1px)) and (max-width: @tablet) {
+        @rules();
+    }
+}
+
+// Desktop apenas
+.desktop-only(@rules) {
+    @media (min-width: (@desktop + 1px)) {
+        @rules();
+    }
+}
+
+// Custom breakpoint
+.respond-to(@breakpoint, @rules) {
+    @media (max-width: @breakpoint) {
+        @rules();
+    }
+}
+
+// Flexbox helpers
+.flex-center() {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-between() {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+// Container responsivo
+.container-responsive() {
+    width: 100%;
+    max-width: @desktop;
+    margin: 0 auto;
+    padding: 0 15px;
+
+    .mobile-only({
+        padding: 0 10px;
+    });
+}
