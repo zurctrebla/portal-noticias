@@ -9,3 +9,15 @@
 /languages
 /reports
 
+# Node.js
+themes/bahia_refactor/node_modules
+themes/bahia_refactor/dist
+*.log
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
