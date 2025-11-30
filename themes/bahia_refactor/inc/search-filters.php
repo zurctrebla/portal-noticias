@@ -4,6 +4,46 @@
  * Adiciona filtros por data e categoria à busca do WordPress
  */
 
+/**
+ * Limita a busca apenas aos campos de título e subtítulo
+ * Remove busca no conteúdo e custom fields
+ */
+function bahia_search_where($where, $query) {
+    global $wpdb;
+
+    // Só modifica a busca principal no front-end
+    if (!is_admin() && $query->is_main_query() && $query->is_search() && !empty($query->query_vars['s'])) {
+        $search_term = $query->query_vars['s'];
+
+        // Remove a busca padrão do WordPress
+        $where = preg_replace(
+            "/\(\s*{$wpdb->posts}.post_title\s+LIKE\s*(\'[^\']+\')\s*\)\s+OR\s+\(\s*{$wpdb->posts}.post_excerpt\s+LIKE\s*(\'[^\']+\')\s*\)\s+OR\s+\(\s*{$wpdb->posts}.post_content\s+LIKE\s*(\'[^\']+\')\s*\)/",
+            "({$wpdb->posts}.post_title LIKE $1) OR ({$wpdb->posts}.post_excerpt LIKE $2)",
+            $where
+        );
+
+        // Substitui a busca padrão por uma busca apenas em título e excerpt
+        $search_term_like = '%' . $wpdb->esc_like($search_term) . '%';
+
+        // Remove a cláusula de busca antiga
+        $where = preg_replace(
+            "/AND \(\({$wpdb->posts}\.post_title LIKE '[^']*'\) OR \({$wpdb->posts}\.post_excerpt LIKE '[^']*'\) OR \({$wpdb->posts}\.post_content LIKE '[^']*'\)\)/",
+            "",
+            $where
+        );
+
+        // Adiciona nova cláusula buscando apenas em título e excerpt
+        $where .= $wpdb->prepare(
+            " AND (({$wpdb->posts}.post_title LIKE %s) OR ({$wpdb->posts}.post_excerpt LIKE %s))",
+            $search_term_like,
+            $search_term_like
+        );
+    }
+
+    return $where;
+}
+add_filter('posts_where', 'bahia_search_where', 10, 2);
+
 // Modifica a query de busca para incluir filtros
 function bahia_search_filter($query) {
     // Só modifica a busca principal no front-end
