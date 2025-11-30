@@ -116,9 +116,21 @@ $news_ids = [];
                 <div class="pix-wrapper pix-loader imgLoader" style="display: none;">
                     <img src="<?php bloginfo('template_url'); ?>/assets/imgs/loader.gif" alt="Carregando...">
                 </div>
+
+                <!-- Botão Ver Mais -->
+                <div class="load-more-wrapper">
+                    <button id="load-more-btn" class="ui blue large button">
+                        <i class="angle down icon"></i>
+                        Ver Mais Notícias
+                    </button>
+                </div>
+
                 <!-- Mensagem de fim -->
-                <div class="no-more-posts" style="display: none;">
-                    <p>Você chegou ao final das últimas notícias.</p>
+                <div class="no-more-posts-message" style="display: none;">
+                    <p class="text-center">
+                        <i class="check circle outline icon"></i>
+                        Você visualizou todas as notícias disponíveis.
+                    </p>
                 </div>
                 <?php include get_template_directory() . '/ad-mobile.php'; ?>
             </div>

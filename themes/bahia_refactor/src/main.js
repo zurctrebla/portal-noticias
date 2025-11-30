@@ -6,6 +6,7 @@
 import $ from 'jquery';
 import '@fontsource/lato';
 import '../assets/js/infinite-scroll-editoria';
+import '../assets/js/load-more-home';
 
 // Expõe jQuery globalmente IMEDIATAMENTE e SINCRONAMENTE
 window.$ = $;
@@ -193,6 +194,107 @@ $(document).on('click', '.url-link', function (e) {
 // Busca - agora usa submit nativo do formulário (GET)
 // Código removido - os formulários agora usam method="get" e action correto
 
+// ============================================
+// 5.5 LOAD MORE HOME
+// ============================================
+window.BahiaLoadMore = {
+    state: {
+        loading: false,
+        hasMore: true,
+        loadedIds: new Set(),
+        postsPerLoad: 15
+    },
+
+    init: function() {
+        var self = this;
+
+        // Registrar posts iniciais
+        var hiddenIds = $('#ids').val();
+        if (hiddenIds) {
+            hiddenIds.split(',').forEach(function (id) {
+                var numId = parseInt(id.trim());
+                if (numId > 0) self.state.loadedIds.add(numId);
+            });
+        }
+
+        // Click no botão
+        $(document).on('click', '#load-more-btn', function (e) {
+            e.preventDefault();
+            self.loadMore();
+        });
+    },
+
+    loadMore: function() {
+        var self = this;
+
+        if (this.state.loading || !this.state.hasMore) {
+            return;
+        }
+
+        this.state.loading = true;
+        $('#load-more-btn').prop('disabled', true).addClass('loading');
+        $('.imgLoader').fadeIn(200);
+
+        var excludeIds = Array.from(this.state.loadedIds).join(',');
+
+        $.ajax({
+            url: bahiaThemeData.ajaxUrl,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'bahia_infinite_scroll',
+                nonce: bahiaThemeData.infiniteScrollNonce,
+                post_type: bahiaThemeData.postTypesList || '',
+                posts_per_page: self.state.postsPerLoad,
+                exclude_ids: excludeIds,
+                is_mobile: false,
+                is_multi_post_type: true
+            },
+            timeout: 15000,
+            success: function (response) {
+                if (!response.success || !response.data || !response.data.html || response.data.count === 0) {
+                    self.state.hasMore = false;
+                    $('#load-more-btn').fadeOut();
+                    $('.no-more-posts-message').fadeIn();
+                    return;
+                }
+
+                // Adicionar IDs
+                if (response.data.ids && Array.isArray(response.data.ids)) {
+                    response.data.ids.forEach(function (id) {
+                        self.state.loadedIds.add(id);
+                    });
+                }
+
+                // Adicionar HTML
+                $('#posts-container').append(response.data.html);
+                $('#ids').val(Array.from(self.state.loadedIds).join(','));
+
+                self.state.hasMore = response.data.has_more;
+
+                if (!self.state.hasMore) {
+                    $('#load-more-btn').fadeOut();
+                    $('.no-more-posts-message').fadeIn();
+                }
+            },
+            error: function () {
+                alert('Erro ao carregar notícias. Tente novamente.');
+            },
+            complete: function () {
+                $('.imgLoader').fadeOut(200);
+                $('#load-more-btn').prop('disabled', false).removeClass('loading');
+                self.state.loading = false;
+            }
+        });
+    }
+};
+
+$(document).ready(function () {
+    // Inicializa se o botão "Ver Mais" existir na página
+    if ($('#load-more-btn').length > 0) {
+        window.BahiaLoadMore.init();
+    }
+});
 
 // ============================================
 // 6. EXPORTS GLOBAIS
