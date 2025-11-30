@@ -190,17 +190,8 @@ $(document).on('click', '.url-link', function (e) {
     }
 });
 
-// Busca
-$(document).on('click', '#btnSearch, #btnSearch2', function (e) {
-    e.preventDefault();
-    const searchInput = $(this).siblings('input[type="text"]');
-    const searchTerm = searchInput.val();
-    const baseUrl = searchInput.data('url');
-
-    if (searchTerm) {
-        window.location.href = baseUrl + '/?s=' + encodeURIComponent(searchTerm);
-    }
-});
+// Busca - agora usa submit nativo do formulário (GET)
+// Código removido - os formulários agora usam method="get" e action correto
 
 
 // ============================================

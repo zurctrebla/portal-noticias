@@ -1,5 +1,6 @@
 <?php
 require_once 'Mobile-Detect/Mobile_Detect.php';
+require_once 'inc/search-filters.php';
 
 // Disable use XML-RPC
 add_filter('xmlrpc_enabled', '__return_false');
