@@ -933,13 +933,13 @@ header .redes-topo a.rede-instagram:hover svg {
 }
 header .redes-topo a.rede-whatsapp {
     color: #706f73;
-    min-width: 135px;
+    /* min-width: 135px; */
     font-size: 1.4em
 }
 header .redes-topo a.rede-whatsapp svg {
-    float: left;
+    /* float: left; */
     fill: #1fad29;
-    margin-right: 5px
+    /* margin-right: 5px */
 }
 header .redes-topo a.rede-whatsapp span {
     font-size: 60%;
@@ -4058,20 +4058,29 @@ mashicon-buffer .icon {
 }
 
 #div-share {
-    height: 20px;
-    width: 160px;
-    float: left;
+    height: auto;
+    width: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin-top: 8px;
-    padding-left: 10px;
+    padding-left: 0px;
 }
 
 ul.sharebox {
-    height: 24px;
+    height: auto;
     margin-top: 10px;
+    list-style: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .sharebox > li {
-    float: left;
+    display: inline-block;
+    margin: 0;
+    padding: 0;
 }
 
 .materia-conteudo .sharebox {
