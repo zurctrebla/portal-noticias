@@ -51,11 +51,16 @@ $urlPost = get_permalink();
                             </a>
                         </li>
                         <li>
-                            <a href="whatsapp://send?text=<?= $urlPost ?>" style="float: left; padding-left: 10px;" class="whatsapp">
+                            <?php
+                            $whatsapp = get_option('options_whatsapp');
+                            if ($whatsapp):
+                            ?>
+                            <a href="https://wa.me/<?= $whatsapp ?>?text=<?= urlencode('Olá! Vi esta notícia: ') . $urlPost ?>" target="_blank" class="whatsapp">
                                 <img id="img_whatsapp" style="width: 35px; height: 35px;" src="<?php bloginfo('template_url'); ?>/assets/imgs/img_whatsapp_big.png" alt="Whatsapp" />
                             </a>
+                            <?php endif; ?>
                         </li>
-                    </div>
+                    </ul>
                     <div class="materia">
                         <div class="conteudo_post">
                             <?php the_content(); ?>
@@ -80,11 +85,16 @@ $urlPost = get_permalink();
                                 </a>
                             </li>
                             <li>
-                                <a href="whatsapp://send?text=<?= $urlPost ?>" style="float: left; padding-left: 10px;" class="whatsapp">
+                                <?php
+                                $whatsapp = get_option('options_whatsapp');
+                                if ($whatsapp):
+                                ?>
+                                <a href="https://wa.me/<?= $whatsapp ?>?text=<?= urlencode('Olá! Vi esta notícia: ') . $urlPost ?>" target="_blank" class="whatsapp">
                                     <img id="img_whatsapp" style="width: 35px; height: 35px;" src="<?php bloginfo('template_url'); ?>/assets/imgs/img_whatsapp_big.png" alt="Whatsapp" />
                                 </a>
+                                <?php endif; ?>
                             </li>
-                        </div>
+                        </ul>
 
                         <!-- PUBLICIDADE -->
                         <!-- FIM PUBLICIDADE -->
