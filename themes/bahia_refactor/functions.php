@@ -1608,3 +1608,70 @@ remove_all_actions('wp_ajax_bahia_infinite_scroll');
 remove_all_actions('wp_ajax_nopriv_bahia_infinite_scroll');
 add_action('wp_ajax_bahia_infinite_scroll', 'bahia_infinite_scroll_handler');
 add_action('wp_ajax_nopriv_bahia_infinite_scroll', 'bahia_infinite_scroll_handler');
+
+/**
+ * Adiciona target="_blank" a todos os links dentro do conteúdo dos posts
+ * para que abram em uma nova guia, mantendo o leitor na matéria original
+ */
+function bahia_add_target_blank_to_content_links($content) {
+    // Verifica se estamos em um single post
+    if (!is_single()) {
+        return $content;
+    }
+
+    // Cria um DOMDocument para parsear o HTML
+    $dom = new DOMDocument();
+
+    // Suprime warnings de HTML mal formado
+    libxml_use_internal_errors(true);
+
+    // Carrega o HTML (usando UTF-8)
+    $dom->loadHTML('<?xml encoding="utf-8" ?>' . $content, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+
+    // Limpa os erros
+    libxml_clear_errors();
+
+    // Encontra todos os links
+    $links = $dom->getElementsByTagName('a');
+
+    // Percorre todos os links encontrados
+    foreach ($links as $link) {
+        $href = $link->getAttribute('href');
+
+        // Ignora links vazios, âncoras e javascript
+        if (empty($href) || $href === '#' || strpos($href, 'javascript:') === 0) {
+            continue;
+        }
+
+        // Adiciona target="_blank"
+        $link->setAttribute('target', '_blank');
+
+        // Adiciona rel="noopener noreferrer" para segurança
+        // (previne que a nova página tenha acesso ao window.opener)
+        $existing_rel = $link->getAttribute('rel');
+        if ($existing_rel) {
+            // Se já tem rel, adiciona noopener noreferrer se não existir
+            $rel_values = explode(' ', $existing_rel);
+            if (!in_array('noopener', $rel_values)) {
+                $rel_values[] = 'noopener';
+            }
+            if (!in_array('noreferrer', $rel_values)) {
+                $rel_values[] = 'noreferrer';
+            }
+            $link->setAttribute('rel', implode(' ', $rel_values));
+        } else {
+            $link->setAttribute('rel', 'noopener noreferrer');
+        }
+    }
+
+    // Retorna o HTML modificado
+    $content = $dom->saveHTML();
+
+    // Remove a declaração XML que foi adicionada
+    $content = str_replace('<?xml encoding="utf-8" ?>', '', $content);
+
+    return $content;
+}
+
+// Adiciona o filtro ao conteúdo dos posts
+add_filter('the_content', 'bahia_add_target_blank_to_content_links', 99);
