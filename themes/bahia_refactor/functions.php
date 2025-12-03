@@ -1441,33 +1441,47 @@ function preload_post_acf_fields($post_ids) {
  * Handler AJAX - USA APENAS exclude_ids (SEM offset)
  */
 function bahia_infinite_scroll_handler() {
-    if (!check_ajax_referer('bahia_infinite_scroll', 'nonce', false)) {
-        wp_send_json_error(array('message' => 'Nonce inválido'));
-        return;
-    }
+    try {
+        if (!check_ajax_referer('bahia_infinite_scroll', 'nonce', false)) {
+            wp_send_json_error(array('message' => 'Nonce inválido'));
+            return;
+        }
 
-    // Parâmetros
-    $post_type = isset($_POST['post_type']) ? sanitize_text_field($_POST['post_type']) : '';
-    $posts_per_page = isset($_POST['posts_per_page']) ? absint($_POST['posts_per_page']) : 10;
-    $exclude_ids_str = isset($_POST['exclude_ids']) ? sanitize_text_field($_POST['exclude_ids']) : '';
-    $taxonomy = isset($_POST['taxonomy']) ? sanitize_text_field($_POST['taxonomy']) : '';
-    $term_id = isset($_POST['term_id']) ? absint($_POST['term_id']) : 0;
-    $is_mobile = isset($_POST['is_mobile']) && $_POST['is_mobile'] === 'true';
-    $is_multi_post_type = isset($_POST['is_multi_post_type']) && $_POST['is_multi_post_type'] === 'true';
+        // Parâmetros
+        $post_type = isset($_POST['post_type']) ? sanitize_text_field($_POST['post_type']) : '';
+        $posts_per_page = isset($_POST['posts_per_page']) ? absint($_POST['posts_per_page']) : 10;
+        $exclude_ids_str = isset($_POST['exclude_ids']) ? sanitize_text_field($_POST['exclude_ids']) : '';
+        $taxonomy = isset($_POST['taxonomy']) ? sanitize_text_field($_POST['taxonomy']) : '';
+        $term_id = isset($_POST['term_id']) ? absint($_POST['term_id']) : 0;
+        $is_mobile = isset($_POST['is_mobile']) && $_POST['is_mobile'] === 'true';
+        $is_multi_post_type = isset($_POST['is_multi_post_type']) && $_POST['is_multi_post_type'] === 'true';
 
-    // Processa IDs para excluir
-    $exclude_ids = array();
-    if (!empty($exclude_ids_str)) {
-        $exclude_ids = array_map('absint', explode(',', $exclude_ids_str));
-        $exclude_ids = array_filter($exclude_ids);
-    }
+        // Processa IDs para excluir
+        $exclude_ids = array();
+        if (!empty($exclude_ids_str)) {
+            $exclude_ids = array_map('absint', explode(',', $exclude_ids_str));
+            $exclude_ids = array_filter($exclude_ids);
+        }
 
-    error_log('=== INFINITE SCROLL ===');
-    error_log('Posts per page: ' . $posts_per_page);
-    error_log('Exclude IDs count: ' . count($exclude_ids));
+        error_log('=== INFINITE SCROLL ===');
+        error_log('Posts per page: ' . $posts_per_page);
+        error_log('Exclude IDs count: ' . count($exclude_ids));
+        error_log('Post type recebido: ' . $post_type);
 
-    // Valida post_type
-    global $POST_TYPES;
+        // Valida post_type
+        global $POST_TYPES;
+
+        // Fallback caso $POST_TYPES não esteja definido
+        if (!isset($POST_TYPES) || !is_array($POST_TYPES)) {
+            error_log('AVISO: $POST_TYPES não definido, usando fallback');
+            $POST_TYPES = array(
+                'artigo', 'bombou', 'entrevista', 'bahia', 'brasil', 'covid19',
+                'carnaval', 'eleicoes2024', 'economia', 'entretenimento', 'especial',
+                'esporte', 'exclusivo', 'gente', 'justica', 'mais_noticias',
+                'municipios', 'mundo', 'politica', 'saude', 'salvador', 'social',
+                'investimentos'
+            );
+        }
 
     if (strpos($post_type, ',') !== false) {
         $post_types = array_map('trim', explode(',', $post_type));
@@ -1601,10 +1615,18 @@ function bahia_infinite_scroll_handler() {
         error_log('Has more: ' . ($response['has_more'] ? 'yes' : 'no'));
     }
 
-    wp_reset_postdata();
-    error_log('=== FIM ===');
+        wp_reset_postdata();
+        error_log('=== FIM ===');
 
-    wp_send_json_success($response);
+        wp_send_json_success($response);
+
+    } catch (Exception $e) {
+        error_log('ERRO FATAL no infinite scroll: ' . $e->getMessage());
+        error_log('Stack trace: ' . $e->getTraceAsString());
+        wp_send_json_error(array(
+            'message' => 'Erro ao carregar posts: ' . $e->getMessage()
+        ));
+    }
 }
 
 remove_all_actions('wp_ajax_bahia_infinite_scroll');

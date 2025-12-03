@@ -126,8 +126,17 @@
         },
 
         onLoadSuccess: function (response) {
+            console.log('📥 Resposta recebida:', response);
+
             if (!response.success || !response.data) {
-                console.warn('⚠️ Resposta inválida');
+                console.warn('⚠️ Resposta inválida:', response);
+
+                // Se há mensagem de erro do servidor, mostra ela
+                if (response.data && response.data.message) {
+                    console.error('Erro do servidor:', response.data.message);
+                    this.showError(response.data.message);
+                }
+
                 this.state.hasMore = false;
                 this.hideButton();
                 this.showNoMoreMessage();
@@ -175,13 +184,30 @@
         },
 
         onLoadError: function (xhr, status, error) {
-            console.error('❌ Erro ao carregar:', { status: status, error: error });
+            console.error('❌ Erro ao carregar:', {
+                status: status,
+                error: error,
+                xhr: xhr,
+                responseText: xhr.responseText,
+                statusCode: xhr.status
+            });
 
             var errorMessage = 'Erro ao carregar notícias. Tente novamente.';
+
+            // Mensagens de erro mais específicas
             if (status === 'timeout') {
                 errorMessage = 'Tempo esgotado. Tente novamente.';
+            } else if (xhr.status === 403) {
+                errorMessage = 'Acesso negado. Recarregue a página.';
+            } else if (xhr.status === 404) {
+                errorMessage = 'Endpoint não encontrado.';
+            } else if (xhr.status === 500) {
+                errorMessage = 'Erro no servidor. Contate o administrador.';
+            } else if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                errorMessage = xhr.responseJSON.data.message;
             }
 
+            console.error('💬 Mensagem de erro:', errorMessage);
             this.showError(errorMessage);
         },
 
