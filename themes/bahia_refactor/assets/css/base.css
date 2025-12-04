@@ -3282,8 +3282,23 @@ aside .bt-ultimas-aside:hover {
     header .bt-ultimas-noticias svg {
         margin: 0
     }
+    /* Banners comerciais agora aparecem no mobile */
     #bar {
-        display: none
+        padding: 0 0 15px 0;
+    }
+    #bar .publicidade-leaderboardtop,
+    #bar .publicidade-minibannertop {
+        float: none;
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        margin: 0 0 10px 0;
+    }
+    #bar .publicidade-leaderboardtop img,
+    #bar .publicidade-minibannertop img {
+        width: 100%;
+        height: auto;
+        max-width: 100%;
     }
     .destaques .grid-base:not(.destg) {
         display: none
