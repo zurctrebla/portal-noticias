@@ -28,9 +28,24 @@ jobs:
               git reset --hard origin/develop
             fi
 
+            if ! command -v node &> /dev/null; then
+              curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+              apt-get install -y nodejs
+            fi
+
             cd themes/bahia_refactor
+
             npm ci --production=false
+
             npm run theme:build
+
+            if [ ! -f "dist/css/main.min.css" ] || [ ! -f "dist/js/theme.min.js" ]; then
+              echo "ERRO: Arquivos de build não foram gerados!"
+              exit 1
+            fi
+
+            echo "Build concluído com sucesso!"
+            ls -lh dist/css/ dist/js/
 
             cd /srv/portal-noticias-wp-content
             docker ps | grep wordpress && docker restart wordpress || true
