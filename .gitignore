@@ -1,0 +1,23 @@
+/uploads
+/cache
+/upgrade
+/ai1wm-backups
+/w3tc-config
+/wflogs
+/smush-webp
+/index.php
+/languages
+/reports
+
+# Node.js
+themes/bahia_refactor/node_modules
+themes/bahia_refactor/dist
+*.log
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db

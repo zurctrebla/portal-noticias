@@ -1,0 +1,1218 @@
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PureDevs GDPR Compliance\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-06-20 06:59+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: \n"
+"Language: \n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Loco https://localise.biz/\n"
+"X-Loco-Version: 2.8.0; wp-6.8.1; php-8.0.30\n"
+"X-Domain: pd_gdpr"
+
+#: admin/partials/plugin-settings.php:307
+msgid "#172b4d"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:239
+msgid "#445454"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:321
+msgid "#ffffff"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:191
+#: admin/partials/plugin-settings.php:193
+#: admin/partials/plugin-settings.php:257
+#: admin/partials/plugin-settings.php:259
+msgid "120"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:201
+#: admin/partials/plugin-settings.php:203
+msgid "2000"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:287
+#: admin/partials/plugin-settings.php:527
+msgid "3rd party Cookie"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:80
+msgid "3rd Party Cookie Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:535
+msgid ""
+"3rd Party Cookies should be enabled at all times so that we can save your "
+"preferences for cookie settings."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:549
+#: admin/partials/plugin-settings.php:556
+#: admin/partials/plugin-settings.php:563
+#: admin/partials/plugin-settings.php:609
+#: admin/partials/plugin-settings.php:616
+#: admin/partials/plugin-settings.php:623
+#: admin/partials/plugin-settings.php:669
+#: admin/partials/plugin-settings.php:676
+#: admin/partials/plugin-settings.php:683
+msgid "3rd party cookies should be enabled at all times."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:568
+msgid "3rd Party Sub Category Cookies"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:281
+msgid "3rd_party_cookie"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:267
+msgid "5000"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:803
+msgid ""
+"<ul class=\"tab clearfix\">\n"
+"                        <li class=\"tab-item \"><a class=\"active\" "
+"href=\"javascript:void(0);\" data-tag=\"faq\">FAQ</a></li>\n"
+"                        <li class=\"tab-item\"><a href=\"javascript:void(0);"
+"\" data-tag=\"hooks\">Hooks</a></li>\n"
+"                        <li class=\"tab-item\"><a href=\"javascript:void(0);"
+"\" data-tag=\"shortcodes\">Shortcodes</a></li>\n"
+"                    </ul>\n"
+"\n"
+"                    <div class=\"tab-wrapper \">\n"
+"                           <div class=\"list\" id=\"faq\">\n"
+"                               <ul class=\"custom-accordian\">\n"
+"                                   <li>\n"
+"                                       <a class=\"acc_trigger  \">\n"
+"                                           How do I setup your plugin?\n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body "
+"\">\n"
+"                                               <p class=\"font-weight-500\"> "
+"To setup your plugin, first activate puredevs gdpr complience plugin. Then "
+"go to <span class=\"text-danger font-weight-500\">Settings -> PureDevs GDPR "
+"Compliance </span>. In the general settings tab, you need to enable primary "
+"status.</p>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                                   \n"
+"                                   <li>\n"
+"                                       <a class=\"  acc_trigger \">Can I use "
+"custom code or hooks with your plugin?               \n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body\">"
+"\n"
+"                                               <p class=\"font-weight-500\">"
+"Yes. We have implemented hooks that allow you to implement custom scripts, "
+"for some examples see the list of pre-defined hooks here: <strong> Hooks "
+"tab</strong></p>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                                   \n"
+"                                   <li>\n"
+"                                       <a class=\"  acc_trigger \">Does the "
+"plugin support subdomains?            \n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body\">"
+"\n"
+"                                               <p class=\"font-weight-500\">"
+"Unfortunately not, subdomains are treated as separate domains by browsers "
+"and we’re unable to change the cookies stored by another domain. If your "
+"multisite setup use subdomain version, each subsite will be recognised as a "
+"separate domain by the browser and will create cookies for each subdomain."
+"</p>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                               </ul>\n"
+"                           </div>\n"
+"                           <div class=\"list hide\" id=\"hooks\">\n"
+"                               <ul class=\"custom-accordian\">\n"
+"                                   <li>\n"
+"                                       <a class=\"acc_trigger  \">HOOK to "
+"GDPR custom 3RD-PARTY script by php – HEAD\n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body "
+"\">\n"
+"                                               <div class=\"code-panel m-2\">"
+"\n"
+"                                                    <code>\n"
+"                                                       "
+"add_filter('pd_gdpr_3rd_party_header_assets',"
+"'pd_gdpr_3rd_party_header_assets_function');\n"
+"                                                        <br>\n"
+"                                                        function "
+"pd_gdpr_3rd_party_header_assets_function( $scripts ) {\n"
+"                                                            $scripts .= "
+"'<script>console.log(\"third-party-head\");</script>';\n"
+"                                                            return $scripts;"
+"\n"
+"                                                         }\n"
+"                                                     </code>\n"
+"                                                </div>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                                   <li>\n"
+"                                       <a class=\"acc_trigger  \">HOOK to "
+"GDPR custom 3RD-PARTY script by php – BODY\n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body "
+"\">\n"
+"                                               <div class=\"code-panel m-2\">"
+"\n"
+"                                                    <code>\n"
+"                                                       "
+"add_filter('pd_gdpr_3rd_party_body_assets',"
+"'pd_gdpr_3rd_party_body_assets_function');\n"
+"                                                        <br>\n"
+"                                                        function "
+"pd_gdpr_3rd_party_body_assets_function( $scripts ) {\n"
+"                                                            $scripts .= "
+"'<script>console.log(\"third-party-body\");</script>';\n"
+"                                                            return $scripts;"
+"\n"
+"                                                         }\n"
+"                                                     </code>\n"
+"                                                </div>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                                   <li>\n"
+"                                       <a class=\"acc_trigger  \">HOOK to "
+"GDPR custom 3RD-PARTY script by php – FOOTER\n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body "
+"\">\n"
+"                                               <div class=\"code-panel m-2\">"
+"\n"
+"                                                    <code>\n"
+"                                                       "
+"add_filter('pd_gdpr_3rd_party_footer_assets',"
+"'pd_gdpr_3rd_party_footer_assets_function');\n"
+"                                                        <br>\n"
+"                                                        function "
+"pd_gdpr_3rd_party_footer_assets_function( $scripts ) {\n"
+"                                                            $scripts .= "
+"'<script>console.log(\"third-party-footer\");</script>';\n"
+"                                                            return $scripts;"
+"\n"
+"                                                         }\n"
+"                                                     </code>\n"
+"                                                </div>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                                   <li>\n"
+"                                       <a class=\"acc_trigger  \">HOOK to "
+"GDPR custom ADDITIONAL COOKIE script by php – HEAD\n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body "
+"\">\n"
+"                                               <div class=\"code-panel m-2\">"
+"\n"
+"                                                    <code>\n"
+"                                                       "
+"add_filter('pd_gdpr_additional_cookie_header_assets',"
+"'pd_gdpr_additional_cookie_header_assets_function');\n"
+"                                                        <br>\n"
+"                                                        function "
+"pd_gdpr_additional_cookie_header_assets_function( $scripts ) {\n"
+"                                                            $scripts .= "
+"'<script>console.log(\"additional-cookie-head\");</script>';\n"
+"                                                            return $scripts;"
+"\n"
+"                                                         }\n"
+"                                                     </code>\n"
+"                                                </div>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                                   <li>\n"
+"                                       <a class=\"acc_trigger  \">HOOK to "
+"GDPR custom ADDITIONAL COOKIE script by php – BODY\n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body "
+"\">\n"
+"                                               <div class=\"code-panel m-2\">"
+"\n"
+"                                                    <code>\n"
+"                                                       "
+"add_filter('pd_gdpr_additional_cookie_body_assets',"
+"'pd_gdpr_additional_cookie_body_assets_function');\n"
+"                                                        <br>\n"
+"                                                        function "
+"pd_gdpr_additional_cookie_body_assets_function( $scripts ) {\n"
+"                                                            $scripts .= "
+"'<script>console.log(\"additional-cookie-body\");</script>';\n"
+"                                                            return $scripts;"
+"\n"
+"                                                         }\n"
+"                                                     </code>\n"
+"                                                </div>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                                   <li>\n"
+"                                       <a class=\"acc_trigger  \">HOOK to "
+"GDPR custom ADDITIONAL COOKIE script by php – FOOTER\n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body "
+"\">\n"
+"                                               <div class=\"code-panel m-2\">"
+"\n"
+"                                                    <code>\n"
+"                                                       "
+"add_filter('pd_gdpr_additional_cookie_footer_assets',"
+"'pd_gdpr_additional_cookie_footer_assets_function');\n"
+"                                                        <br>\n"
+"                                                        function "
+"pd_gdpr_additional_cookie_footer_assets_function( $scripts ) {\n"
+"                                                            $scripts .= "
+"'<script>console.log(\"additional-cookie-footer\");</script>';\n"
+"                                                            return $scripts;"
+"\n"
+"                                                         }\n"
+"                                                     </code>\n"
+"                                                </div>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                                   <li>\n"
+"                                       <a class=\"acc_trigger  \">HOOK to "
+"GDPR custom REQUIRED COOKIE  script by php – HEAD\n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body "
+"\">\n"
+"                                               <div class=\"code-panel m-2\">"
+"\n"
+"                                                    <code>\n"
+"                                                       "
+"add_filter('pd_gdpr_required_cookie_header_assets',"
+"'pd_gdpr_required_cookie_header_assets_function');\n"
+"                                                        <br>\n"
+"                                                        function "
+"pd_gdpr_required_cookie_header_assets_function( $scripts ) {\n"
+"                                                            $scripts .= "
+"'<script>console.log(\"required-cookie-head\");</script>';\n"
+"                                                            return $scripts;"
+"\n"
+"                                                         }\n"
+"                                                     </code>\n"
+"                                                </div>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                                   <li>\n"
+"                                       <a class=\"acc_trigger  \">HOOK to "
+"GDPR custom REQUIRED COOKIE script by php – BODY\n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body "
+"\">\n"
+"                                               <div class=\"code-panel m-2\">"
+"\n"
+"                                                    <code>\n"
+"                                                       "
+"add_filter('pd_gdpr_required_cookie_body_assets',"
+"'pd_gdpr_required_cookie_body_assets_function');\n"
+"                                                        <br>\n"
+"                                                        function "
+"pd_gdpr_required_cookie_body_assets_function( $scripts ) {\n"
+"                                                            $scripts .= "
+"'<script>console.log(\"required-cookie-body\");</script>';\n"
+"                                                            return $scripts;"
+"\n"
+"                                                         }\n"
+"                                                     </code>\n"
+"                                                </div>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                                   <li>\n"
+"                                       <a class=\"acc_trigger  \">HOOK to "
+"GDPR custom REQUIRED COOKIE script by php – FOOTER\n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body "
+"\">\n"
+"                                               <div class=\"code-panel m-2\">"
+"\n"
+"                                                    <code>\n"
+"                                                       "
+"add_filter('pd_gdpr_required_cookie_footer_assets',"
+"'pd_gdpr_required_cookie_footer_assets_function');\n"
+"                                                        <br>\n"
+"                                                        function "
+"pd_gdpr_required_cookie_footer_assets_function( $scripts ) {\n"
+"                                                            $scripts .= "
+"'<script>console.log(\"required-cookie-footer\");</script>';\n"
+"                                                            return $scripts;"
+"\n"
+"                                                         }\n"
+"                                                     </code>\n"
+"                                                </div>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                                   <li>\n"
+"                                       <a class=\"acc_trigger  \">HOOK to "
+"GDPR custom FUNCTIONAL COOKIE script by php – HEAD\n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body "
+"\">\n"
+"                                               <div class=\"code-panel m-2\">"
+"\n"
+"                                                    <code>\n"
+"                                                       "
+"add_filter('pd_gdpr_functional_cookie_header_assets',"
+"'pd_gdpr_functional_cookie_header_assets_function');\n"
+"                                                        <br>\n"
+"                                                        function "
+"pd_gdpr_functional_cookie_header_assets_function( $scripts ) {\n"
+"                                                            $scripts .= "
+"'<script>console.log(\"functional-cookie-head\");</script>';\n"
+"                                                            return $scripts;"
+"\n"
+"                                                         }\n"
+"                                                     </code>\n"
+"                                                </div>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                                   <li>\n"
+"                                       <a class=\"acc_trigger  \">HOOK to "
+"GDPR custom FUNCTIONAL COOKIE script by php – BODY\n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body "
+"\">\n"
+"                                               <div class=\"code-panel m-2\">"
+"\n"
+"                                                    <code>\n"
+"                                                       "
+"add_filter('pd_gdpr_functional_cookie_body_assets',"
+"'pd_gdpr_functional_cookie_body_assets_function');\n"
+"                                                        <br>\n"
+"                                                        function "
+"pd_gdpr_functional_cookie_body_assets_function( $scripts ) {\n"
+"                                                            $scripts .= "
+"'<script>console.log(\"functional-cookie-body\");</script>';\n"
+"                                                            return $scripts;"
+"\n"
+"                                                         }\n"
+"                                                     </code>\n"
+"                                                </div>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                                   <li>\n"
+"                                       <a class=\"acc_trigger  \">HOOK to "
+"GDPR custom FUNCTIONAL COOKIE script by php – FOOTER\n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body "
+"\">\n"
+"                                               <div class=\"code-panel m-2\">"
+"\n"
+"                                                    <code>\n"
+"                                                       "
+"add_filter('pd_gdpr_functional_cookie_footer_assets',"
+"'pd_gdpr_functional_cookie_footer_assets_function');\n"
+"                                                        <br>\n"
+"                                                        function "
+"pd_gdpr_functional_cookie_footer_assets_function( $scripts ) {\n"
+"                                                            $scripts .= "
+"'<script>console.log(\"functional-cookie-footer\");</script>';\n"
+"                                                            return $scripts;"
+"\n"
+"                                                         }\n"
+"                                                     </code>\n"
+"                                                </div>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                               </ul>\n"
+"                           </div>\n"
+"                           <div class=\"list hide\" id=\"shortcodes\">\n"
+"                                <ul class=\"custom-accordian\">\n"
+"                                   <li>\n"
+"                                       <a class=\"acc_trigger  \">\n"
+"                                           How can I link setting popup with "
+"the banner message?\n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body "
+"\">\n"
+"                                               <p class=\"font-weight-500\"> "
+"To link the setting popup with your banner message, add [settings "
+"color=\"#dd3333\"] to your banner content under the <strong>Banner "
+"Setting</strong>.</p>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"\n"
+"                                   <li>\n"
+"                                       <a class=\"  acc_trigger \">How can I "
+"change the color of the setting link?\n"
+"                                            <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body\">"
+"\n"
+"                                               <p class=\"font-weight-500\">"
+"To change the color of the setting link first find the hexadecimal version "
+"of your desired color and replace it with the default color, you can find "
+"the value of the default color within the quotation mark in the [settings "
+"color=\"#dd3333\"].</p>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"\n"
+"                                   <li>\n"
+"                                       <a class=\"  acc_trigger \">How can I "
+"add or remove subcategory cookie polices from my cookie policy page?\n"
+"                                           <i class=\"angle-down\"></i>\n"
+"                                       </a>\n"
+"\n"
+"                                       <div class=\"acc_container\" >\n"
+"                                           <div class=\"acc_card card-body\">"
+"\n"
+"                                               <p class=\"font-weight-500\">"
+"To remove all or any of the default subcategories from the  cookie policy "
+"page, go to edit cookie policy page in wp-admin and remove the shortcode of "
+"the subcatagory that you want to get rid of.</p>\n"
+"                                           </div>\n"
+"                                       </div>\n"
+"                                   </li>\n"
+"                               </ul>\n"
+"                           </div>\n"
+"                       </div>"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:786
+msgid ""
+"A cookie is a small piece of text that allows a website to recognize your "
+"device and maintain a consistent, cohesive experience throughout multiple "
+"sessions. This information is used to make the site work as you expect it to."
+" It is not personally identifiable to you, but it can be used to give you a "
+"more personalised web experience.To know more about our cookie policy, press "
+"the button below."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:343
+#: admin/partials/plugin-settings.php:345
+msgid "Accept"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:335
+msgid "Accept Button Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:342
+msgid "Accept Button Text"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:286
+#: admin/partials/plugin-settings.php:467
+msgid "Additional Cookie"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:76
+msgid "Additional Cookie Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:475
+msgid ""
+"Additional Cookies should be enabled at all times so that we can save your "
+"preferences for cookie settings."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:508
+msgid "Additional Sub Category Cookies"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:280
+msgid "additional_cookie"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:223
+msgid "Allow you set the position of the floating button"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:166
+msgid "Allow you to choose the position where the cookie ber will be shown."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:178
+msgid "Allow you to choose the style of cookie alert."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:244
+msgid "Allow you to choose when to show the floating button"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:154
+msgid "Allow you to show the cookie bar either as a banner or a popup"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:121
+msgid "Allow you to turn on or off the plugin"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:426
+msgid "Always enabled (User can not disable but can see the content)"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:427
+msgid "Always enabled and content is hidden from the user"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:423
+msgid "always-enable"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:304
+#: admin/partials/plugin-settings.php:357
+#: admin/partials/plugin-settings.php:386
+msgid "Background Color"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:311
+msgid "Background Opacity"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:312
+msgid ""
+"Background opacity ranges from 0 to 1. Where 1 is fully opaque and 0 is "
+"fully transparent."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:158
+msgid "Banner"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:296
+msgid "Banner Content"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:60
+msgid "Banner Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:494
+#: admin/partials/plugin-settings.php:554
+#: admin/partials/plugin-settings.php:614
+#: admin/partials/plugin-settings.php:674
+msgid "Body Section"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:230
+msgid "Bottom Left"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:229
+msgid "Bottom Right"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:64
+msgid "Button Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:341
+#: admin/partials/plugin-settings.php:370
+msgid "Button Text"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:420
+msgid "Choose Functionality"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:148
+msgid "Choose Logo"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:358
+msgid "Choose the background color of the accept button"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:305
+msgid "Choose the background color of the banner"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:387
+msgid "Choose the background color of the reject button"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:351
+msgid "Choose the text color of the accept button"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:319
+msgid "Choose the text color of the banner"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:380
+msgid "Choose the text color of the reject button"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:394
+msgid "Choose whether to show the reject button or not"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:177
+msgid "Cookie Alert Options"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:127
+msgid "Cookie Bar"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:199
+msgid "Cookie Bar Delay Time "
+msgstr ""
+
+#: admin/partials/plugin-settings.php:165
+msgid "Cookie Bar Position"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:153
+msgid "Cookie Bar Style"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:275
+#: admin/partials/plugin-settings.php:276
+msgid "Cookie Categories"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:778
+msgid "Cookie Policy"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:792
+msgid "Cookie Policy Page Url"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:794
+msgid "Cookie policy page url"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:134
+msgid "Cookie Settings Heading"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:143
+msgid "Cookie Settings Logo"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:326
+msgid "Customize the font size of your banner text. Ex: 15px"
+msgstr ""
+
+#: public/templates/pd-gdpr-complience-modal.php:138
+#: public/templates/pd-gdpr-complience-modal.php:162
+#: public/templates/pd-gdpr-complience-modal.php:190
+#: public/templates/pd-gdpr-complience-modal.php:210
+#: public/templates/pd-gdpr-complience-modal.php:230
+msgid "Enable"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:458
+#: admin/partials/plugin-settings.php:518
+#: admin/partials/plugin-settings.php:578
+#: admin/partials/plugin-settings.php:638
+#: admin/partials/plugin-settings.php:769
+msgid "ENABLE / DISABLE"
+msgstr ""
+
+#: public/templates/pd-gdpr-complience-modal.php:118
+msgid "Enable ALL"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:729
+msgid "EXPORT"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:92
+msgid "Export Import Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:698
+msgid "Export Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:236
+msgid "Floating Button Color"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:222
+msgid "Floating Button Position"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:209
+msgid "Floating Button Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:243
+msgid "Floating Button's Delay Options"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:325
+msgid "Font Size"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:171
+msgid "Footer"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:168
+msgid "footer"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:501
+#: admin/partials/plugin-settings.php:561
+#: admin/partials/plugin-settings.php:621
+#: admin/partials/plugin-settings.php:681
+msgid "Footer Section"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:488
+#: admin/partials/plugin-settings.php:495
+#: admin/partials/plugin-settings.php:502
+#: admin/partials/plugin-settings.php:548
+#: admin/partials/plugin-settings.php:555
+#: admin/partials/plugin-settings.php:562
+#: admin/partials/plugin-settings.php:608
+#: admin/partials/plugin-settings.php:615
+#: admin/partials/plugin-settings.php:622
+#: admin/partials/plugin-settings.php:668
+#: admin/partials/plugin-settings.php:675
+#: admin/partials/plugin-settings.php:682
+msgid ""
+"For example, you can use it for Google Tag Manager script or any other 3rd "
+"party code snippets."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:587
+msgid "Functional cookie"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:628
+msgid "Functional Cookie Sub Category Cookies"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:288
+msgid "Functional Cookies"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:84
+msgid "Functional Cookies Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:595
+msgid ""
+"Functional Cookies should be enabled at all times so that we can save your "
+"preferences for cookie settings."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:56
+msgid "General Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:96
+msgid "Geo Location Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:487
+#: admin/partials/plugin-settings.php:547
+#: admin/partials/plugin-settings.php:607
+#: admin/partials/plugin-settings.php:667
+msgid "Head Section"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:170
+msgid "Header"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:104
+msgid "Help, Hooks, Shortcodes"
+msgstr ""
+
+#. Author URI of the plugin
+msgid "https://puredevs.com/"
+msgstr ""
+
+#. URI of the plugin
+msgid "https://wordpress.org/plugins/puredevs-gdpr-complience"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:740
+msgid "IMPORT"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:735
+#: admin/partials/plugin-settings.php:736
+msgid "Import Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:450
+#: admin/partials/plugin-settings.php:510
+#: admin/partials/plugin-settings.php:570
+#: admin/partials/plugin-settings.php:630
+#: admin/partials/plugin-settings.php:690
+msgid ""
+"Lorem Ipsum is simply dummy text of the printing and typesetting industry. "
+"Lorem Ipsum has been the industry standard dummy text ever since the 1500s, "
+"when an unknown printer took a galley of type and scrambled it to make a "
+"type specimen book. It has survived not only five centuries, but also the "
+"leap into electronic typesetting, remaining essentially unchanged. It was "
+"popularised in the 1960s with the release of Letraset sheets containing "
+"Lorem Ipsum passages, and more recently with desktop publishing software "
+"like Aldus PageMaker including versions of Lorem Ipsum."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:200
+msgid "Numbers are calculated in microseconds (ms)"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:190
+#: admin/partials/plugin-settings.php:256
+msgid "Numbers are calculated in pixels"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:425
+msgid "Optional (User select their preferences)"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:481
+#: admin/partials/plugin-settings.php:541
+#: admin/partials/plugin-settings.php:601
+msgid ""
+"Paste your codes and snippets below. They will be added to all pages if user "
+"enables these cookies:"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:159
+msgid "Popup"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:120
+msgid "Primary Status"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:100
+msgid "Privacy and Policy Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:405
+msgid "Privacy Overview"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:68
+msgid "Privacy Overview Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:47
+msgid "Pure GDPR Cookie Settings"
+msgstr ""
+
+#. Author of the plugin
+msgid "PureDevs"
+msgstr ""
+
+#. Name of the plugin
+#: admin/partials/plugin-settings.php:33 admin/partials/plugin-settings.php:34
+#: admin/partials/plugin-settings.php:1145
+msgid "PureDevs GDPR Compliance"
+msgstr ""
+
+#. Description of the plugin
+msgid ""
+"PureDevs GDPR compliance can minimize the risk of getting penalized by GDPR. "
+"It's packed with all the premium features of other plugins, but for free!"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:136
+#: admin/partials/plugin-settings.php:138
+msgid "PureDevs GDPR Cookie Setting Options"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:144
+msgid "Recommended size:64 x 64 pixels"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:372
+msgid "Reject"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:364
+msgid "Reject Button Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:371
+msgid "Reject Button Text"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:688
+msgid "Required Cookie Sub Category Cookies"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:289
+msgid "Required Cookies"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:647
+msgid "Required cookies"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:88
+msgid "Required Cookies Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:655
+msgid ""
+"Required cookies should be enabled at all times so that we can save your "
+"preferences for cookie settings."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:282
+msgid "required_cookies"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:182
+#: admin/partials/plugin-settings.php:248
+msgid "Scroll bound"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:189
+msgid "Scroll Offset "
+msgstr ""
+
+#: admin/partials/plugin-settings.php:265
+msgid "Set floating button's delay time"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:255
+msgid "Set Floating Button's Scroll Effect"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:237
+msgid "Set the color of the floating button"
+msgstr ""
+
+#: public/partials/shortcode.php:63
+msgid "Settings"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:747
+msgid "Show Cookie Banner"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:128
+msgid "Show cookie bar"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:215
+msgid "Show Floating Button"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:393
+msgid "Show Reject Button?"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:180
+#: admin/partials/plugin-settings.php:246
+msgid "soe"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:72 admin/partials/plugin-settings.php:285
+msgid "Strictly Necessary Cookie"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:442
+msgid ""
+"Strictly Necessary Cookie should be enabled at all times so that we can save "
+"your preferences for cookie settings."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:434
+msgid "Strictly Necessary Cookies"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:489
+#: admin/partials/plugin-settings.php:496
+#: admin/partials/plugin-settings.php:503
+msgid "Strictly necessary cookies should be enabled at all times."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:784
+msgid "Strictly Necessary Required Messages"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:448
+msgid "Strictly Necessary Sub Category Cookies"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:279
+msgid "strictly_necessary_cookie"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:410
+#: admin/partials/plugin-settings.php:411
+#: admin/partials/plugin-settings.php:440
+#: admin/partials/plugin-settings.php:441
+#: admin/partials/plugin-settings.php:449
+#: admin/partials/plugin-settings.php:473
+#: admin/partials/plugin-settings.php:474
+#: admin/partials/plugin-settings.php:509
+#: admin/partials/plugin-settings.php:533
+#: admin/partials/plugin-settings.php:534
+#: admin/partials/plugin-settings.php:569
+#: admin/partials/plugin-settings.php:593
+#: admin/partials/plugin-settings.php:594
+#: admin/partials/plugin-settings.php:629
+#: admin/partials/plugin-settings.php:653
+#: admin/partials/plugin-settings.php:654
+#: admin/partials/plugin-settings.php:689
+msgid "Tab Content"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:402
+#: admin/partials/plugin-settings.php:403
+#: admin/partials/plugin-settings.php:432
+#: admin/partials/plugin-settings.php:433
+#: admin/partials/plugin-settings.php:465
+#: admin/partials/plugin-settings.php:466
+#: admin/partials/plugin-settings.php:525
+#: admin/partials/plugin-settings.php:526
+#: admin/partials/plugin-settings.php:585
+#: admin/partials/plugin-settings.php:586
+#: admin/partials/plugin-settings.php:645
+#: admin/partials/plugin-settings.php:646
+#: admin/partials/plugin-settings.php:776
+#: admin/partials/plugin-settings.php:777
+msgid "Tab Title"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:318
+#: admin/partials/plugin-settings.php:350
+#: admin/partials/plugin-settings.php:379
+msgid "Text Color"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:785
+msgid ""
+"This warning message will be displayed if the strictly necessary cookies are "
+"not enabled and the user try to enable the \"Third Party Cookies\""
+msgstr ""
+
+#: admin/partials/plugin-settings.php:413
+msgid ""
+"This website uses cookies so that we can provide you with the best user "
+"experience possible. Cookie information is stored in your browser and "
+"performs functions such as recognising you when you return to our website "
+"and helping our team to understand which sections of the website you find "
+"most interesting and useful."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:299
+msgid ""
+"This website uses cookies to provide you with the best browsing experience. "
+"Find out more or adjust your [settings]."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:183
+#: admin/partials/plugin-settings.php:249
+msgid "Time bound"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:266
+msgid "Time is calculated in microseconds(ms) "
+msgstr ""
+
+#: admin/partials/plugin-settings.php:760
+msgid ""
+"To get the most accurate performance from the geolocation feature, go to <a "
+"href=\"https://ipgeolocation.io/\" target=\"_blank\">ipgelocation.io</a>. "
+"Upon signup, they will provide a key. Put that in Your IP Geo Location API "
+"Key and you are good to go."
+msgstr ""
+
+#: admin/partials/plugin-settings.php:228
+msgid "Top Left"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:227
+msgid "Top Right"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:297
+msgid ""
+"Use the following shortcodes to link with setting section: [settings "
+"color=\"#fff\"]"
+msgstr ""
+
+#: public/templates/pd-gdpr-complience-modal.php:249
+msgid "View Cookie Policy"
+msgstr ""
+
+#: admin/partials/plugin-settings.php:759
+msgid "Your IP Geo Location API Key"
+msgstr ""
