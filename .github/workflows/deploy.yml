@@ -33,7 +33,7 @@ jobs:
               apt-get install -y nodejs
             fi
 
-            cd themes/bahia_refactor
+            cd /srv/portal-noticias-wp-content/themes/bahia_refactor
 
             npm ci --production=false
 

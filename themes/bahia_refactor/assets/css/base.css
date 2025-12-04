@@ -417,6 +417,7 @@ header .container {
     padding-bottom: 10px;
     border-bottom: solid 1px #98cbff
 }
+/* #bar no desktop - dentro do header */
 header #bar {
     padding: 0 0 30px 0;
 }
@@ -430,6 +431,33 @@ header #bar .publicidade-leaderboard {
 }
 header #bar .publicidade-minibanner {
     float: right
+}
+
+/* #bar no desktop - agora está fora do header também */
+body > #bar {
+    padding: 0 0 30px 0;
+}
+
+body > #bar:after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+body > #bar .publicidade-leaderboardtop {
+    float: left;
+}
+
+body > #bar .publicidade-minibannertop {
+    float: right;
+}
+
+body > #bar .publicidade-leaderboard {
+    float: left;
+}
+
+body > #bar .publicidade-minibanner {
+    float: right;
 }
 header nav.nav-row {
     float: left;
@@ -3093,6 +3121,15 @@ aside .bt-ultimas-aside:hover {
     .container {
         width: 100%
     }
+    /* Banners no mobile - aparecem no topo e somem ao rolar */
+    body > #bar {
+        position: relative;
+        z-index: 1;
+        background-color: #fff;
+        margin-top: 65px;
+    }
+
+    /* Header fixo no topo - sempre acima dos banners */
     #divHeader {
         position: fixed;
         top: 0;
@@ -3184,23 +3221,23 @@ aside .bt-ultimas-aside:hover {
         display: none
     }
     header .bt-menu-mobile {
-        display: block;
-        position: absolute;
-        left: 15px;
-        top: 50%;
-        margin-top: -8px;
-        z-index: 999
+        display: block !important;
+        position: absolute !important;
+        left: 15px !important;
+        top: 50% !important;
+        margin-top: -8px !important;
+        z-index: 999 !important;
     }
     header .bt-menu-mobile .icon {
         float: left;
         position: relative;
-        width: 40px;
-        height: 28px
+        width: 25px;
+        height: 18px
     }
     header .bt-menu-mobile .icon span {
         display: inline-block;
-        width: 35px;
-        height: 6px;
+        width: 23px;
+        height: 4px;
         background: #98cbff;
         border-radius: 0.28571rem;
         position: relative;
@@ -3213,8 +3250,8 @@ aside .bt-ultimas-aside:hover {
     header .bt-menu-mobile .icon span:before,
     header .bt-menu-mobile .icon span:after {
         display: inline-block;
-        width: 35px;
-        height: 6px;
+        width: 23px;
+        height: 4px;
         background: #98cbff;
         border-radius: 0.28571rem;
         position: absolute;
@@ -3261,17 +3298,49 @@ aside .bt-ultimas-aside:hover {
     }
     header h1,
     header h2 {
-        width: 150px;
-        height: 34px;
-        background-size: 150px;
-        height: 34px;
-        margin: 2px 0 0 10px;
-        position: absolute;
-        left: 60px;
-        float: none
+        width: 150px !important;
+        height: 34px !important;
+        background-size: 150px !important;
+        margin: 2px 0 0 10px !important;
+        position: absolute !important;
+        left: 60px !important;
+        float: none !important;
     }
     header .left-header {
-        margin: 0 15px 0 0
+        display: block !important;
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        margin: 0;
+        float: none;
+        z-index: 1000;
+    }
+
+    /* Mantém redes sociais escondidas no mobile */
+    header .left-header .redes-topo {
+        display: none !important;
+    }
+
+    /* Mostra o botão de busca que está fora do .left-header */
+    header .container > .item {
+        display: block !important;
+        position: absolute !important;
+        right: 15px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        z-index: 1000 !important;
+        padding: 0 !important;
+    }
+
+    header .container > .item .dropdownBtnSearchIpad,
+    header .container > .item .buscaNav {
+        display: block !important;
+    }
+
+    header .container > .item .search.icon {
+        font-size: 18px !important;
+        color: #98cbff !important;
     }
     header .bt-ultimas-noticias {
         margin: 0
@@ -3282,23 +3351,35 @@ aside .bt-ultimas-aside:hover {
     header .bt-ultimas-noticias svg {
         margin: 0
     }
-    /* Banners comerciais agora aparecem no mobile */
-    #bar {
-        padding: 0 0 15px 0;
+    /* Esconde #bar dentro do header no mobile */
+    header #bar {
+        display: none !important;
     }
-    #bar .publicidade-leaderboardtop,
-    #bar .publicidade-minibannertop {
+
+    /* Mostra #bar fora do header no mobile */
+    body > #bar {
+        display: block !important;
+        padding: 10px 0;
+        background-color: #fff;
+    }
+
+    body > #bar .publicidade-leaderboardtop,
+    body > #bar .publicidade-minibannertop {
         float: none;
         width: 100%;
         max-width: 100%;
         height: auto;
         margin: 0 0 10px 0;
+        padding: 0 10px;
     }
-    #bar .publicidade-leaderboardtop img,
-    #bar .publicidade-minibannertop img {
+
+    body > #bar .publicidade-leaderboardtop img,
+    body > #bar .publicidade-minibannertop img {
         width: 100%;
         height: auto;
         max-width: 100%;
+        display: block;
+        margin: 0 auto;
     }
     .destaques .grid-base:not(.destg) {
         display: none
