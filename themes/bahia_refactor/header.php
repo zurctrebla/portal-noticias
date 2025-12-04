@@ -376,23 +376,25 @@ $ipad = strpos(getUserAgent(), "iPad");
             </div>
         </div>
 
+        <!-- Banners mobile - fora do header fixo -->
+        <div id="bar">
+            <div class="container">
+                <?php if(is_home()): ?>
+                    <div class="publicidade-leaderboardtop"><?php echo adrotate_group(1); ?></div>
+                    <div class="publicidade-minibannertop"><?php echo adrotate_group(2); ?></div>
+                <?php elseif(get_query_var('post_type') == 'municipios') : ?>
+                    <div class="publicidade-leaderboardtop"><?php echo adrotate_group(14); ?></div>
+                <?php else : ?>
+                    <div class="publicidade-leaderboardtop"><?php echo adrotate_group(12); ?></div>
+                    <div class="publicidade-minibannertop"><?php echo adrotate_group(13); ?></div>
+                <?php endif; ?>
+            </div>
+        </div>
 
         <div id="divHeader" >
             <!-- HEADER -->
             <header>
                 <div class="container" >
-                    <div id="bar">
-                        <?php if(is_home()): ?>
-                            <div class="publicidade-leaderboardtop"><?php echo adrotate_group(1); ?></div>
-                            <div class="publicidade-minibannertop"><?php echo adrotate_group(2); ?></div>
-                        <?php elseif(get_query_var('post_type') == 'municipios') : ?>
-                            <div class="publicidade-leaderboardtop"><?php echo adrotate_group(14); ?></div>
-                        <?php else : ?>
-                            <div class="publicidade-leaderboardtop"><?php echo adrotate_group(12); ?></div>
-                            <div class="publicidade-minibannertop"><?php echo adrotate_group(13); ?></div>
-                        <?php endif; ?>
-                    </div>
-
                     <a href="#/" class="bt-menu-mobile"><span class="icon"><span></span></span></a>
 
                     <?php if (is_home()): ?>
