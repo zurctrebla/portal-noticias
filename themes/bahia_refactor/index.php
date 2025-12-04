@@ -21,7 +21,7 @@ if (is_mobile() and is_home()) {
                 <?php get_sidebar('home1'); ?>
                 <div class="grid-base-int">
                     <?php include get_template_directory() . '/ad-small.php'; ?>
-                    <ul class="resultado-busca">
+                    <ul class="resultado-busca" id="posts-container">
                         <?php if ($objCobertura) { ?>
                             <div class="divCobertura">
                                 <div class="divCoberturaAoVivo">
@@ -72,6 +72,22 @@ if (is_mobile() and is_home()) {
                     </ul>
                     <div class="pix-wrapper pix-loader imgLoader" style="display: none;">
                         <img src="<?php bloginfo('template_url'); ?>/assets/imgs/loader.gif">
+                    </div>
+
+                    <!-- Botão Ver Mais -->
+                    <div class="load-more-wrapper">
+                        <button id="load-more-btn" class="ui blue large button">
+                            <i class="angle down icon"></i>
+                            Ver Mais Notícias
+                        </button>
+                    </div>
+
+                    <!-- Mensagem fim de posts -->
+                    <div class="no-more-posts-message" style="display: none;">
+                        <p class="text-center">
+                            <i class="check circle outline icon"></i>
+                            Você visualizou todas as notícias disponíveis.
+                        </p>
                     </div>
                 </div>
                 <?php get_sidebar('home2'); ?>

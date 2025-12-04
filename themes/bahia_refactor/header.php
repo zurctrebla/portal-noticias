@@ -181,18 +181,20 @@ $ipad = strpos(getUserAgent(), "iPad");
                 </a>
             </div>
                 <div class="right item removeBorderItemMenu">
-                    <form method="post" action="/?s=" style="position: absolute;">
-                        <div style="right: 3rem;" class="ui icon top right pointing dropdown button <?php if($ipad){echo "dropdownBtnSearchIpad";}else{echo "dropdownBtnSearchMobile";} ?>">
-                            <i class="search icon"></i>
-                            <div class="menu divMenu">
-                                    <div class="ui fluid action input">
-                                            <input type="text" id="txtSearch" name="b" data-url="<?php bloginfo('url'); ?>" placeholder="Conteúdo">
-                                            <button class="ui blue button" id="btnSearch">Buscar</button>
-                                    </div>
-                                <div class="item" style="display: none;"></div>
-                            </div>
+                    <div style="right: 3rem;" class="ui icon top right pointing dropdown button <?php if($ipad){echo "dropdownBtnSearchIpad";}else{echo "dropdownBtnSearchMobile";} ?>">
+                        <i class="search icon"></i>
+                        <div class="menu divMenu">
+                            <form role="search" method="get" action="<?php echo esc_url(home_url('/')); ?>">
+                                <div class="ui fluid action input">
+                                    <input type="search" id="txtSearch" name="s" placeholder="Buscar..." value="<?php echo get_search_query(); ?>">
+                                    <button type="submit" class="ui blue button" id="btnSearch">
+                                        <i class="search icon"></i>
+                                    </button>
+                                </div>
+                            </form>
+                            <div class="item" style="display: none;"></div>
                         </div>
-                    </form>
+                    </div>
                 </div>
         </div>
         <div class="pusher"><!-- INÍCIO PUSHER -->
@@ -361,18 +363,20 @@ $ipad = strpos(getUserAgent(), "iPad");
             </div>
 
             <div class="item" style="padding-right: 10% !important;">
-                <form method="post" action="/?s=">
-                    <div class="ui icon top right pointing dropdown button buscaNav dropdownBtnSearchIpad">
-                        <i class="search icon"></i>
-                        <div class="menu">
+                <div class="ui icon top right pointing dropdown button buscaNav dropdownBtnSearchIpad">
+                    <i class="search icon"></i>
+                    <div class="menu">
+                        <form role="search" method="get" action="<?php echo esc_url(home_url('/')); ?>">
                             <div class="ui action input">
-                                <input type="text" id="txtSearch2" name="b" data-url="<?php bloginfo('url'); ?>" placeholder="Conteúdo">
-                                <button class="ui blue button" id="btnSearch2">Buscar</button>
+                                <input type="search" id="txtSearch2" name="s" placeholder="Buscar..." value="<?php echo get_search_query(); ?>">
+                                <button type="submit" class="ui blue button" id="btnSearch2">
+                                    <i class="search icon"></i> Buscar
+                                </button>
                             </div>
-                            <div class="item" style="display: none;"></div>
-                        </div>
+                        </form>
+                        <div class="item" style="display: none;"></div>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
 

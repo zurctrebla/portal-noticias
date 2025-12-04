@@ -6,14 +6,11 @@
 import $ from 'jquery';
 import '@fontsource/lato';
 import '../assets/js/infinite-scroll-editoria';
+import '../assets/js/load-more-home';
 
 // Expõe jQuery globalmente IMEDIATAMENTE e SINCRONAMENTE
 window.$ = $;
 window.jQuery = $;
-
-// Log para debug
-console.log('✅ jQuery carregado:', $.fn.jquery);
-
 
 // ============================================
 // 2. SEMANTIC UI
@@ -21,7 +18,6 @@ console.log('✅ jQuery carregado:', $.fn.jquery);
 
 // Semantic UI JS (depende do jQuery)
 import 'semantic-ui-css/semantic.js';
-console.log('✅ Semantic UI JS carregado');
 
 
 // ============================================
@@ -30,26 +26,21 @@ console.log('✅ Semantic UI JS carregado');
 
 // Aguarda o DOM estar pronto
 $(function () {
-    console.log('🚀 DOM pronto! Inicializando componentes...');
-
     // Inicializa componentes do Semantic UI
     try {
         // Dropdowns
         if ($.fn.dropdown) {
             $('.ui.dropdown').dropdown();
-            console.log('✅ Dropdowns inicializados');
         }
 
         // Modals
         if ($.fn.modal) {
             $('.ui.modal').modal();
-            console.log('✅ Modals inicializados');
         }
 
         // Sidebar (menu mobile)
         if ($.fn.sidebar) {
             $('.ui.sidebar').sidebar('attach events', '.mobile-button');
-            console.log('✅ Sidebar inicializado');
         }
 
         // Accordion
@@ -63,7 +54,8 @@ $(function () {
         }
 
     } catch (error) {
-        console.error('❌ Erro ao inicializar Semantic UI:', error);
+        // Mantém apenas erros críticos
+        console.error('Erro ao inicializar Semantic UI:', error);
     }
 
     // Inicializa funcionalidades personalizadas do tema
@@ -79,8 +71,6 @@ $(function () {
 // ============================================
 
 function initTheme() {
-    console.log('🎨 Inicializando tema Bahia...');
-
     // Botão voltar ao topo
     initBackToTop();
 
@@ -104,8 +94,6 @@ function initBackToTop() {
             e.preventDefault();
             $('html, body').animate({ scrollTop: 0 }, 600);
         });
-
-        console.log('✅ Botão "voltar ao topo" inicializado');
     }
 }
 
@@ -121,8 +109,6 @@ function initSmoothScroll() {
             }, 600);
         }
     });
-
-    console.log('✅ Smooth scroll inicializado');
 }
 
 function initMobileMenu() {
@@ -170,8 +156,6 @@ function initMobileMenu() {
                 }
             }
         });
-
-        console.log('✅ Menu mobile responsivo inicializado');
     }
 }
 
@@ -207,18 +191,110 @@ $(document).on('click', '.url-link', function (e) {
     }
 });
 
-// Busca
-$(document).on('click', '#btnSearch, #btnSearch2', function (e) {
-    e.preventDefault();
-    const searchInput = $(this).siblings('input[type="text"]');
-    const searchTerm = searchInput.val();
-    const baseUrl = searchInput.data('url');
+// Busca - agora usa submit nativo do formulário (GET)
+// Código removido - os formulários agora usam method="get" e action correto
 
-    if (searchTerm) {
-        window.location.href = baseUrl + '/?s=' + encodeURIComponent(searchTerm);
+// ============================================
+// 5.5 LOAD MORE HOME
+// ============================================
+window.BahiaLoadMore = {
+    state: {
+        loading: false,
+        hasMore: true,
+        loadedIds: new Set(),
+        postsPerLoad: 15
+    },
+
+    init: function() {
+        var self = this;
+
+        // Registrar posts iniciais
+        var hiddenIds = $('#ids').val();
+        if (hiddenIds) {
+            hiddenIds.split(',').forEach(function (id) {
+                var numId = parseInt(id.trim());
+                if (numId > 0) self.state.loadedIds.add(numId);
+            });
+        }
+
+        // Click no botão
+        $(document).on('click', '#load-more-btn', function (e) {
+            e.preventDefault();
+            self.loadMore();
+        });
+    },
+
+    loadMore: function() {
+        var self = this;
+
+        if (this.state.loading || !this.state.hasMore) {
+            return;
+        }
+
+        this.state.loading = true;
+        $('#load-more-btn').prop('disabled', true).addClass('loading');
+        $('.imgLoader').fadeIn(200);
+
+        var excludeIds = Array.from(this.state.loadedIds).join(',');
+
+        $.ajax({
+            url: bahiaThemeData.ajaxUrl,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'bahia_infinite_scroll',
+                nonce: bahiaThemeData.infiniteScrollNonce,
+                post_type: bahiaThemeData.postTypesList || '',
+                posts_per_page: self.state.postsPerLoad,
+                exclude_ids: excludeIds,
+                is_mobile: false,
+                is_multi_post_type: true
+            },
+            timeout: 15000,
+            success: function (response) {
+                if (!response.success || !response.data || !response.data.html || response.data.count === 0) {
+                    self.state.hasMore = false;
+                    $('#load-more-btn').fadeOut();
+                    $('.no-more-posts-message').fadeIn();
+                    return;
+                }
+
+                // Adicionar IDs
+                if (response.data.ids && Array.isArray(response.data.ids)) {
+                    response.data.ids.forEach(function (id) {
+                        self.state.loadedIds.add(id);
+                    });
+                }
+
+                // Adicionar HTML
+                $('#posts-container').append(response.data.html);
+                $('#ids').val(Array.from(self.state.loadedIds).join(','));
+
+                self.state.hasMore = response.data.has_more;
+
+                if (!self.state.hasMore) {
+                    $('#load-more-btn').fadeOut();
+                    $('.no-more-posts-message').fadeIn();
+                }
+            },
+            error: function () {
+                alert('Erro ao carregar notícias. Tente novamente.');
+            },
+            complete: function () {
+                $('.imgLoader').fadeOut(200);
+                $('#load-more-btn').prop('disabled', false).removeClass('loading');
+                self.state.loading = false;
+            }
+        });
+    }
+};
+
+$(document).ready(function () {
+    // Inicializa se o botão "Ver Mais" existir na página
+    if ($('#load-more-btn').length > 0) {
+        window.BahiaLoadMore.init();
     }
 });
-
 
 // ============================================
 // 6. EXPORTS GLOBAIS
@@ -230,5 +306,3 @@ window.BahiaTheme = {
     backToTop: initBackToTop,
     version: '1.0.0'
 };
-
-console.log('🎉 Tema Bahia carregado com sucesso!');

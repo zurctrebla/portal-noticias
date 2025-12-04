@@ -1,0 +1,240 @@
+// Barra de Busca com Filtros - Responsivo
+
+.bahia-searchbar {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    .tablet-up({
+        padding: 20px;
+    });
+
+    .search-form {
+        width: 100%;
+    }
+
+    // Campo de busca principal
+    .search-field-group {
+        margin-bottom: 15px;
+
+        .search-input-wrapper {
+            width: 100%;
+            display: flex;
+
+            .search-field {
+                flex: 1;
+                border: 1px solid #ddd;
+                border-radius: 4px 0 0 4px;
+                padding: 12px 15px;
+                font-size: 14px;
+
+                &:focus {
+                    outline: none;
+                    border-color: #2185d0;
+                }
+            }
+
+            .search-submit {
+                border-radius: 0 4px 4px 0;
+                margin: 0;
+                white-space: nowrap;
+                padding: 12px 20px;
+
+                .mobile-only({
+                    padding: 12px 15px;
+
+                    .button-text {
+                        display: none;
+                    }
+
+                    .icon {
+                        margin: 0 !important;
+                    }
+                });
+            }
+        }
+    }
+
+    // Filtros
+    .search-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: flex-end;
+
+        // Mobile: vertical
+        .mobile-only({
+            flex-direction: column;
+            gap: 15px;
+
+            .filter-group {
+                width: 100%;
+            }
+        });
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+
+            label {
+                font-size: 13px;
+                font-weight: 600;
+                color: #666;
+            }
+
+            .date-input,
+            .ui.dropdown,
+            select {
+                padding: 8px 12px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-size: 14px;
+                min-width: 150px;
+
+                .mobile-only({
+                    width: 100%;
+                });
+            }
+
+            // Semantic UI dropdown
+            .ui.dropdown {
+                min-height: auto;
+            }
+        }
+
+        // Filtro de data
+        .date-filter {
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+
+            .mobile-only({
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            });
+
+            label {
+                margin: 0;
+                white-space: nowrap;
+
+                .mobile-only({
+                    margin-bottom: 3px;
+                });
+            }
+
+            .date-input {
+                min-width: 140px;
+
+                .mobile-only({
+                    width: 100%;
+                });
+            }
+        }
+
+        // Editoria filter
+        .editoria-filter {
+            flex: 1;
+
+            .mobile-only({
+                width: 100%;
+            });
+
+            .tablet-up({
+                min-width: 200px;
+            });
+        }
+
+        // Botão limpar
+        .clear-filters {
+            align-self: flex-end;
+            white-space: nowrap;
+
+            .mobile-only({
+                width: 100%;
+                justify-content: center;
+            });
+        }
+    }
+
+    // Screen reader only
+    .screen-reader-text {
+        position: absolute;
+        left: -10000px;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+    }
+
+    // Versão compacta para header
+    &.compact {
+        padding: 10px;
+        margin-bottom: 0;
+        background: transparent;
+        box-shadow: none;
+
+        .search-filters {
+            .mobile-only({
+                display: none; // Esconde filtros na versão compacta mobile
+            });
+        }
+    }
+
+    // Versão sticky (fixada no topo)
+    &.sticky {
+        position: sticky;
+        top: 60px; // Abaixo do header
+        z-index: 100;
+        margin-bottom: 20px;
+    }
+}
+
+// Resultados da busca
+.search-results-info {
+    padding: 15px 20px;
+    background: #f0f8ff;
+    border-left: 4px solid #2185d0;
+    margin-bottom: 20px;
+    border-radius: 4px;
+
+    .search-term {
+        font-weight: 600;
+        color: #2185d0;
+    }
+
+    .results-count {
+        color: #666;
+        font-size: 14px;
+        margin: 0 0 10px 0;
+    }
+
+    .active-filters {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        .filter-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 16px;
+            font-size: 13px;
+
+            .remove {
+                cursor: pointer;
+                color: #999;
+
+                &:hover {
+                    color: #333;
+                }
+            }
+        }
+    }
+}

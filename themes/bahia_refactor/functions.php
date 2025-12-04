@@ -1,5 +1,6 @@
 <?php
 require_once 'Mobile-Detect/Mobile_Detect.php';
+require_once 'inc/search-filters.php';
 
 // Disable use XML-RPC
 add_filter('xmlrpc_enabled', '__return_false');
@@ -1287,12 +1288,14 @@ function bahia_theme_enqueue_assets()
     );
 
     // Passa dados para o JavaScript
+    global $POST_TYPES_LIST;
     wp_localize_script('bahia-theme-script', 'bahiaThemeData', [
         'ajaxUrl' => admin_url('admin-ajax.php'),
         'nonce' => wp_create_nonce('bahia_theme_nonce'),
         'infiniteScrollNonce' => wp_create_nonce('bahia_infinite_scroll'),
         'homeUrl' => home_url('/'),
         'themeUrl' => $theme_uri,
+        'postTypesList' => $POST_TYPES_LIST, // Lista de post types para a home
     ]);
 }
 add_action('wp_enqueue_scripts', 'bahia_theme_enqueue_assets');

@@ -1,7 +1,10 @@
 <?php
 get_header();
 
-if (!isset($_POST["b"])) {
+// Usa get_search_query() do WordPress (padrão)
+$searched = get_search_query();
+
+if (empty($searched)) {
 ?>
     <script type="text/javascript">
         window.location.href = "<?php bloginfo('url'); ?>";
@@ -9,23 +12,20 @@ if (!isset($_POST["b"])) {
 <?php
 } else {
 
-    $searched = stripslashes($_POST['b']);
     $ipad = strpos(getUserAgent(), "iPad");
     $news_ids = array();
 
-    if (isset($searched)) {
-        wp_reset_query();
+    wp_reset_query();
 
-        $params = array(
-            'post_type' => explode(',', $POST_TYPES_LIST),
-            'post_status' => 'publish',
-            's' => $searched,
-            'orderby' => 'post_date',
-            'order' => 'DESC',
-            'no_found_rows' => true,
-            'ignore_sticky_posts' => true
-        );
-    }
+    $params = array(
+        'post_type' => explode(',', $POST_TYPES_LIST),
+        'post_status' => 'publish',
+        's' => $searched,
+        'orderby' => 'post_date',
+        'order' => 'DESC',
+        'no_found_rows' => true,
+        'ignore_sticky_posts' => true
+    );
 
     $query = new WP_Query($params);
     $qtdResultados = count($query->posts);
@@ -36,8 +36,8 @@ if (!isset($_POST["b"])) {
             <div class="main-interno">
                 <div class="grid-base-int">
 
-                    <form id="busca" method="post" action="/?s=">
-                        <input type="text" value="<?= $searched; ?>" name="b" />
+                    <form id="busca" role="search" method="get" action="<?php echo esc_url(home_url('/')); ?>">
+                        <input type="search" value="<?= esc_attr($searched); ?>" name="s" placeholder="Buscar..." />
                         <input type="submit" value="" />
 
                         <div class="feedback-resultado-busca">
