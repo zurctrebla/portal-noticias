@@ -1,0 +1,30 @@
+name: Deploy wp-content (prod)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-prod:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Atualiza wp-content
+        run: |
+          cd /opt/bahia-website/wp-content
+          git fetch origin
+          git reset --hard origin/main
+
+      - name: Instalar dependências
+        run: |
+          cd /opt/bahia-website/wp-content/themes/bahia_refactor
+          npm ci
+          npm run theme:build
+
+      - name: Reiniciar WordPress
+        run: |
+          docker ps | grep wordpress && docker restart wordpress || true
