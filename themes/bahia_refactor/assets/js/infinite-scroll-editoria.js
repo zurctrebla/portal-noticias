@@ -285,7 +285,11 @@
     };
 
     $(document).ready(function () {
-        InfiniteScroll.init();
+        // Não inicializar se o botão "Ver Mais" existir (home usa botão)
+        // Apenas em páginas de editoria que não têm o botão
+        if ($('#load-more-btn').length === 0) {
+            InfiniteScroll.init();
+        }
     });
 
 })(jQuery);
