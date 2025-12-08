@@ -6,6 +6,7 @@
 import $ from 'jquery';
 import '@fontsource/lato';
 import '../assets/js/infinite-scroll-editoria';
+import '../assets/js/load-more-home';
 
 // Expõe jQuery globalmente IMEDIATAMENTE e SINCRONAMENTE
 window.$ = $;
