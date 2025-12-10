@@ -44,23 +44,6 @@ $urlPost = get_permalink();
                         }
                         ?>
                     </div>
-                    <ul class="sharebox">
-                        <li>
-                            <a class="twitter" title="Twitter" onclick="window.open('https://twitter.com/intent/tweet?url='+encodeURIComponent('<?= $urlPost ?>')+'&text=<?php resumo(80, get_the_title()); ?>', '', 'toolbar=no, location=no, status=no, menubar=no, scrollbars=no, resizable=no, top=200, left='+Math.round((screen.width / 2) - (550 / 2))+', width=550, height=450');">
-                                <img id="img_twitter_<?= get_the_ID() ?>" style="width: 35px; height: 35px;" src="<?php bloginfo('template_url'); ?>/assets/imgs/img_twitter_big.png" alt="Twitter" />
-                            </a>
-                        </li>
-                        <li>
-                            <?php
-                            $whatsapp = get_option('options_whatsapp');
-                            if ($whatsapp):
-                            ?>
-                            <a href="https://wa.me/<?= $whatsapp ?>?text=<?= urlencode('Olá! Vi esta notícia: ') . $urlPost ?>" target="_blank" class="whatsapp">
-                                <img id="img_whatsapp" style="width: 35px; height: 35px;" src="<?php bloginfo('template_url'); ?>/assets/imgs/img_whatsapp_big.png" alt="Whatsapp" />
-                            </a>
-                            <?php endif; ?>
-                        </li>
-                    </ul>
                     <div class="materia">
                         <div class="conteudo_post">
                             <?php the_content(); ?>
@@ -78,23 +61,7 @@ $urlPost = get_permalink();
                         }
                         ?>
 
-                        <ul class="sharebox">
-                            <li>
-                                <a class="twitter" title="Twitter" onclick="window.open('https://twitter.com/intent/tweet?url='+encodeURIComponent('<?= $urlPost ?>')+'&text=<?php resumo(80, get_the_title()); ?>', '', 'toolbar=no, location=no, status=no, menubar=no, scrollbars=no, resizable=no, top=200, left='+Math.round((screen.width / 2) - (550 / 2))+', width=550, height=450');">
-                                    <img id="img_twitter_<?= get_the_ID() ?>" style="width: 35px; height: 35px;" src="<?php bloginfo('template_url'); ?>/assets/imgs/img_twitter_big.png" alt="Twitter" />
-                                </a>
-                            </li>
-                            <li>
-                                <?php
-                                $whatsapp = get_option('options_whatsapp');
-                                if ($whatsapp):
-                                ?>
-                                <a href="https://wa.me/<?= $whatsapp ?>?text=<?= urlencode('Olá! Vi esta notícia: ') . $urlPost ?>" target="_blank" class="whatsapp">
-                                    <img id="img_whatsapp" style="width: 35px; height: 35px;" src="<?php bloginfo('template_url'); ?>/assets/imgs/img_whatsapp_big.png" alt="Whatsapp" />
-                                </a>
-                                <?php endif; ?>
-                            </li>
-                        </ul>
+                        <?php include get_template_directory() . '/template-parts/social-share-buttons.php'; ?>
 
                         <!-- PUBLICIDADE -->
                         <!-- FIM PUBLICIDADE -->

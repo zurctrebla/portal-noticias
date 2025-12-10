@@ -890,9 +890,6 @@ function showLinePostWeb($postId, $fields, $divChamada = null, $exclusivo = fals
             <p class="dataPostHome"><?= $post_date; ?></p>
             <p class="txtTitleHome"><?php resumo(100, $post_title); ?></p>
             <p class="txtSubtitleHome"><?= obterSubtitulo($fields); ?></p>
-            <div id="div-share" style="padding-left: 0px; padding-top: 5px; padding-bottom: 30px;">
-                <a href="#/" class="twitter" title="Twitter" onclick="window.open('https://twitter.com/intent/tweet?url='+encodeURIComponent('<?= $permalink ?>')+'&text=<?php resumo(80, $post_title); ?>', '', 'toolbar=no, location=no, status=no, menubar=no, scrollbars=no, resizable=no, top=200, left='+Math.round((screen.width / 2) - (550 / 2))+', width=550, height=450');"><img id="img_twitter_<?= $postId ?>" style="width: 25px; height: 25px;" src="<?php bloginfo('template_url'); ?>/assets/imgs/img_twitter_big.png" alt="Twitter" /></a>
-            </div>
         </a>
     </li>
 <?php
