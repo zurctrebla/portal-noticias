@@ -4221,6 +4221,20 @@ ul.sharebox {
     margin-bottom: 12px;
 }
 
+.sharebox a {
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+}
+
+.sharebox a:hover {
+    opacity: 0.7;
+}
+
+.sharebox a img,
+.sharebox a svg {
+    display: block;
+}
+
 .infoPost {
     float: left;
     padding-left: 5px;
