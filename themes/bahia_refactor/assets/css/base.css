@@ -2661,6 +2661,9 @@ aside .bt-ultimas-aside:hover {
     color: #333;
     border-bottom: dotted 1px #333
 }
+.resultado-busca li:first-child {
+    padding-top: 0;
+}
 .resultado-busca li a {
     text-decoration: none
 }
@@ -2783,7 +2786,7 @@ aside .bt-ultimas-aside:hover {
 .filtros-resultado-busca {
     /*float: left;*/
     position: relative;
-    margin: 20px 0 0;
+    margin: 0;
     padding-bottom: 20px;
     width: 100%;
     clear: both;
@@ -3622,6 +3625,25 @@ aside .bt-ultimas-aside:hover {
         width: 90%;
         margin: 0 5%
     }
+
+    /* Reduz espaçamento acima do DESTAQUE no mobile */
+    .divCoberturaMobile {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+    .filtros-resultado-busca {
+        margin-top: 0 !important;
+    }
+
+    #divPublicidade {
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+    }
+
+    .resultado-busca li:first-child {
+        padding-top: 0 !important;
+    }
 }
 .es-carousel-wrapper {
     background: #706f73;
@@ -4268,7 +4290,7 @@ img.infoPost {
 }
 
 #divPublicidade {
-    padding-top: 20px;
+    padding-top: 0;
     text-align: center;
     float: left;
 }
@@ -4700,7 +4722,8 @@ img.infoPost {
 .divCoberturaMobile {
     width: 100%;
     height: 40px;
-    margin-top: 10px;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 .divCoberturaAoVivoMobile {

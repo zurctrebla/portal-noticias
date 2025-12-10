@@ -11,7 +11,7 @@ $objCobertura = $wpdb->get_results($sql);
 $objPopup = [];
 $news_ids = [];
 ?>
-<main style="padding-top: 65px;">
+<main style="padding-top: 0px;">
     <div class="container">
         <!-- INTERNA -->
         <div class="main-interno">
