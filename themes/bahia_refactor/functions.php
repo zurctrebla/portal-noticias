@@ -972,10 +972,16 @@ function printDateSearch($date)
 function obterDestaqueMaiorMobile()
 {
     $destaque = get_option("options_slider_m1", 'options');
+
+    // Carrega as funções de ícones
+    require_once get_template_directory() . '/template-parts/social-icons.php';
 ?>
 
-    <div class="filtros-resultado-busca">
+    <div class="filtros-resultado-busca" style="display: flex; justify-content: space-between; align-items: center;">
         <a href="#" class="ativo">DESTAQUE</a>
+        <div style="display: flex; gap: 8px;">
+            <?php render_social_follow_links(24, array('wrapper_class' => '', 'link_style' => 'display: inline-block; margin: 0;')); ?>
+        </div>
     </div>
 
     <ul class="resultado-busca">
