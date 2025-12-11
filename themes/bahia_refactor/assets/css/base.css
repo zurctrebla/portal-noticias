@@ -3644,6 +3644,13 @@ aside .bt-ultimas-aside:hover {
     .resultado-busca li:first-child {
         padding-top: 0 !important;
     }
+
+    /* Remove bordas dos ícones de redes sociais no mobile */
+    .filtros-resultado-busca .social-link {
+        border-right: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
 }
 .es-carousel-wrapper {
     background: #706f73;
