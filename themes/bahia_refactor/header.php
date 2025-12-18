@@ -188,13 +188,13 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
                 </a>
             </div>
                 <div class="right item removeBorderItemMenu">
-                    <form method="post" action="/?s=" style="position: absolute;">
+                    <form method="post" action="/?s=" style="position: absolute;" id="searchFormMobile">
                         <div style="right: 3rem;" class="ui icon top right pointing dropdown button <?php if($ipad){echo "dropdownBtnSearchIpad";}else{echo "dropdownBtnSearchMobile";} ?>">
                             <i class="search icon"></i>
                             <div class="menu divMenu">
                                     <div class="ui fluid action input">
                                             <input type="text" id="txtSearch" name="b" data-url="<?php bloginfo('url'); ?>" placeholder="Conteúdo">
-                                            <button class="ui blue button" id="btnSearch">Buscar</button>
+                                            <button type="button" class="ui blue button" id="btnSearch">Buscar</button>
                                     </div>
                                 <div class="item" style="display: none;"></div>
                             </div>
@@ -342,13 +342,13 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
             </div>
 
             <div class="item" style="padding-right: 10% !important;">
-                <form method="post" action="/?s=">
+                <form method="post" action="/?s=" id="searchFormDesktop">
                     <div class="ui icon top right pointing dropdown button buscaNav dropdownBtnSearchIpad">
                         <i class="search icon"></i>
                         <div class="menu">
                             <div class="ui action input">
                                 <input type="text" id="txtSearch2" name="b" data-url="<?php bloginfo('url'); ?>" placeholder="Conteúdo">
-                                <button class="ui blue button" id="btnSearch2">Buscar</button>
+                                <button type="button" class="ui blue button" id="btnSearch2">Buscar</button>
                             </div>
                             <div class="item" style="display: none;"></div>
                         </div>
