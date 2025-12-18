@@ -889,7 +889,6 @@ function showLinePostWeb($postId, $fields, $divChamada = null, $exclusivo = fals
             </div>
             <p class="dataPostHome"><?= $post_date; ?></p>
             <p class="txtTitleHome"><?php resumo(100, $post_title); ?></p>
-            <p class="txtSubtitleHome"><?= obterSubtitulo($fields); ?></p>
         </a>
     </li>
 <?php
@@ -946,11 +945,6 @@ function showLinePostMobile($postId, $fields, $divChamada = null, $spanCategoria
                 <?php } ?>
                 <p class="data-publicacao"></p>
                 <h2 class="call-chamada"><?php resumo(100, $post_title); ?></h2>
-                <?php if ($subtitulo == "") : ?>
-                    <p><?php resumo(170, get_the_excerpt()); ?></p>
-                <?php else : ?>
-                    <p><?php resumo(170, $subtitulo); ?></p>
-                <?php endif; ?>
             </div>
         </a>
     </li>

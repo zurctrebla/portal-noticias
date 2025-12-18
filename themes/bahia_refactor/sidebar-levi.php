@@ -38,11 +38,6 @@
 									<figure><img src="<?= $img; ?>" <?=getMedidasImagem('news_home');?>></figure>
 								<?php endif; ?>
                                 <p class="call-chamada"><?= get_the_title($id); ?></p>
-                                <?php if ($subtitulo == ""): ?>
-                                    <p class="txtSubtitleHome"><?php resumo(170, get_the_excerpt()); ?></p>
-                                <?php else: ?>
-                                    <p class="txtSubtitleHome"><?php resumo(170, $subtitulo); ?></p>
-                                <?php endif; ?>
                             </a>
                         </div>
                         <a href="<?= get_permalink($id); ?>">
@@ -92,11 +87,6 @@
 									<figure><img src="<?= $img; ?>" <?=getMedidasImagem('news_home');?>></figure>
 								<?php endif; ?>
                                 <p class="call-chamada"><?= get_the_title($id); ?></p>
-                                <?php if ($subtitulo == ""): ?>
-                                    <p class="txtSubtitleHome"><?php resumo(170, get_the_excerpt()); ?></p>
-                                <?php else: ?>
-                                    <p class="txtSubtitleHome"><?php resumo(170, $subtitulo); ?></p>
-                                <?php endif; ?>
                             </a>
                         </div>
                         <a href="<?= get_permalink($id); ?>">
