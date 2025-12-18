@@ -33,11 +33,6 @@
                         <?php endif;
                         ?>
                         <p class="call-chamada"><?= get_the_title($id2); ?></p>
-                        <?php if ($subtitulo == ""): ?>
-                            <p class="txtSubtitleHome"><?php resumo(170, get_the_excerpt()); ?></p>
-                        <?php else: ?>
-                            <p class="txtSubtitleHome"><?php resumo(170, $subtitulo); ?></p>
-                        <?php endif; ?>
                     </a>
                 </div>
                 <a href="<?php echo $post_type; ?>">
@@ -104,11 +99,6 @@
                         <?php endif;
                         ?>
                         <p class="call-chamada"><?= get_the_title($id3); ?></p>
-                        <?php if ($subtitulo == ""): ?>
-                            <p class="txtSubtitleHome"><?php resumo(170, get_the_excerpt()); ?></p>
-                        <?php else: ?>
-                            <p class="txtSubtitleHome"><?php resumo(170, $subtitulo); ?></p>
-                        <?php endif; ?>
                     </a>
                 </div>
                 <a href="<?php echo $post_type; ?>">
