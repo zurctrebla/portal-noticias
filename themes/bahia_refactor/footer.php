@@ -8,6 +8,7 @@
         <div class="container">
             <ul>
                 <li><a href="<?php bloginfo('url'); ?>/ultimas-noticias" data-notificacao="">Últimas Notícias</a></li>
+                <li><a href="<?php bloginfo('url'); ?>/quem-somos" data-notificacao="">Quem Somos</a></li>
                 <li><a href="<?php bloginfo('url'); ?>/politica" data-notificacao="">Política</a></li>
                 <li><a href="<?php bloginfo('url'); ?>/salvador" data-notificacao="">Salvador</a></li>
                 <li><a href="<?php bloginfo('url'); ?>/bahia" data-notificacao="">Bahia</a></li>
