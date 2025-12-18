@@ -105,6 +105,9 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
             <a class="item" href="<?php bloginfo('url'); ?>/ultimas-noticias">
                 <p class="txtItemMenu">Últimas Notícias</p>
             </a>
+            <a class="item" href="<?php bloginfo('url'); ?>/quem-somos">
+                <p class="txtItemMenu">Quem Somos</p>
+            </a>
             <a class="item" href="<?php bloginfo('url'); ?>/politica-de-privacidade">
                 <p class="txtItemMenu">Política de Privacidade</p>
             </a>
@@ -226,6 +229,9 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
                     <div class="menu" style="width: 200px;">
                         <div class="item url-link" data-url="<?php bloginfo('url'); ?>/ultimas-noticias">
                             <a href="#/">Últimas Notícias</a>
+                        </div>
+                        <div class="item url-link" data-url="<?php bloginfo('url'); ?>/quem-somos">
+                            <a href="#/">Quem Somos</a>
                         </div>
                         <div class="item">
                             <i class="dropdown icon"></i>
@@ -400,6 +406,9 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
                                             <div class="item url-link" data-url="<?php bloginfo('url'); ?>/ultimas-noticias">
                                                 <a href="#/">Últimas Notícias</a>
                                             </div>
+                                            <div class="item url-link" data-url="<?php bloginfo('url'); ?>/quem-somos">
+                                                <a href="#/">Quem Somos</a>
+                                            </div>
                                             <div class="item">
                                                 <i class="dropdown icon"></i>
                                                 <div class="url-link" data-url="<?php bloginfo('url'); ?>/">
@@ -504,6 +513,7 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
                     <nav class="nav-drop">
                         <ul class="menu-principal">
                             <li><a href="<?php bloginfo('url'); ?>/ultimas-noticias" data-notificacao="">Últimas Notícias</a></li>
+                            <li><a href="<?php bloginfo('url'); ?>/quem-somos" data-notificacao="">Quem Somos</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/carnaval" data-notificacao="">Carnaval</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/politica" data-notificacao="">Política</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/social" data-notificacao="">Ginno Larry</a></li>

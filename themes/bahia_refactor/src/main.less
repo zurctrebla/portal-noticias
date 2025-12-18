@@ -1,6 +1,5 @@
 @import '../node_modules/semantic-ui-css/semantic.css';
 @import "../assets/css/base.css";
-@import "./styles/load-more.less";
 
 /* Variáveis customizadas */
 @bahia-azul: #0066cc;
@@ -23,8 +22,80 @@
 /* Botões customizados */
 .bt-menu-mobile {
   display: none;
-  
+
   @media (max-width: 768px) {
       display: block;
+  }
+}
+
+/* Página Quem Somos */
+.quem-somos-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid @bahia-azul;
+}
+
+.quem-somos-title {
+  color: @bahia-azul;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+
+  @media (max-width: 768px) {
+    font-size: 1.8rem;
+  }
+}
+
+.quem-somos-content {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #333;
+
+  p {
+    margin-bottom: 1.5rem;
+    text-align: justify;
+  }
+
+  h2 {
+    color: @bahia-azul;
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-top: 2.5rem;
+    margin-bottom: 1.5rem;
+
+    @media (max-width: 768px) {
+      font-size: 1.5rem;
+    }
+  }
+
+  h3 {
+    color: @bahia-verde;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+
+    @media (max-width: 768px) {
+      font-size: 1.3rem;
+    }
+  }
+
+  ul, ol {
+    margin-bottom: 1.5rem;
+    padding-left: 2rem;
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    line-height: 1.6;
+
+    p {
+      text-align: left;
+    }
   }
 }
