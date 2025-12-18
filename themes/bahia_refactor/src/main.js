@@ -189,14 +189,32 @@ $(document).on('click', '.url-link', function (e) {
 });
 
 // Busca
-$(document).on('click', '#btnSearch, #btnSearch2', function (e) {
+$(document).on('click', '#btnSearch', function (e) {
     e.preventDefault();
-    const searchInput = $(this).siblings('input[type="text"]');
-    const searchTerm = searchInput.val();
-    const baseUrl = searchInput.data('url');
+    const searchTerm = $('#txtSearch').val();
+    const baseUrl = $('#txtSearch').data('url');
 
     if (searchTerm) {
         window.location.href = baseUrl + '/?s=' + encodeURIComponent(searchTerm);
+    }
+});
+
+$(document).on('click', '#btnSearch2', function (e) {
+    e.preventDefault();
+    const searchTerm = $('#txtSearch2').val();
+    const baseUrl = $('#txtSearch2').data('url');
+
+    if (searchTerm) {
+        window.location.href = baseUrl + '/?s=' + encodeURIComponent(searchTerm);
+    }
+});
+
+// Busca ao pressionar Enter
+$(document).on('keypress', '#txtSearch, #txtSearch2', function (e) {
+    if (e.which === 13) {
+        e.preventDefault();
+        const buttonId = $(this).attr('id') === 'txtSearch' ? '#btnSearch' : '#btnSearch2';
+        $(buttonId).click();
     }
 });
 

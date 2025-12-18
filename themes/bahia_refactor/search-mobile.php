@@ -1,7 +1,15 @@
 <?php
 get_header();
 
-if (!isset($_POST["b"])) {
+// Aceita busca via POST ou GET
+$searchTerm = '';
+if (isset($_POST["b"])) {
+    $searchTerm = stripslashes($_POST['b']);
+} elseif (isset($_GET["s"])) {
+    $searchTerm = stripslashes($_GET['s']);
+}
+
+if (empty($searchTerm)) {
 ?>
     <script type="text/javascript">
         window.location.href = "<?php bloginfo('url'); ?>";
@@ -9,7 +17,7 @@ if (!isset($_POST["b"])) {
 <?php
 } else {
 
-    $searched = stripslashes($_POST['b']);
+    $searched = $searchTerm;
     $ipad = strpos(getUserAgent(), "iPad");
     $news_ids = array();
 
