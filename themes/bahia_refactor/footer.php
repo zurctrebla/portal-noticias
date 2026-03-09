@@ -9,9 +9,11 @@
             <ul>
                 <li><a href="<?php bloginfo('url'); ?>/ultimas-noticias" data-notificacao="">Últimas Notícias</a></li>
                 <li><a href="<?php bloginfo('url'); ?>/politica" data-notificacao="">Política</a></li>
+                <li><a href="<?php bloginfo('url'); ?>/esporte" data-notificacao="">Esporte</a></li>
+                <li><a href="<?php bloginfo('url'); ?>/entretenimento" class="" data-notificacao="">Entretenimento</a></li>
+                <li><a href="<?php bloginfo('url'); ?>/quem-somos" data-notificacao="">Quem Somos</a></li>
                 <li><a href="<?php bloginfo('url'); ?>/salvador" data-notificacao="">Salvador</a></li>
                 <li><a href="<?php bloginfo('url'); ?>/bahia" data-notificacao="">Bahia</a></li>
-                <li><a href="<?php bloginfo('url'); ?>/entretenimento" class="" data-notificacao="">Entretenimento</a></li>
                 <li><a href="<?php bloginfo('url'); ?>/municipios" data-notificacao="">Municípios</a></li>
                 <li><a href="<?php bloginfo('url'); ?>/mundo" data-notificacao="">Mundo</a></li>
                 <li><a href="<?php bloginfo('url'); ?>/entrevista" data-notificacao="">Entrevistas</a></li>
