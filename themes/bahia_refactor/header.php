@@ -105,6 +105,15 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
             <a class="item" href="<?php bloginfo('url'); ?>/ultimas-noticias">
                 <p class="txtItemMenu">Últimas Notícias</p>
             </a>
+            <a class="item" href="<?php bloginfo('url'); ?>/politica">
+                <p class="txtItemMenu">Política</p>
+            </a>
+            <a class="item" href="<?php bloginfo('url'); ?>/esporte">
+                <p class="txtItemMenu">Esporte</p>
+            </a>
+            <a class="item" href="<?php bloginfo('url'); ?>/entretenimento">
+                <p class="txtItemMenu">Entretenimento</p>
+            </a>
             <a class="item" href="<?php bloginfo('url'); ?>/quem-somos">
                 <p class="txtItemMenu">Quem Somos</p>
             </a>
@@ -116,9 +125,6 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
             </a>
             <a class="item" href="<?php bloginfo('url'); ?>/carnaval">
                 <p class="txtItemMenu">Carnaval</p>
-            </a>
-            <a class="item" href="<?php bloginfo('url'); ?>/politica">
-                <p class="txtItemMenu">Política</p>
             </a>
             <a class="item" href="<?php bloginfo('url'); ?>/social">
                 <p class="txtItemMenu">Ginno Larry</p>
@@ -147,14 +153,8 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
             <a class="item" href="<?php bloginfo('url'); ?>/exclusivo">
                 <p class="txtItemMenu">Exclusivo</p>
             </a>
-            <a class="item" href="<?php bloginfo('url'); ?>/esporte">
-                <p class="txtItemMenu">Esporte</p>
-            </a>
             <a class="item" href="<?php bloginfo('url'); ?>/brasil">
                 <p class="txtItemMenu">Brasil</p>
-            </a>
-            <a class="item" href="<?php bloginfo('url'); ?>/entretenimento">
-                <p class="txtItemMenu">Entretenimento</p>
             </a>
             <a class="item" href="<?php bloginfo('url'); ?>/mais_gente">
                 <p class="txtItemMenu">Mais Gente</p>
@@ -406,6 +406,39 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
                                             <div class="item url-link" data-url="<?php bloginfo('url'); ?>/ultimas-noticias">
                                                 <a href="#/">Últimas Notícias</a>
                                             </div>
+                                            <div class="item">
+                                                <!-- <i class="dropdown icon"></i> -->
+                                                <div class="url-link" data-url="<?php bloginfo('url'); ?>/politica">
+                                                    <span class="text" >
+                                                        <a href="#/">Política</a>
+                                                    </span>
+                                                </div>
+                                                <!-- <div class="menu url-link" data-url="<?//php bloginfo('url'); ?>/eleicoes2024">
+                                                    <div class="item"><a href="#/">Eleições 2024</a></div>
+                                                </div> -->
+                                            </div>
+                                            <div class="item">
+                                                <i class="dropdown icon"></i>
+                                                <div class="url-link" data-url="<?php bloginfo('url'); ?>/esporte">
+                                                    <span class="text" >
+                                                        <a href="#/">Esporte</a>
+                                                    </span>
+                                                </div>
+                                                <div class="menu url-link" data-url="<?php bloginfo('url'); ?>/esporte?category=brasileirao">
+                                                    <div class="item"><a href="#/">Brasileirão 2025</a></div>
+                                                </div>
+                                            </div>
+                                            <div class="item">
+                                                <i class="dropdown icon"></i>
+                                                <div class="url-link" data-url="<?php bloginfo('url'); ?>/entretenimento">
+                                                    <span class="text" >
+                                                        <a href="#/">Entretenimento</a>
+                                                    </span>
+                                                </div>
+                                                <div class="menu url-link" data-url="<?php bloginfo('url'); ?>/carnaval">
+                                                    <div class="item"><a href="#/">Carnaval</a></div>
+                                                </div>
+                                            </div>
                                             <div class="item url-link" data-url="<?php bloginfo('url'); ?>/quem-somos">
                                                 <a href="#/">Quem Somos</a>
                                             </div>
@@ -420,17 +453,6 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
                                                     <div class="item url-link"><a href="#/" class="linkMenu" data-url="<?php bloginfo('url'); ?>/politica-de-privacidade">Política de Privacidade</a></div>
                                                     <div class="item url-link"><a href="#/" class="linkMenu" data-url="<?php bloginfo('url'); ?>/politica-de-cookies">Política de Cookies</a></div>
                                                 </div>
-                                            </div>
-                                            <div class="item">
-                                                <!-- <i class="dropdown icon"></i> -->
-                                                <div class="url-link" data-url="<?php bloginfo('url'); ?>/politica">
-                                                    <span class="text" >
-                                                        <a href="#/">Política</a>
-                                                    </span>
-                                                </div>
-                                                <!-- <div class="menu url-link" data-url="<?//php bloginfo('url'); ?>/eleicoes2024">
-                                                    <div class="item"><a href="#/">Eleições 2024</a></div>
-                                                </div> -->
                                             </div>
                                             <div class="item url-link" data-url="<?php bloginfo('url'); ?>/social">
                                                 <a href="#/">Ginno Larry</a>
@@ -453,30 +475,8 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
                                             <div class="item url-link" data-url="<?php bloginfo('url'); ?>/exclusivo">
                                                 <a href="#/">Exclusivo</a>
                                             </div>
-                                            <div class="item">
-                                                <i class="dropdown icon"></i>
-                                                <div class="url-link" data-url="<?php bloginfo('url'); ?>/esporte">
-                                                    <span class="text" >
-                                                        <a href="#/">Esporte</a>
-                                                    </span>
-                                                </div>
-                                                <div class="menu url-link" data-url="<?php bloginfo('url'); ?>/esporte?category=brasileirao">
-                                                    <div class="item"><a href="#/">Brasileirão 2025</a></div>
-                                                </div>
-                                            </div>
                                             <div class="item url-link" data-url="<?php bloginfo('url'); ?>/brasil">
                                                 <a href="#/">Brasil</a>
-                                            </div>
-                                            <div class="item">
-                                                <i class="dropdown icon"></i>
-                                                <div class="url-link" data-url="<?php bloginfo('url'); ?>/entretenimento">
-                                                    <span class="text" >
-                                                        <a href="#/">Entretenimento</a>
-                                                    </span>
-                                                </div>
-                                                <div class="menu url-link" data-url="<?php bloginfo('url'); ?>/carnaval">
-                                                    <div class="item"><a href="#/">Carnaval</a></div>
-                                                </div>
                                             </div>
                                             <div class="item url-link" data-url="<?php bloginfo('url'); ?>/mais_gente">
                                                 <a href="#/">Mais Gente</a>
@@ -501,10 +501,10 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
                                 </a>
                             </li>
                             <li><a href="<?php bloginfo('url'); ?>/politica" data-notificacao="">Política</a></li>
-                            <li><a href="<?php bloginfo('url'); ?>/social" data-notificacao="">Ginno Larry</a></li>
-                            <li><a href="<?php bloginfo('url'); ?>/investimentos" data-notificacao="">Investimentos</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/esporte" data-notificacao="">Esporte</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/entretenimento" data-notificacao="">Entretenimento</a></li>
+                            <li><a href="<?php bloginfo('url'); ?>/social" data-notificacao="">Ginno Larry</a></li>
+                            <li><a href="<?php bloginfo('url'); ?>" data-notificacao="">Investimentos</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/salvador" data-notificacao="">Salvador</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/bahia" data-notificacao="">Bahia</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/justica" data-notificacao="">Justiça</a></li>
@@ -517,7 +517,7 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
                             <li><a href="<?php bloginfo('url'); ?>/carnaval" data-notificacao="">Carnaval</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/politica" data-notificacao="">Política</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/social" data-notificacao="">Ginno Larry</a></li>
-                            <li><a href="<?php bloginfo('url'); ?>/investimentos" data-notificacao="">Investimentos</a></li>
+                            <li><a href="<?php bloginfo('url'); ?>" data-notificacao="">Investimentos</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/salvador" data-notificacao="">Salvador</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/bahia" data-notificacao="">Bahia</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/municipios" data-notificacao="">Municípios</a></li>
