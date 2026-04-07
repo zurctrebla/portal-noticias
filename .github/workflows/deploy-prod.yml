@@ -27,4 +27,6 @@ jobs:
 
       - name: Reiniciar WordPress
         run: |
-          docker ps | grep wordpress && docker restart wordpress || true
+          #docker ps | grep wordpress && docker restart wordpress || true
+          docker service update --force bahia-wordpress_wordpress
+
