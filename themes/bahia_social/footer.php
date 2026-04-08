@@ -30,7 +30,7 @@
             </nav>
             <div class="low-footer">
                 <div class="container">
-                    <small>Copyright 2016 Bahia.ba</small>
+                    <small>Copyright <?php echo date('Y'); ?> Bahia.ba</small>
                     <ul>
                         <li><a href="<?php bloginfo('url'); ?>/anuncie-conosco">Anuncie Conosco</a></li>
                     </ul>
