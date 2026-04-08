@@ -285,7 +285,7 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
                                 </span>
                             </div>
                             <div class="menu url-link" data-url="<?php bloginfo('url'); ?>/esporte?category=brasileirao">
-                                <div class="item"><a href="#/">Brasileirão 2025</a></div>
+                                <div class="item"><a href="#/">Brasileirão 2026</a></div>
                             </div>
                         </div>
                         <div class="item url-link" data-url="<?php bloginfo('url'); ?>/brasil">
@@ -425,7 +425,7 @@ require_once get_template_directory() . '/template-parts/social-icons.php';
                                                     </span>
                                                 </div>
                                                 <div class="menu url-link" data-url="<?php bloginfo('url'); ?>/esporte?category=brasileirao">
-                                                    <div class="item"><a href="#/">Brasileirão 2025</a></div>
+                                                    <div class="item"><a href="#/">Brasileirão 2026</a></div>
                                                 </div>
                                             </div>
                                             <div class="item">
