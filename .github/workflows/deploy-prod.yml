@@ -29,4 +29,7 @@ jobs:
         run: |
           #docker ps | grep wordpress && docker restart wordpress || true
           docker service update --force bahia-wordpress_wordpress
-
+      - name: Purgar cache Varnish
+        run: |
+          VARNISH_ID=$(docker ps --filter "name=bahia-wordpress_varnish" --filter "status=running" --format "{{.ID}}" | head -1)
+          docker exec $VARNISH_ID varnishadm 'ban req.url ~ "."'
