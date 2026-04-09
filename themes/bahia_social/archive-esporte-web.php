@@ -71,6 +71,8 @@ if($_GET) {
         <div class="filtros-resultado-busca <?php if($ipad){echo "main-interno main-internoIpadArchive";}?>" style="margin-bottom: 20px;">
             <a href="/esporte" class="ativo" style="color: #15559e">ESPORTE</a>
             <a href="?category=brasileirao" class="categoriasLevi <?php if($category == "brasileirao"){echo "categoriasEntretenimentoAtual";}?>" >BRASILEIRÃO 2026</a>
+            <a href="?category=bahia" class="categoriasLevi <?php if($category == "bahia"){echo "categoriasEntretenimentoAtual";}?>" >EC BAHIA</a>
+            <a href="?category=vitoria" class="categoriasLevi <?php if($category == "vitoria"){echo "categoriasEntretenimentoAtual";}?>" >EC VITÓRIA</a>
         </div>
 
         <?php

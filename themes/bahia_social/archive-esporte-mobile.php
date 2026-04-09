@@ -87,6 +87,8 @@ if($_GET) {
                  <i class="sidebar icon"></i>
                  <div class="menu" >
                      <div class="<?php if($category == "brasileirao"){echo "active";}?> item"><a style="color: #545454;" href="?category=brasileirao">BRASILEIRÃO 2026</a></div>
+                     <div class="<?php if($category == "bahia"){echo "active";}?> item"><a style="color: #545454;" href="?category=bahia">EC BAHIA</a></div>
+                     <div class="<?php if($category == "vitoria"){echo "active";}?> item"><a style="color: #545454;" href="?category=vitoria">EC VITÓRIA</a></div>
                  </div>
              </div>
 
