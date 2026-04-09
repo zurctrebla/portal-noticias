@@ -12,6 +12,7 @@ if($_GET['category'] == "brasileirao") {
 var dados = null;
 var rodadaAtual = 1;
 
+(function($){
 $(document).ready(function () {
     $.ajax({
         method: "GET",
@@ -254,6 +255,7 @@ function formatarData(data) {
         return "";
     }
 }
+})(jQuery);
 </script>
 
 

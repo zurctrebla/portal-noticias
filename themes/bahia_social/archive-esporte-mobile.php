@@ -86,7 +86,7 @@ if($_GET) {
              <div class="circular ui icon top pointing dropdown button btnDropdownCategorias" style="left: 43.5%; margin-top: -10px !important; position: absolute; float: left;">
                  <i class="sidebar icon"></i>
                  <div class="menu" >
-                     <div class="<?php if($category == "brasileirao"){echo "active";}?> item"><a style="color: #545454;" href="?category=brasileirao">BRASILEIRÃO 2024</a></div>
+                     <div class="<?php if($category == "brasileirao"){echo "active";}?> item"><a style="color: #545454;" href="?category=brasileirao">BRASILEIRÃO 2026</a></div>
                      <div class="<?php if($category == "serie-b"){echo "active";}?> item"><a style="color: #545454;" href="?category=serie-b">SÉRIE B</a></div>
                      <div class="<?php if($category == "bahia"){echo "active";}?> item"><a style="color: #545454;" href="?category=bahia">E.C BAHIA</a></div>
                      <div class="<?php if($category == "vitoria"){echo "active";}?> item"><a style="color: #545454;" href="?category=vitoria">E.C VITÓRIA</a></div>

@@ -12,12 +12,19 @@ if($_GET['category'] == "brasileirao") {
 var dados = null;
 var rodadaAtual = 1;
 
+(function($){
 $(document).ready(function () {
     $.ajax({
         method: "GET",
         url: '/api_brasileirao.php',
         data: {serie: '<?=$serie?>'},
         dataType: 'json'
+    }).fail(function(xhr, status, error) {
+        $(".bodyTableClassificacao .trLoading").hide();
+        $(".divRod .trLoading").hide();
+        $('.bodyTableClassificacao').append("<tr><td colspan='7' class='center aligned'>Erro ao carregar classificação.</td></tr>");
+        $('.divJogosRodadas').html("<p class='center aligned'>Erro ao carregar rodadas.</p>");
+        console.error('Erro API Brasileirão:', status, error);
     }).done(function( retorno ) {
         var i;
         dados = retorno;
@@ -254,6 +261,7 @@ function formatarData(data) {
         return "";
     }
 }
+})(jQuery);
 </script>
 
 <div class="ui top attached tabular menu tabBrasileirao2017" style="margin-top: 50px;">

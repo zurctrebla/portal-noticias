@@ -41,7 +41,7 @@ if ($category) {
                     <i class="sidebar icon"></i>
                     <div class="menu">
                         <div class="<?php echo $category == 'brasileirao' ? 'active' : ''; ?> item">
-                            <a style="color: #545454;" href="?category=brasileirao">BRASILEIRÃO 2025</a>
+                            <a style="color: #545454;" href="?category=brasileirao">BRASILEIRÃO 2026</a>
                         </div>
                         <div class="<?php echo $category == 'serie-b' ? 'active' : ''; ?> item">
                             <a style="color: #545454;" href="?category=serie-b">SÉRIE B</a>
