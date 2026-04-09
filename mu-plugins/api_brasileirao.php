@@ -2,6 +2,8 @@
 /**
  * API Brasileirão
  * Serve /api_brasileirao.php via WordPress
+ * Fonte: api.football-data.org v4
+ * Saída: formato compatível com o front-end legado (estrutura UOL)
  */
 
 add_action('init', function () {
@@ -11,172 +13,241 @@ add_action('init', function () {
         return;
     }
 
+    // delete_transient('brasileirao_estadios_A');
+    // delete_transient('brasileirao_ftb_A');
+
     $serie = isset($_GET['serie']) ? strtoupper(sanitize_text_field($_GET['serie'])) : 'A';
 
-    if ($serie === 'A') {
-        $idCampeonato    = 30;
-        $numFase         = 4139;
-    } elseif ($serie === 'B') {
-        $idCampeonato    = 112;
-        $numFase         = 4138;
-    } else {
+    if ($serie !== 'A') {
         http_response_code(400);
         header('Content-Type: application/json');
-        echo json_encode(['error' => 'Serie inválida. Use A ou B.']);
+        echo json_encode(['error' => 'Apenas Série A disponível. Use ?serie=A']);
         exit;
     }
 
     header('Content-Type: application/json');
-    header('Cache-Control: max-age=60');
+    header('Cache-Control: max-age=1800');
 
-    $datetime  = time();
-    $dados_url = 'http://jsuol.com.br/c/monaco/utils/gestor/commons.js?file=commons.uol.com.br/sistemas/esporte/modalidades/futebol/campeonatos/dados/2025/' . $idCampeonato . '/dados.json&time=' . $datetime;
+    // $api_token      = 'aa11580137f54154b69714b0508e9cea';
+    $api_token      = 'f5c2e920e49b4657b44ff0ef77c87350';
+    $competition    = 'BSA';
+    $cache_key      = 'brasileirao_ftb_' . $serie;
+    $stale_key      = $cache_key . '_stale';
+    $cache_duration = 30 * MINUTE_IN_SECONDS;
 
-    $json_dados_raw = @file_get_contents($dados_url);
-
-    if (!$json_dados_raw) {
-        http_response_code(502);
-        echo json_encode(['error' => 'Falha ao buscar dados do Brasileirão.']);
+    // Retorna cache ativo se existir
+    $cached = get_transient($cache_key);
+    if ($cached !== false) {
+        echo $cached;
         exit;
     }
 
-    $json_dados = json_decode($json_dados_raw, true);
+    // --- Busca classificação ---
+    $standings_raw = wp_remote_get(
+        "https://api.football-data.org/v4/competitions/{$competition}/standings",
+        ['headers' => ['X-Auth-Token' => $api_token], 'timeout' => 15]
+    );
 
-    if (!$json_dados || !isset($json_dados['fases'][$numFase])) {
+    if (is_wp_error($standings_raw) || wp_remote_retrieve_response_code($standings_raw) !== 200) {
+        // Fallback: retorna último cache salvo sem expiração
+        $stale = get_option($stale_key);
+        if ($stale) { echo $stale; exit; }
         http_response_code(502);
-        echo json_encode(['error' => 'Dados inválidos ou fase não encontrada.']);
+        echo json_encode(['error' => 'Falha ao buscar classificação. Código: ' . wp_remote_retrieve_response_code($standings_raw)]);
         exit;
     }
 
-    $fase = $json_dados['fases'][$numFase];
+    $standings_data = json_decode(wp_remote_retrieve_body($standings_raw), true);
+    $matchday       = $standings_data['season']['currentMatchday'] ?? 1;
 
-    $json_final = [];
-    $json_final['atualizacao']       = $json_dados['atualizacao'];
-    $json_final['faixasClassificacao'] = $fase['faixas-classificacao'];
-    $json_final['rodada']            = $fase['rodada'];
-    $json_final['idJogosPorRodada']  = $fase['jogos']['rodada'];
-    $json_final['jogoPorId']         = $fase['jogos']['id'];
-    $json_final['classificacao']     = $fase['classificacao']['equipe'];
-    $json_final['equipes']           = $json_dados['equipes'];
+    // --- Busca todos os jogos (todas as rodadas) ---
+    $matches_raw = wp_remote_get(
+        "https://api.football-data.org/v4/competitions/{$competition}/matches",
+        ['headers' => ['X-Auth-Token' => $api_token], 'timeout' => 15]
+    );
 
-    foreach ($json_final['classificacao'] as $key => $i) {
-        unset(
-            $json_final['classificacao'][$key]['pg']['mandante'],
-            $json_final['classificacao'][$key]['pg']['visitante'],
-            $json_final['classificacao'][$key]['j']['mandante'],
-            $json_final['classificacao'][$key]['j']['visitante'],
-            $json_final['classificacao'][$key]['v']['mandante'],
-            $json_final['classificacao'][$key]['v']['visitante'],
-            $json_final['classificacao'][$key]['e']['mandante'],
-            $json_final['classificacao'][$key]['e']['visitante'],
-            $json_final['classificacao'][$key]['d']['mandante'],
-            $json_final['classificacao'][$key]['d']['visitante'],
-            $json_final['classificacao'][$key]['cd'],
-            $json_final['classificacao'][$key]['obs']
-        );
+    if (is_wp_error($matches_raw) || wp_remote_retrieve_response_code($matches_raw) !== 200) {
+        // Fallback: retorna último cache salvo sem expiração
+        $stale = get_option($stale_key);
+        if ($stale) { echo $stale; exit; }
+        http_response_code(502);
+        echo json_encode(['error' => 'Falha ao buscar jogos. Código: ' . wp_remote_retrieve_response_code($matches_raw)]);
+        exit;
     }
 
-    foreach ($json_final['equipes'] as $key => $i) {
-        unset(
-            $json_final['equipes'][$key]['uri'],
-            $json_final['equipes'][$key]['brasao'],
-            $json_final['equipes'][$key]['tag'],
-            $json_final['equipes'][$key]['tipo'],
-            $json_final['equipes'][$key]['cor'],
-            $json_final['equipes'][$key]['nome']
-        );
-    }
+    $matches_data = json_decode(wp_remote_retrieve_body($matches_raw), true);
 
-    foreach ($json_final['jogoPorId'] as $key => $i) {
-        unset(
-            $json_final['jogoPorId'][$key]['posicao'],
-            $json_final['jogoPorId'][$key]['njogo'],
-            $json_final['jogoPorId'][$key]['penalti1'],
-            $json_final['jogoPorId'][$key]['penalti2'],
-            $json_final['jogoPorId'][$key]['desempate_time1'],
-            $json_final['jogoPorId'][$key]['desempate_time2'],
-            $json_final['jogoPorId'][$key]['url-prejogo'],
-            $json_final['jogoPorId'][$key]['url-posjogo'],
-            $json_final['jogoPorId'][$key]['url-video'],
-            $json_final['jogoPorId'][$key]['eliminou-jogo-volta'],
-            $json_final['jogoPorId'][$key]['classificou-gols-fora'],
-            $json_final['jogoPorId'][$key]['local']
-        );
-        if (isset($json_final['jogoPorId'][$key]['estadio']) && $json_final['jogoPorId'][$key]['estadio'] === 'A definir') {
-            $json_final['jogoPorId'][$key]['estadio'] = null;
+    // --- Busca estádios via /v4/teams/{id} para cada time mandante único ---
+    $estadios_cache_key = 'brasileirao_estadios_' . $serie;
+    $team_estadios      = get_transient($estadios_cache_key);
+
+    if ($team_estadios === false) {
+        $team_estadios = [];
+        $home_team_ids = [];
+
+        foreach ($matches_data['matches'] ?? [] as $match) {
+            $home_team_ids[$match['homeTeam']['id']] = true;
         }
-    }
 
-    // Dados ao vivo
-    $aovivo_url    = 'http://esporte.uol.com.br/resultados/ao-vivo/index.htm?time=' . $datetime;
-    $json_aovivo_raw = @file_get_contents($aovivo_url);
-    $json_aovivo   = $json_aovivo_raw ? json_decode($json_aovivo_raw, true) : [];
-
-    if (is_array($json_aovivo)) {
-        foreach ($json_final['jogoPorId'] as $key => $final) {
-            foreach ($json_aovivo as $aovivo) {
-                if (
-                    $aovivo['competicao']['id'] == $idCampeonato &&
-                    $aovivo['partida']['id'] == $key &&
-                    ($aovivo['periodo']['is-andamento'] === 'true' || ($json_final['jogoPorId'][$key]['placar1'] === null && $aovivo['periodo']['id'] == 8))
-                ) {
-                    $equipe1    = $aovivo['equipes']['e1']['id'];
-                    $equipe2    = $aovivo['equipes']['e2']['id'];
-                    $saldoGols1 = $aovivo['equipes']['e1']['saldo-gols'];
-                    $saldoGols2 = $aovivo['equipes']['e2']['saldo-gols'];
-
-                    if ($saldoGols1 > $saldoGols2) {
-                        $json_final['classificacao'][$equipe1]['pg']['total'] = (int)$json_final['classificacao'][$equipe1]['pg']['total'] + 3;
-                        $json_final['classificacao'][$equipe1]['v']['total']  = (int)$json_final['classificacao'][$equipe1]['v']['total'] + 1;
-                        $json_final['classificacao'][$equipe2]['d']['total']  = (int)$json_final['classificacao'][$equipe2]['d']['total'] + 1;
-                    } elseif ($saldoGols2 > $saldoGols1) {
-                        $json_final['classificacao'][$equipe2]['pg']['total'] = (int)$json_final['classificacao'][$equipe2]['pg']['total'] + 3;
-                        $json_final['classificacao'][$equipe2]['v']['total']  = (int)$json_final['classificacao'][$equipe2]['v']['total'] + 1;
-                        $json_final['classificacao'][$equipe1]['d']['total']  = (int)$json_final['classificacao'][$equipe1]['d']['total'] + 1;
-                    } else {
-                        $json_final['classificacao'][$equipe1]['pg']['total'] = (int)$json_final['classificacao'][$equipe1]['pg']['total'] + 1;
-                        $json_final['classificacao'][$equipe2]['pg']['total'] = (int)$json_final['classificacao'][$equipe2]['pg']['total'] + 1;
-                        $json_final['classificacao'][$equipe1]['e']['total']  = (int)$json_final['classificacao'][$equipe1]['e']['total'] + 1;
-                        $json_final['classificacao'][$equipe2]['e']['total']  = (int)$json_final['classificacao'][$equipe2]['e']['total'] + 1;
-                    }
-
-                    $json_final['classificacao'][$equipe1]['j']['total']  = (int)$json_final['classificacao'][$equipe1]['j']['total'] + 1;
-                    $json_final['classificacao'][$equipe2]['j']['total']  = (int)$json_final['classificacao'][$equipe2]['j']['total'] + 1;
-                    $json_final['classificacao'][$equipe1]['gp']['total'] = (int)$json_final['classificacao'][$equipe1]['gp']['total'] + $saldoGols1;
-                    $json_final['classificacao'][$equipe2]['gp']['total'] = (int)$json_final['classificacao'][$equipe2]['gp']['total'] + $saldoGols2;
-                    $json_final['classificacao'][$equipe1]['gc']['total'] = (int)$json_final['classificacao'][$equipe1]['gc']['total'] + $saldoGols2;
-                    $json_final['classificacao'][$equipe2]['gc']['total'] = (int)$json_final['classificacao'][$equipe2]['gc']['total'] + $saldoGols1;
-                    $json_final['classificacao'][$equipe1]['sg']['total'] = (int)$json_final['classificacao'][$equipe1]['gp']['total'] - (int)$json_final['classificacao'][$equipe1]['gc']['total'];
-                    $json_final['classificacao'][$equipe2]['sg']['total'] = (int)$json_final['classificacao'][$equipe2]['gp']['total'] - (int)$json_final['classificacao'][$equipe2]['gc']['total'];
-                    $json_final['classificacao'][$equipe1]['ap'] = round(((float)$json_final['classificacao'][$equipe1]['pg']['total'] / ((float)$json_final['classificacao'][$equipe1]['j']['total'] * 3)) * 100);
-                    $json_final['classificacao'][$equipe2]['ap'] = round(((float)$json_final['classificacao'][$equipe2]['pg']['total'] / ((float)$json_final['classificacao'][$equipe2]['j']['total'] * 3)) * 100);
-                    $json_final['jogoPorId'][$key]['placar1'] = $saldoGols1;
-                    $json_final['jogoPorId'][$key]['placar2'] = $saldoGols2;
-
-                    if ($aovivo['periodo']['is-andamento'] === 'true') {
-                        $json_final['jogoPorId'][$key]['is-andamento'] = true;
-                    }
-                }
+        foreach (array_keys($home_team_ids) as $team_id) {
+            $team_raw = wp_remote_get(
+                "https://api.football-data.org/v4/teams/{$team_id}",
+                ['headers' => ['X-Auth-Token' => $api_token], 'timeout' => 10]
+            );
+            if (!is_wp_error($team_raw) && wp_remote_retrieve_response_code($team_raw) === 200) {
+                $team_data = json_decode(wp_remote_retrieve_body($team_raw), true);
+                $venue     = $team_data['venue'] ?? null;
+                $team_estadios[$team_id] = ($venue === 'A definir') ? null : $venue;
             }
         }
+
+        set_transient($estadios_cache_key, $team_estadios, DAY_IN_SECONDS);
     }
 
-    usort($json_final['classificacao'], function ($a, $b) {
-        $pgA = (int)$a['pg']['total'];
-        $pgB = (int)$b['pg']['total'];
-        $vA  = (int)$a['v']['total'];
-        $vB  = (int)$b['v']['total'];
-        $sgA = (int)$a['sg']['total'];
-        $sgB = (int)$b['sg']['total'];
-        $gpA = (int)$a['gp']['total'];
-        $gpB = (int)$b['gp']['total'];
+    // --- Ajusta rodada atual: se todos os jogos já terminaram, avança para a próxima ---
+    $jogos_rodada_atual = array_filter(
+        $matches_data['matches'] ?? [],
+        fn($m) => (int)$m['matchday'] === $matchday
+    );
+    $todos_encerrados = !empty($jogos_rodada_atual) && array_reduce(
+        $jogos_rodada_atual,
+        fn($carry, $m) => $carry && in_array($m['status'], ['FINISHED', 'POSTPONED', 'CANCELLED']),
+        true
+    );
+    if ($todos_encerrados) {
+        $matchday++;
+    }
 
-        if ($pgA !== $pgB) return $pgB - $pgA;
-        if ($vA !== $vB)   return $vB - $vA;
-        if ($sgA !== $sgB) return $sgB - $sgA;
-        return $gpB - $gpA;
-    });
+    // --- Overrides de nome/slug ---
+    $team_overrides = [
+        1766 => ['nome' => 'Atlético-MG', 'slug' => 'atletico-mg', 'sigla' => 'CAM'],
+        1767 => ['nome' => 'Grêmio', 'slug' => 'gremio', 'sigla' => 'GRE'],
+        1768 => ['nome' => 'Atlético-PR', 'slug' => 'athletico',   'sigla' => 'CAP'],
+        1776 => ['nome' => 'São Paulo',   'slug' => 'sao-paulo',   'sigla' => 'SAO'],
+        1780 => ['nome' => 'Vasco',       'slug' => 'vasco',       'sigla' => 'VAS'],
+        4241 => ['nome' => 'Coritiba',    'slug' => 'coritiba',    'sigla' => 'CFC'],
+        4287 => ['nome' => 'Remo',        'slug' => 'remo-',       'sigla' => 'REM'],
+        6684 => ['nome' => 'Internacional','slug' => 'internacional','sigla' => 'INT'],
+    ];
 
-    echo json_encode($json_final);
+    // --- Helper slug ---
+    $make_slug = function ($name) {
+        $name = mb_strtolower($name, 'UTF-8');
+        $name = strtr($name, [
+            'á' => 'a', 'à' => 'a', 'ã' => 'a', 'â' => 'a',
+            'é' => 'e', 'ê' => 'e', 'í' => 'i',
+            'ó' => 'o', 'õ' => 'o', 'ô' => 'o',
+            'ú' => 'u', 'ü' => 'u', 'ç' => 'c', 'ñ' => 'n',
+        ]);
+        $name = preg_replace('/[^a-z0-9\s-]/', '', $name);
+        $name = preg_replace('/\s+/', '-', trim($name));
+        return $name;
+    };
+
+    // --- Monta equipes ---
+    $equipes = [];
+    foreach ($standings_data['standings'][0]['table'] ?? [] as $row) {
+        $t     = $row['team'];
+        $ftbId = $t['id'];
+        $short = $t['shortName'] ?? '';
+
+        $front_id = $ftbId;
+        if (stripos($short, 'Bahia') !== false)                                           $front_id = 30;
+        if (stripos($short, 'Vitória') !== false || stripos($short, 'Vitoria') !== false) $front_id = 21;
+
+        $equipes[$ftbId] = [
+            'id'         => $front_id,
+            'nome-comum' => $team_overrides[$ftbId]['nome'] ?? $short,
+            'nome-slug'  => $team_overrides[$ftbId]['slug'] ?? $make_slug($short),
+            'sigla'      => $team_overrides[$ftbId]['sigla'] ?? ($t['tla'] ?? ''),
+        ];
+    }
+
+    // --- Monta classificação ---
+    $classificacao = [];
+    foreach ($standings_data['standings'][0]['table'] ?? [] as $row) {
+        $t  = $row['team'];
+        $j  = (int) $row['playedGames'];
+        $pg = (int) $row['points'];
+        $ap = $j > 0 ? round(($pg / ($j * 3)) * 100) : 0;
+
+        $classificacao[] = [
+            'id' => $t['id'],
+            'pg' => ['total' => $pg],
+            'j'  => ['total' => $j],
+            'v'  => ['total' => (int) $row['won']],
+            'e'  => ['total' => (int) $row['draw']],
+            'd'  => ['total' => (int) $row['lost']],
+            'gp' => ['total' => (int) $row['goalsFor']],
+            'gc' => ['total' => (int) $row['goalsAgainst']],
+            'sg' => ['total' => (int) $row['goalDifference']],
+            'ap' => $ap,
+        ];
+    }
+
+    // --- Monta jogoPorId e idJogosPorRodada ---
+    $jogoPorId        = [];
+    $idJogosPorRodada = [];
+
+    foreach ($matches_data['matches'] ?? [] as $match) {
+        $mid    = (string) $match['id'];
+        $rodada = (int)    $match['matchday'];
+        $homeId = $match['homeTeam']['id'];
+
+        $dt = new DateTime($match['utcDate'], new DateTimeZone('UTC'));
+        $dt->setTimezone(new DateTimeZone('America/Sao_Paulo'));
+
+        $jogo = [
+            'time1'   => $homeId,
+            'time2'   => $match['awayTeam']['id'],
+            'placar1' => $match['score']['fullTime']['home'],
+            'placar2' => $match['score']['fullTime']['away'],
+            'data'    => $dt->format('Y-m-d'),
+            'horario' => $dt->format('H:i'),
+            'estadio' => $team_estadios[$homeId] ?? null,
+        ];
+
+        if (in_array($match['status'], ['IN_PLAY', 'PAUSED'])) {
+            $jogo['is-andamento'] = true;
+        }
+
+        // Garante equipes fora da tabela
+        foreach (['homeTeam', 'awayTeam'] as $side) {
+            $t     = $match[$side];
+            $ftbId = $t['id'];
+            if (!isset($equipes[$ftbId])) {
+                $short    = $t['shortName'] ?? $t['name'] ?? '';
+                $front_id = $ftbId;
+                if (stripos($short, 'Bahia') !== false)                                           $front_id = 30;
+                if (stripos($short, 'Vitória') !== false || stripos($short, 'Vitoria') !== false) $front_id = 21;
+                $equipes[$ftbId] = [
+                    'id'         => $front_id,
+                    'nome-comum' => $team_overrides[$ftbId]['nome'] ?? $short,
+                    'nome-slug'  => $team_overrides[$ftbId]['slug'] ?? $make_slug($short),
+                    'sigla'      => $team_overrides[$ftbId]['sigla'] ?? ($t['tla'] ?? ''),
+                ];
+            }
+        }
+
+        $jogoPorId[$mid]             = $jogo;
+        $idJogosPorRodada[$rodada][] = $mid;
+    }
+
+    $json_final = json_encode([
+        'atualizacao'         => (new DateTime('now', new DateTimeZone('America/Sao_Paulo')))->format('d/m/Y H:i'),
+        'faixasClassificacao' => [
+            'classifica3' => ['faixa' => '17-20'],
+        ],
+        'rodada'              => ['atual' => $matchday],
+        'classificacao'       => $classificacao,
+        'equipes'             => $equipes,
+        'idJogosPorRodada'    => $idJogosPorRodada,
+        'jogoPorId'           => $jogoPorId,
+    ]);
+
+    set_transient($cache_key, $json_final, $cache_duration);
+    update_option($stale_key, $json_final, false); // fallback sem expiração
+
+    echo $json_final;
     exit;
 }, 1);
