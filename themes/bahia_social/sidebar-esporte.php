@@ -2,6 +2,7 @@
 var dados = null;
 var rodadaAtual = 1;
 
+(function($) {
 $(document).ready(function () {
     $.ajax({
         method: "GET",
@@ -11,44 +12,47 @@ $(document).ready(function () {
     }).done(function( retorno ) {
         var i;
         dados = retorno;
-        
+
+        try {
+
         /******* INICIO CLASSIFICAÇÃO ********/
         var arr = dados["classificacao"];
         for(i = 0; i < arr.length; i++){
             var idTime = arr[i].id;
-            if(i <= 2 || dados['equipes'][idTime]["id"] == 30 || dados['equipes'][idTime]["id"] == 21) {
+            var equipe = dados['equipes'][idTime];
+            if (!equipe) continue;
+            if(i <= 2 || equipe["id"] == 30 || equipe["id"] == 21) {
                 var body, color;
                 color = '';
 
                 var destaqueBaVi = "";
                 var destaque = "";
-                if(dados['equipes'][idTime]["id"] == 30) {
+                if(equipe["id"] == 30) {
                     destaqueBaVi = "destaqueBaVi";
                     destaque = "destaqueBahia";
                 }
-                if(dados['equipes'][idTime]["id"] == 21) {
+                if(equipe["id"] == 21) {
                     destaqueBaVi = "destaqueBaVi";
                     destaque = "destaqueVitoria";
                 }
 
-                var brasao = '<?php bloginfo('template_url');?>/brasileirao/brasao/'+dados['equipes'][idTime]['nome-slug']+".png";
+                var brasao = '<?php bloginfo('template_url');?>/brasileirao/brasao/'+equipe['nome-slug']+".png";
 
                 body = "<tr class='"+destaqueBaVi+" "+destaque+"'>";
                 body += "<td class='center aligned "+color+"' title='Posição'>"+(i+1)+"</td>";
                 body += "<td class='tdBrasao'><img width='30px' src='"+brasao+"'></td>";
-                body += "<td>"+dados['equipes'][idTime]['nome-comum']+"</td>";
+                body += "<td>"+equipe['nome-comum']+"</td>";
                 body += "<td class='center aligned' title='Pontos'>"+dados['classificacao'][i].pg.total+"</td>";
                 body += "<td class='center aligned' title='Jogos'>"+dados['classificacao'][i].j.total+"</td>";
                 body += "<td class='center aligned' title='Vitórias'>"+dados['classificacao'][i].v.total+"</td>";
                 body += "<td class='center aligned' title='Saldo de Gols'>"+dados['classificacao'][i].sg.total+"</td>";
                 body += "</tr>";
-                
+
                 $('.bodyTableClassificacao').append(body);
-                $(".bodyTableClassificacao .trLoading").hide();
-                
             }
-            
+
         }
+        $(".bodyTableClassificacao .trLoading").hide();
         /******* FIM CLASSIFICAÇÃO ********/
         
         
@@ -74,8 +78,19 @@ $(document).ready(function () {
         /******* FIM RODADAS ********/
         
         imprimirRodada(rodadaAtual);
-        
-        
+
+        } catch(e) {
+            console.error('Brasileirao sidebar error:', e);
+        } finally {
+            $(".bodyTableClassificacao .trLoading").hide();
+            $(".divRod .trLoading").hide();
+        }
+
+
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+        console.error('Brasileirao AJAX error:', textStatus, errorThrown);
+        $(".bodyTableClassificacao .trLoading").hide();
+        $(".divRod .trLoading").hide();
     });
 });
 
@@ -103,15 +118,21 @@ function imprimirRodada(rodada) {
 
     var jogosRodadaAtual = dados["idJogosPorRodada"][rodada];
 
+    $(".divRod .trLoading").hide();
+
+    if (!jogosRodadaAtual || jogosRodadaAtual.length === 0) {
+        return;
+    }
+
     for(i = 0; i < jogosRodadaAtual.length; i++){
-        
+
         var jogo = dados['jogoPorId'][jogosRodadaAtual[i]];
         var andamento = false;
 
         if(typeof jogo['is-andamento'] !== 'undefined') {
             andamento = true;
         }
-        
+
         if(jogo.time1 == 30 || jogo.time1 == 21 || jogo.time2 == 30 || jogo.time2 == 21) {
 
             var placar1 = jogo.placar1;
@@ -177,7 +198,6 @@ function imprimirRodada(rodada) {
             jogosRodada += "<div class='ui divider'></div>";
 
             $('.divJogosRodadas').append(jogosRodada);
-            $(".divRod .trLoading").hide();
         }
 
     }
@@ -212,6 +232,7 @@ function formatarData(data) {
         return "";
     }
 }
+})(jQuery);
 </script>
 
 <aside>

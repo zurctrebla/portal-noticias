@@ -17,16 +17,13 @@ if ($category) {
     }
 }
 ?>
-<link rel="stylesheet" href="<?php bloginfo('template_url'); ?>/assets/css/brasileirao.min.css" media="all" />
+<link rel="stylesheet" href="<?php bloginfo('template_url'); ?>/assets/css/brasileirao.css" media="all" />
 <main>
     <div class="container">
         <!-- Menu de Categorias -->
         <div class="filtros-resultado-busca <?php if($ipad) echo 'main-interno main-internoIpadArchive'; ?>" style="margin-bottom: 20px;">
             <a href="/esporte" class="<?php echo !$category ? 'ativo categoriasEntretenimentoAtual' : ''; ?>" style="color: #15559e">ESPORTE</a>
             <a href="?category=brasileirao" class="categoriasLevi <?php echo $category == 'brasileirao' ? 'categoriasEntretenimentoAtual' : ''; ?>">BRASILEIRÃO 2026</a>
-            <a href="?category=serie-b" class="categoriasLevi <?php echo $category == 'serie-b' ? 'categoriasEntretenimentoAtual' : ''; ?>">SÉRIE B</a>
-            <a href="?category=bahia" class="categoriasLevi <?php echo $category == 'bahia' ? 'categoriasEntretenimentoAtual' : ''; ?>">E.C. BAHIA</a>
-            <a href="?category=vitoria" class="categoriasLevi <?php echo $category == 'vitoria' ? 'categoriasEntretenimentoAtual' : ''; ?>">E.C. VITÓRIA</a>
         </div>
 
         <?php
