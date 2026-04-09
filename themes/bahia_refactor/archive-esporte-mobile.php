@@ -16,7 +16,7 @@ if ($category) {
     }
 }
 ?>
-<link rel="stylesheet" href="<?php bloginfo('template_url'); ?>/assets/css/brasileirao.css" media="all" />
+<link rel="stylesheet" href="<?php bloginfo('template_url'); ?>/assets/css/brasileirao.min.css" media="all" />
 <style>
     .ui.dropdown .menu {
         left: -72px;
@@ -42,6 +42,12 @@ if ($category) {
                     <div class="menu">
                         <div class="<?php echo $category == 'brasileirao' ? 'active' : ''; ?> item">
                             <a style="color: #545454;" href="?category=brasileirao">BRASILEIRÃO 2026</a>
+                        </div>
+                        <div class="<?php echo $category == 'bahia' ? 'active' : ''; ?> item">
+                            <a style="color: #545454;" href="?category=bahia">EC BAHIA</a>
+                        </div>
+                        <div class="<?php echo $category == 'vitoria' ? 'active' : ''; ?> item">
+                            <a style="color: #545454;" href="?category=vitoria">EC VITÓRIA</a>
                         </div>
                     </div>
                 </div>
