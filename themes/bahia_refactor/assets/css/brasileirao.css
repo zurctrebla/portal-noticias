@@ -14,26 +14,29 @@ table.tableNumRodada {
     font-size: 12px;
     font-family: "Roboto", sans-serif;
 }
+.divMatchRow {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
 .divTime1 {
-    width: 34%;
-    padding-left: 5%;
+    flex: 0 0 34%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
     font-size: 20px;
-    float: left;
+    padding-right: 4px;
 }
 .divNomeTime1 {
-    float: left;
-    margin-top: 5%;
     font-size: 95%;
 }
 .divBrasaoTime1 {
-    float: left;
-    padding-left: 10px;
+    /* flex item, sem float */
 }
 .divPlacar {
-    width: 30%;
+    flex: 0 0 30%;
     text-align: center;
-    padding-right: 0.7%;
-    float: left;
 }
 .spanPlacar1 {
     font-size: 28px;
@@ -41,10 +44,11 @@ table.tableNumRodada {
     font-weight: 700;
 }
 .spanVersus {
-    font-size: 24px;
+    font-size: 32px;
     line-height: 28px;
-    margin-left: 5px;
-    margin-right: 5px;
+    margin-left: 8px;
+    margin-right: 8px;
+    font-weight: 700;
 }
 .spanPlacar2 {
     font-size: 28px;
@@ -52,19 +56,19 @@ table.tableNumRodada {
     font-weight: 700;
 }
 .divTime2 {
-    width: 35%;
-    padding-left: 5%;
+    flex: 0 0 36%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
     font-size: 20px;
-    float: left;
+    padding-left: 4px;
 }
 .divNomeTime2 {
-    float: left;
-    margin-right: 10px;
-    font-size: 95%;
+    /* flex item, sem float */
 }
 .divBrasaoTime2 {
-    float: left;
-    margin-top: 5%;
+    font-size: 95%;
 }
 .divLocalJogo {
     text-align: center;

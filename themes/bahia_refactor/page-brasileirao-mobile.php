@@ -187,39 +187,30 @@ function imprimirRodada(rodada) {
         }
         jogosRodada += "</div>";
 
-        jogosRodada += "<div class='divTime1' title='"+dados['equipes'][jogo.time1]['nome-comum']+"'>";
-        jogosRodada += "<div class='divNomeTime1'>";
-        jogosRodada += dados['equipes'][jogo.time1]['sigla'];
+        var svgX = "<svg width='14' height='14' viewBox='0 0 10 10' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M5 3.88906L8.88906 0L10 1.11094L6.11094 5L10 8.88906L8.88906 10L5 6.11094L1.11094 10L0 8.88906L3.88906 5L0 1.11094L1.11094 0L5 3.88906Z' fill='#666666'/></svg>";
+        var separador = placar1 !== "" ? "<span class='spanPlacar1'>"+placar1+"</span><span style='margin:0 6px;font-size:20px;font-weight:700;color:#333;'>x</span><span class='spanPlacar2'>"+placar2+"</span>" : svgX;
+
+        jogosRodada += "<div style='display:flex;align-items:center;width:100%;'>";
+
+        jogosRodada += "<div style='flex:1;display:flex;align-items:center;justify-content:flex-end;' title='"+dados['equipes'][jogo.time1]['nome-comum']+"'>";
+        jogosRodada += "<span style='font-size:14px;font-weight:600;margin-right:10px;'>"+dados['equipes'][jogo.time1]['sigla']+"</span>";
+        jogosRodada += "<img width='32' height='32' style='margin-right:10px;' src='"+brasaoTime1+"'>";
         jogosRodada += "</div>";
 
-        jogosRodada += "<div class='divBrasaoTime1'>";
-        jogosRodada += "<img width='30px' src='"+brasaoTime1+"'>";
-        jogosRodada += "</div>";
-        jogosRodada += "</div>";
+        jogosRodada += "<div style='flex:0 0 auto;display:flex;align-items:center;justify-content:center;min-width:60px;text-align:center;'>"+separador+"</div>";
 
-        jogosRodada += "<div class='divPlacar'>";
-        jogosRodada += "<span class='spanPlacar1'>"+placar1+"</span>";
-        jogosRodada += "<span class='spanVersus'>-</span>";
-        jogosRodada += "<span class='spanPlacar2'>"+placar2+"</span>";
-        jogosRodada += "</div>";
-
-        jogosRodada += "<div class='divTime2' title='"+dados['equipes'][jogo.time2]['nome-comum']+"'>";
-        jogosRodada += "<div class='divNomeTime2'>";
-        jogosRodada += "<img width='30px' src='"+brasaoTime2+"'>";
-        jogosRodada += "</div>";
-        jogosRodada += "<div class='divBrasaoTime2'>";
-        jogosRodada += dados['equipes'][jogo.time2]['sigla'];
+        jogosRodada += "<div style='flex:1;display:flex;align-items:center;justify-content:flex-start;' title='"+dados['equipes'][jogo.time2]['nome-comum']+"'>";
+        jogosRodada += "<img width='32' height='32' style='margin-left:10px;' src='"+brasaoTime2+"'>";
+        jogosRodada += "<span style='font-size:14px;font-weight:600;margin-left:10px;'>"+dados['equipes'][jogo.time2]['sigla']+"</span>";
         jogosRodada += "</div>";
 
         jogosRodada += "</div>";
-
-        jogosRodada += "<div style='clear: both;'></div>";
 
         jogosRodada += "<div class='divLocalJogo'>";
         if(andamento) {
             jogosRodada += "<div class='ui mini green label'>EM ANDAMENTO</div>";
         } else if(jogo.estadio == null) {
-            jogosRodada += "A DEFINIR LOCAL";
+            // sem info de local
         } else {
             jogosRodada += jogo.estadio.toUpperCase();
         }
@@ -235,17 +226,9 @@ function imprimirRodada(rodada) {
 
 function getDiaExtenso(dataJogo) {
     if(dataJogo != null) {
-        var dataJg = new Date(dataJogo);
-        var arrayDia = new Array(7);
-
-        arrayDia[0] = "SEG";
-        arrayDia[1] = "TER";
-        arrayDia[2] = "QUA";
-        arrayDia[3] = "QUI";
-        arrayDia[4] = "SEX";
-        arrayDia[5] = "SÁB";
-        arrayDia[6] = "DOM";
-
+        var p = dataJogo.split('-');
+        var dataJg = new Date(p[0], p[1] - 1, p[2]); // parse como local, sem UTC shift
+        var arrayDia = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"]; // 0=Dom..6=Sab
         return arrayDia[dataJg.getDay()];
     } else {
         return "A DEFINIR DATA";
