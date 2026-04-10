@@ -86,7 +86,7 @@
     </div>
 <?php endif; ?>
 <?php wp_footer(); ?>
-<?php echo adrotate_ad(1660); ?>
-<div class="clever-core-ads"></div>
+
+<?php echo adrotate_group(17); ?>
 </body>
 </html>
