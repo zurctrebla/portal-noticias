@@ -1677,3 +1677,34 @@ function bahia_add_target_blank_to_content_links($content) {
 
 // Adiciona o filtro ao conteúdo dos posts
 add_filter('the_content', 'bahia_add_target_blank_to_content_links', 99);
+
+add_action('wp_footer', function() {
+    ?>
+    <div id="popup-banner" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; align-items:center; justify-content:center; overflow:auto;">
+        <div style="position:relative; width:min(55vw,55vh); margin:auto; flex-shrink:0; overflow:hidden;">
+            <span onclick="document.getElementById('popup-banner').style.display='none'; localStorage.setItem('popup_closed','1');" 
+                  style="position:absolute; top:-12px; right:-12px; cursor:pointer; background:#fff; border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:16px; z-index:100;">✕</span>
+            <?php echo adrotate_group(18); ?>
+        </div>
+    </div>
+    <script>
+    if (!localStorage.getItem("popup_closed")) {
+        setTimeout(function() {
+            var p = document.getElementById("popup-banner");
+            p.style.display = "flex";
+            p.querySelectorAll("img").forEach(function(img) { img.style.maxWidth = "100%"; img.style.height = "auto"; img.style.width = "100%"; });
+            p.querySelectorAll("img[data-src]").forEach(function(img) {
+                img.src = img.getAttribute("data-src");
+                img.removeAttribute("data-src");
+            });
+        }, 2000);
+    }
+
+
+
+
+
+
+    </script>
+    <?php
+});

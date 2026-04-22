@@ -9,3 +9,17 @@ Version: 1.0
 License: Software proprietário
 Text Domain: bahia_refactor
 */
+
+/* Banner AdRotate - responsivo */
+.box-news-int .adrotate-ad img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Popup banner responsivo */
+#popup-banner img {
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    display: block;
+}
