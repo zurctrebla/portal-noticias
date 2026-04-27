@@ -1691,10 +1691,10 @@ add_action('wp_footer', function() {
     if (!localStorage.getItem("popup_closed")) {
         setTimeout(function() {
             var p = document.getElementById("popup-banner");
-            p.style.display = "flex";
+            p.querySelectorAll("img[data-src]").forEach(function(img) { img.src = img.getAttribute("data-src"); img.removeAttribute("data-src"); });
             p.querySelectorAll("img").forEach(function(img) { img.style.maxWidth = "100%"; img.style.height = "auto"; img.style.width = "100%"; });
-            p.querySelectorAll("img[data-src]").forEach(function(img) {
-                img.src = img.getAttribute("data-src");
+            var hasContent = p.querySelector("img[src]:not([src=""])");
+            if (hasContent) { p.style.display = "flex"; }
                 img.removeAttribute("data-src");
             });
         }, 2000);
