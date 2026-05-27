@@ -122,12 +122,6 @@ $ipad = strpos(getUserAgent(), "iPad");
             <a class="item" href="<?php bloginfo('url'); ?>/carnaval">
                 <p class="txtItemMenu">Carnaval</p>
             </a>
-            <a class="item" href="<?php bloginfo('url'); ?>/social">
-                <p class="txtItemMenu">Ginno Larry</p>
-            </a>
-            <a class="item" href="<?php bloginfo('url'); ?>/investimentos">
-                <p class="txtItemMenu">Investimentos</p>
-            </a>
             <!-- <a class="item" href="<?//php bloginfo('url'); ?>/eleicoes2024">
                 <p class="txtItemMenu">Eleições 2024</p>
             </a> -->
@@ -248,12 +242,6 @@ $ipad = strpos(getUserAgent(), "iPad");
                             <!-- <div class="menu url-link" data-url="<?//php bloginfo('url'); ?>/eleicoes2024">
                                 <div class="item"><a href="#/">Eleições 2024</a></div>
                             </div> -->
-                        </div>
-                        <div class="item url-link" data-url="<?php bloginfo('url'); ?>/social">
-                            <a href="#/">Ginno Larry</a>
-                        </div>
-                        <div class="item url-link" data-url="<?php bloginfo('url'); ?>/investimentos">
-                            <a href="#/">Investimentos</a>
                         </div>
                         <div class="item url-link" data-url="<?php bloginfo('url'); ?>/salvador">
                             <a href="#/">Salvador</a>
@@ -544,12 +532,6 @@ $ipad = strpos(getUserAgent(), "iPad");
                                                     <div class="item url-link"><a href="#/" class="linkMenu" data-url="<?php bloginfo('url'); ?>/politica-de-cookies">Política de Cookies</a></div>
                                                 </div>
                                             </div>
-                                            <div class="item url-link" data-url="<?php bloginfo('url'); ?>/social">
-                                                <a href="#/">Ginno Larry</a>
-                                            </div>
-                                            <div class="item url-link" data-url="<?php bloginfo('url'); ?>/investimentos">
-                                                <a href="#/">Investimentos</a>
-                                            </div>
                                             <div class="item url-link" data-url="<?php bloginfo('url'); ?>/salvador">
                                                 <a href="#/">Salvador</a>
                                             </div>
@@ -593,11 +575,10 @@ $ipad = strpos(getUserAgent(), "iPad");
                             <li><a href="<?php bloginfo('url'); ?>/politica" data-notificacao="">Política</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/esporte" data-notificacao="">Esporte</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/entretenimento" data-notificacao="">Entretenimento</a></li>
-                            <li><a href="<?php bloginfo('url'); ?>/social" data-notificacao="">Ginno Larry</a></li>
-                            <li><a href="<?php bloginfo('url'); ?>" data-notificacao="">Investimentos</a></li>
+                            <li><a href="<?php bloginfo('url'); ?>/municipios" data-notificacao="">Municípios</a></li>
+                            <li><a href="<?php bloginfo('url'); ?>/justica" data-notificacao="">Justiça</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/salvador" data-notificacao="">Salvador</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/bahia" data-notificacao="">Bahia</a></li>
-                            <li><a href="<?php bloginfo('url'); ?>/justica" data-notificacao="">Justiça</a></li>
                         </ul>
                     </nav>
                     <nav class="nav-drop">
@@ -605,8 +586,6 @@ $ipad = strpos(getUserAgent(), "iPad");
                             <li><a href="<?php bloginfo('url'); ?>/ultimas-noticias" data-notificacao="">Últimas Notícias</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/carnaval" data-notificacao="">Carnaval</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/politica" data-notificacao="">Política</a></li>
-                            <li><a href="<?php bloginfo('url'); ?>/social" data-notificacao="">Ginno Larry</a></li>
-                            <li><a href="<?php bloginfo('url'); ?>" data-notificacao="">Investimentos</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/salvador" data-notificacao="">Salvador</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/bahia" data-notificacao="">Bahia</a></li>
                             <li><a href="<?php bloginfo('url'); ?>/municipios" data-notificacao="">Municípios</a></li>
