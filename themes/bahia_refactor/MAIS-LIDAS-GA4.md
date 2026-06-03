@@ -31,6 +31,35 @@ primária, janela de **48h**, mantendo o SQL legado como fallback.
 | `themes/bahia_refactor/functions.php:2` | `require_once` do novo arquivo. |
 | `themes/bahia_refactor/functions.php:1079` (`mais_lidas2`) | Lê transient GA4 primeiro; cai no SQL legado se vazio. |
 
+### Ajuste aplicado em produção (2026-06-03)
+
+Em `mais-lidas-ga4.php:61`, a leitura do owner do Site Kit foi alterada de:
+
+```php
+$owner_id = (int) $auth->get_owner_id_instance()->get();
+```
+
+para acesso direto à option:
+
+```php
+$owner_id = (int) get_option('googlesitekit_owner_id');
+```
+
+**Motivo:** evita inicializar a cadeia `Authentication → Owner_ID` apenas para
+ler um valor que já está disponível em `wp_options`. Menos custo e menos
+superfície de erro caso a estrutura interna do Site Kit mude entre versões.
+A option `googlesitekit_owner_id` é uma API estável do Site Kit.
+
+**Implicação para verificação:** para conferir o owner manualmente:
+
+```bash
+wp option get googlesitekit_owner_id
+```
+
+Deve retornar o ID de um usuário admin com Site Kit conectado. Se vier
+vazio/`0`, o Site Kit não está autenticado e a integração não rodará
+(cai no fallback SQL).
+
 `mais_lidas()` (linha 1041) **não foi alterada** — só `mais_lidas2()` é usada
 pela sidebar (`sidebar-home2.php:7`). Se houver outros pontos consumindo
 `mais_lidas()`, avaliar replicar o mesmo padrão.
@@ -126,7 +155,7 @@ em `wp-content/debug.log`. Falhas comuns:
 
 | Sintoma | Causa provável |
 |---|---|
-| Transient nunca aparece, sem erro | Site Kit sem owner / Analytics_4 não conectado. |
+| Transient nunca aparece, sem erro | `googlesitekit_owner_id` vazio / Analytics_4 não conectado. Conferir com `wp option get googlesitekit_owner_id`. |
 | `invalid_grant` no log | OAuth token expirado e sem refresh. Reconectar Site Kit. |
 | Transient aparece mas vazio (`[]`) | Nenhuma pagePath bateu com `url_to_postid` — verificar permalinks. |
 | Sidebar continua mostrando SQL antigo | Cron não rodou / transient ainda não populado / Site Kit ausente. |
