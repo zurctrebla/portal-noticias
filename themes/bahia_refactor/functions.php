@@ -1,5 +1,6 @@
 <?php
 require_once 'Mobile-Detect/Mobile_Detect.php';
+require_once __DIR__ . '/mais-lidas-ga4.php';
 
 // Disable use XML-RPC
 add_filter('xmlrpc_enabled', '__return_false');
@@ -1078,6 +1079,35 @@ function mais_lidas($limit = 7, $type = false)
 
 function mais_lidas2($limit = 7, $type = false)
 {
+    // Fonte primária: GA4 (últimas 48h) via Site Kit, cacheado em transient.
+    $top_ids = \Bahia\MaisLidas\get_top_post_ids();
+
+    if (!empty($top_ids)) {
+        $args = array(
+            'post__in'            => array_slice($top_ids, 0, $limit),
+            'orderby'             => 'post__in',
+            'posts_per_page'      => $limit,
+            'no_found_rows'       => true,
+            'ignore_sticky_posts' => true,
+            'post_status'         => 'publish',
+            'post_type'           => $type ? $type : 'any',
+        );
+
+        $q = new WP_Query($args);
+        if ($q->have_posts()) {
+            while ($q->have_posts()) : $q->the_post(); ?>
+                <div class="item-popular">
+                    <div class="chamada-popular">
+                        <p><a href="<?= get_the_permalink(); ?>"><?php resumo(100, get_the_title()); ?></a></p>
+                    </div>
+                </div>
+            <?php endwhile;
+            wp_reset_postdata();
+            return;
+        }
+    }
+
+    // Fallback: contador interno (mesmo comportamento da versão anterior).
     global $wpdb;
 
     $dataInicial = date('Y-m-d 00:00:00', strtotime("-2 days"));
@@ -1098,8 +1128,7 @@ function mais_lidas2($limit = 7, $type = false)
 
     $query = $wpdb->get_results($sql);
 
-    $n_post = 0;
-    foreach ($query as $q) : $n_post++;
+    foreach ($query as $q) :
     ?>
         <div class="item-popular">
             <div class="chamada-popular">
@@ -1108,7 +1137,6 @@ function mais_lidas2($limit = 7, $type = false)
         </div>
         <?php
     endforeach;
-    //wp_reset_query();
 }
 
 function mais_noticias_editoria($limit = 7, $type = false)
