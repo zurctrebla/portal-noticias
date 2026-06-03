@@ -58,7 +58,7 @@ function refresh() {
 		$user_opts = new \Google\Site_Kit\Core\Storage\User_Options( $context );
 		$auth      = new \Google\Site_Kit\Core\Authentication\Authentication( $context, $options, $user_opts );
 
-		$owner_id = (int) $auth->get_owner_id_instance()->get();
+		$owner_id = (int) get_option('googlesitekit_owner_id');
 		if ( ! $owner_id ) {
 			return;
 		}
