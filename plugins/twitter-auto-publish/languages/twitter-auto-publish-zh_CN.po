@@ -1,0 +1,1162 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: multilang\n"
+"POT-Creation-Date: 2025-10-28 14:38+0530\n"
+"PO-Revision-Date: 2025-10-28 14:38+0530\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Poedit 3.0.1\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-KeywordsList: _e;__;esc_html_e\n"
+"X-Poedit-SearchPath-0: admin/about.php\n"
+"X-Poedit-SearchPath-1: admin/admin-notices.php\n"
+"X-Poedit-SearchPath-2: admin/ajax-backlink.php\n"
+"X-Poedit-SearchPath-3: admin/destruction.php\n"
+"X-Poedit-SearchPath-4: admin/footer.php\n"
+"X-Poedit-SearchPath-5: admin/header.php\n"
+"X-Poedit-SearchPath-6: admin/install.php\n"
+"X-Poedit-SearchPath-7: admin/logs.php\n"
+"X-Poedit-SearchPath-8: admin/manage-auth.php\n"
+"X-Poedit-SearchPath-9: admin/menu.php\n"
+"X-Poedit-SearchPath-10: admin/metabox.php\n"
+"X-Poedit-SearchPath-11: admin/publish.php\n"
+"X-Poedit-SearchPath-12: admin/settings.php\n"
+"X-Poedit-SearchPath-13: admin/suggest_feature.php\n"
+"X-Poedit-SearchPath-14: twitter-auto-publish.php\n"
+"X-Poedit-SearchPath-15: xyz-functions.php\n"
+
+#: admin/about.php:9
+#, php-format
+msgid ""
+"%s automatically publishes posts from your blog to your Twitter pages. It "
+"allows you to filter posts based on post-types and categories. %s is "
+"developed and maintained by"
+msgstr ""
+"%s 自动将帖子从您的博客发布到您的 Twitter 页面。它允许您根据帖子类型和类别过"
+"滤帖子。 %s 由以下人员开发和维护"
+
+#: admin/about.php:17
+#, php-format
+msgid ""
+"If you would like to have more features , please try <a href=\"%s\" "
+"target=\"_blank\">%s</a> which is a premium version of this plugin. We have "
+"included a quick comparison of the free and premium plugins for your "
+"reference."
+msgstr ""
+"如果您想拥有更多功能，请尝试 <a href=\"%s\" target=\"_blank\">%s</a> 这是该插"
+"件的高级版本。我们提供了免费和高级插件的快速比较供您参考。"
+
+#: admin/about.php:24
+msgid "Feature group"
+msgstr "特征组"
+
+#: admin/about.php:25
+msgid "Feature"
+msgstr "特征"
+
+#: admin/about.php:26
+msgid "Free"
+msgstr "免费"
+
+#: admin/about.php:28
+msgid "Premium"
+msgstr "优质的"
+
+#: admin/about.php:30
+#, php-format
+msgid "%s Premium"
+msgstr "%s 溢价"
+
+#: admin/about.php:35
+msgid "Supported Media"
+msgstr "支持的媒体"
+
+#: admin/about.php:36 admin/admin-notices.php:56
+msgid "Facebook"
+msgstr "脸书"
+
+#: admin/about.php:46 admin/admin-notices.php:57 admin/metabox.php:291
+msgid "Twitter"
+msgstr "推特"
+
+#: admin/about.php:55 admin/admin-notices.php:58
+msgid "LinkedIn"
+msgstr "领英"
+
+#: admin/about.php:64
+msgid "Instagram"
+msgstr "Instagram"
+
+#: admin/about.php:73
+msgid "Tumblr"
+msgstr "棒棒哒"
+
+#: admin/about.php:82
+msgid "Pinterest"
+msgstr "Pinterest"
+
+#: admin/about.php:91
+msgid "Telegram"
+msgstr "Telegram"
+
+#: admin/about.php:100
+msgid "Threads"
+msgstr "线程"
+
+#: admin/about.php:111
+msgid "Posting Options"
+msgstr "发布选项"
+
+#: admin/about.php:112
+msgid "Publish to facebook pages"
+msgstr "发布到 脸书 页面"
+
+#: admin/about.php:123
+msgid "Publish to twitter profile"
+msgstr "发布到 推特 个人资料"
+
+#: admin/about.php:133
+msgid "Publish to linkedin profile/company pages"
+msgstr "发布到领英个人资料/公司页面"
+
+#: admin/about.php:142
+msgid "Publish to instagram Business accounts"
+msgstr "发布到 Instagram 企业帐户"
+
+#: admin/about.php:152
+msgid "Publish to tumblr profile"
+msgstr "发布到 棒棒哒 个人资料"
+
+#: admin/about.php:162
+msgid "Publish to pinterest boards"
+msgstr "发布到 pinterest 板"
+
+#: admin/about.php:172
+msgid "Publish to telegram channels and groups"
+msgstr "发布到电报频道和群组"
+
+#: admin/about.php:181
+msgid "Publish to threads profile"
+msgstr "发布到线程配置文件"
+
+#: admin/about.php:190
+msgid "Option to add twitter image description for visually impaired people"
+msgstr "为视障人士添加 推特 图像描述的选项"
+
+#: admin/about.php:200
+msgid "Option to republish existing posts"
+msgstr "重新发布现有帖子的选项"
+
+#: admin/about.php:210
+msgid "Publish to multiple social media accounts"
+msgstr "发布到多个社交媒体帐户"
+
+#: admin/about.php:220
+msgid ""
+"Seperate message formats for publishing to multiple social media accounts"
+msgstr "用于发布到多个社交媒体帐户的单独消息格式"
+
+#: admin/about.php:230
+msgid "Save auto publish settings of individual posts"
+msgstr "保存单个帖子的自动发布设置"
+
+#: admin/about.php:240
+msgid ""
+"Hash Tags support for Facebook, Twitter, Linkedin, Instagram, Tumblr, "
+"Threads, Pinterest and Telegram"
+msgstr ""
+"哈希标签支持 Facebook、Twitter、Linkedin、Instagram、Tumblr、Threads、"
+"Pinterest 和 Telegram"
+
+#: admin/about.php:250
+msgid "Option to use post tags as hash tags"
+msgstr "使用帖子标签作为哈希标签的选项"
+
+#: admin/about.php:259
+msgid "Option to use post categories as hash tags"
+msgstr "选择使用帖子类别作为主题标签"
+
+#: admin/about.php:269
+msgid "Enable/Disable SSL peer verification"
+msgstr "启用/禁用 SSL 对等验证"
+
+#: admin/about.php:278
+msgid "Carousel post support for Instagram and Telegram"
+msgstr "轮播帖子支持 Instagram 和 Telegram"
+
+#: admin/about.php:289
+msgid "Image Options"
+msgstr "图像选项"
+
+#: admin/about.php:290
+msgid "Publish images along with post content"
+msgstr "发布图像以及帖子内容"
+
+#: admin/about.php:301
+msgid ""
+"Separate default image url for publishing to multiple social media accounts"
+msgstr "用于发布到多个社交媒体帐户的单独默认图像 URL"
+
+#: admin/about.php:311
+msgid ""
+"Option to specify preference from featured image, post content, post meta "
+"and open graph tags"
+msgstr "选择从特色图像、帖子内容、帖子元和开放图形标签中指定偏好"
+
+#: admin/about.php:321
+msgid ""
+"Publish multiple images to facebook, tumblr, linkedin, twitter, threads and "
+"telegram along with post content\t"
+msgstr ""
+"将多张图像连同帖子内容发布到 facebook、tumblr、linkedin、twitter、threads 和 "
+"telegram "
+
+#: admin/about.php:331
+msgid "Option to specify multiphoto preference from post content and post meta"
+msgstr "从帖子内容和帖子元中指定多张照片偏好的选项"
+
+#: admin/about.php:343
+msgid "Video/Audio Options"
+msgstr "视频/音频选项"
+
+#: admin/about.php:344
+msgid ""
+"Publish video to facebook, tumblr,Linkedin, Instagram, twitter, threads and "
+"telegram along with post content"
+msgstr ""
+"将视频连同帖子内容发布到 facebook、tumblr、Linkedin、Instagram、twitter、"
+"threads 和 telegram"
+
+#: admin/about.php:354
+msgid ""
+"Option to specify preference from post content, post meta and open graph tags"
+msgstr "从帖子内容、帖子元和开放图形标签中指定偏好的选项"
+
+#: admin/about.php:364
+msgid "Publish audio to tumblr along with post content"
+msgstr "将音频与帖子内容一起发布到 棒棒哒"
+
+#: admin/about.php:373
+msgid ""
+"Option to specify audio preference from  post content, post meta and open "
+"graph tags"
+msgstr "从帖子内容、帖子元和打开图形标签中指定音频偏好的选项"
+
+#: admin/about.php:384
+msgid "Filter Options"
+msgstr "过滤器选项"
+
+#: admin/about.php:385
+msgid "Filter posts to publish based on categories"
+msgstr "根据类别过滤要发布的帖子"
+
+#: admin/about.php:395
+msgid "Filter posts to publish based on custom post types"
+msgstr "根据自定义帖子类型过滤要发布的帖子"
+
+#: admin/about.php:404
+msgid "Filter posts to publish based on sticky posts"
+msgstr "根据粘性帖子过滤要发布的帖子"
+
+#: admin/about.php:413
+msgid "Configuration to enable/disable page publishing"
+msgstr "启用/禁用页面发布的配置"
+
+#: admin/about.php:423
+msgid "Category filter for individual accounts"
+msgstr "个人帐户的类别过滤器"
+
+#: admin/about.php:433
+msgid "Custom post type filter for individual accounts"
+msgstr "个人帐户的自定义帖子类型过滤器"
+
+#: admin/about.php:443
+msgid "Enable/Disable page publishing for individual accounts"
+msgstr "为个人帐户启用/禁用页面发布"
+
+#: admin/about.php:453
+msgid "Override auto publish scheduling for individual accounts"
+msgstr "覆盖个人帐户的自动发布计划"
+
+#: admin/about.php:462
+msgid "Override auto publish based on sticky posts for individual accounts"
+msgstr "覆盖基于个人帐户的粘性帖子的自动发布"
+
+#: admin/about.php:473
+msgid "Scheduling"
+msgstr "调度"
+
+#: admin/about.php:474
+msgid "Instantaneous post publishing"
+msgstr "即时发布"
+
+#: admin/about.php:484
+msgid "Scheduled post publishing using cron"
+msgstr "使用 cron 定时发布"
+
+#: admin/about.php:494
+msgid "Status summary of auto publish tasks by mail"
+msgstr "通过邮件自动发布任务的状态摘要"
+
+#: admin/about.php:504
+msgid "Configurable auto publishing time interval"
+msgstr "可配置的自动发布时间间隔"
+
+#: admin/about.php:518
+msgid "Publishing History"
+msgstr "出版历史"
+
+#: admin/about.php:519
+msgid "View auto publish history"
+msgstr "查看自动发布历史"
+
+#: admin/about.php:528
+msgid "View auto publish error logs"
+msgstr "查看自动发布错误日志"
+
+#: admin/about.php:538
+msgid "Option to republish post"
+msgstr "重新发布帖子的选项"
+
+#: admin/about.php:548
+msgid "Option to reschedule publishing"
+msgstr "重新安排发布的选项"
+
+#: admin/about.php:559
+msgid "Installation and Support"
+msgstr "安装和支持"
+
+#: admin/about.php:560
+msgid "Free Installation"
+msgstr "免费安装"
+
+#: admin/about.php:569
+msgid "Privilege customer support"
+msgstr "特权客户支持"
+
+#: admin/about.php:580
+msgid "Addon Features"
+msgstr "附加功能"
+
+#: admin/about.php:581
+msgid "Advanced Autopublish Scheduler"
+msgstr "高级自动发布计划程序"
+
+#: admin/about.php:590
+msgid "URL-Shortener"
+msgstr "网址缩短器"
+
+#: admin/about.php:599
+msgid "Privilege Management"
+msgstr "权限管理"
+
+#: admin/about.php:608
+msgid "Other"
+msgstr "其他"
+
+#: admin/about.php:609
+msgid "Price"
+msgstr "价钱"
+
+#: admin/about.php:610
+msgid "FREE"
+msgstr "免费"
+
+#: admin/about.php:611
+msgid "Starts from 29 USD"
+msgstr "29 美元起"
+
+#: admin/about.php:612
+msgid "Starts from 59 USD"
+msgstr "59 美元起"
+
+#: admin/about.php:615
+msgid "Purchase"
+msgstr "购买"
+
+#: admin/about.php:617 admin/footer.php:27
+msgid "Buy Now"
+msgstr "立即购买"
+
+#: admin/about.php:624
+msgid "Pinterest is added on experimental basis."
+msgstr "Pinterest 是在实验基础上添加的。"
+
+#: admin/admin-notices.php:41
+#, php-format
+msgid ""
+"Thank you for using <a href=\"%s\" target=\"_blank\"> %s </a> plugin from <a "
+"href=\"%s\" target=\"_blank\"> %s </a>. Would you consider supporting us "
+"with the continued development of the plugin using any of the below methods?"
+msgstr ""
+"感谢您使用 <a href=\"%s\" target=\"_blank\"> %s </a> 的 <a href=\"%s\" "
+"target=\"_blank\"> %s </a> 插件。您会考虑使用以下任何方法支持我们继续开发插件"
+"吗？"
+
+#: admin/admin-notices.php:45
+msgid "Rate it 5★'s on wordpress"
+msgstr "在 wordpress 上给它评分 5★"
+
+#: admin/admin-notices.php:47
+msgid "Enable Backlink"
+msgstr "启用反向链接"
+
+#: admin/admin-notices.php:49
+msgid "Share on"
+msgstr "分享"
+
+#: admin/admin-notices.php:50 admin/header.php:99
+msgid "Donate"
+msgstr "捐"
+
+#: admin/admin-notices.php:52
+msgid "Don't Show This Again"
+msgstr "不要再显示这个"
+
+#: admin/footer.php:15
+#, php-format
+msgid ""
+"%sUpgrade to the Fully Featured XYZ WP Social Media Auto Publish Premium "
+"Plugin for %sJust 29 USD%s"
+msgstr ""
+"%s升级到功能齐全的 XYZ WP Social Media Auto Publish Premium 插件，仅需 %s29 "
+"美元%s"
+
+#: admin/footer.php:21
+msgid ""
+"Unlock advanced scheduling, multi-account publishing, hashtag automation, "
+"and seamless social media integration!"
+msgstr "解锁高级调度、多帐户发布、主题标签自动化和无缝社交媒体集成！"
+
+#: admin/footer.php:31
+msgid "Compare Features"
+msgstr "比较功能"
+
+#: admin/footer.php:42
+msgid "We are available for custom development"
+msgstr "我們可以進行客製化開發"
+
+#: admin/footer.php:44
+msgid "Get a quote"
+msgstr "取得報價"
+
+#: admin/footer.php:50
+msgid "Follow Us"
+msgstr "跟着我们"
+
+#: admin/footer.php:58
+msgid "Support"
+msgstr "支持"
+
+#: admin/footer.php:59
+msgid "Contact Us"
+msgstr "联系我们"
+
+#: admin/footer.php:60
+msgid "Please Rate Us"
+msgstr "请评价我们"
+
+#: admin/footer.php:64
+msgid "Create a ticket at Wordpress forum"
+msgstr "在 Wordpress 论坛上创建票证"
+
+#: admin/footer.php:67
+msgid "Stay tuned for our updates"
+msgstr "请继续关注我们的更新"
+
+#: admin/footer.php:131
+msgid "Name"
+msgstr "姓名"
+
+#: admin/footer.php:147
+msgid "Email"
+msgstr "电子邮件"
+
+#: admin/footer.php:149
+msgid "Subscribe"
+msgstr "订阅"
+
+#: admin/footer.php:161
+msgid "Our Plugins"
+msgstr "我们的插件"
+
+#: admin/footer.php:182
+msgid "Powered by"
+msgstr "供电"
+
+#: admin/header.php:19
+msgid "Settings updated successfully."
+msgstr "设置更新成功。"
+
+#: admin/header.php:19 admin/header.php:32 admin/header.php:49
+#: admin/manage-auth.php:9 admin/manage-auth.php:143 admin/manage-auth.php:207
+#: admin/settings.php:29 admin/settings.php:155 admin/settings.php:168
+#: admin/settings.php:178 admin/settings.php:186 admin/settings.php:195
+#: admin/settings.php:1034 admin/settings.php:1060 admin/suggest_feature.php:11
+#: admin/suggest_feature.php:19 admin/suggest_feature.php:27
+msgid "Dismiss"
+msgstr "清除"
+
+#: admin/header.php:31
+msgid "Thank you for enabling backlink."
+msgstr "感谢您启用反向链接。"
+
+#: admin/header.php:48
+msgid "Please do a favour by enabling backlink to our site."
+msgstr "请通过启用反向链接到我们的网站来帮个忙。"
+
+#: admin/header.php:48
+msgid "Okay, Enable"
+msgstr "好的，启用"
+
+#: admin/header.php:102
+msgid "FAQ"
+msgstr "常问问题"
+
+#: admin/header.php:105
+msgid "Readme"
+msgstr "自述文件"
+
+#: admin/header.php:108 admin/menu.php:35
+msgid "About"
+msgstr "关于"
+
+#: admin/logs.php:9
+msgid "Auto Publish Logs"
+msgstr "自动发布日志"
+
+#: admin/logs.php:10
+msgid "Last ten logs"
+msgstr "最后十个日志"
+
+#: admin/logs.php:15
+msgid "Post Id"
+msgstr "帖子编号"
+
+#: admin/logs.php:16
+msgid "Post Title"
+msgstr "帖子标题"
+
+#: admin/logs.php:17
+msgid "Published On"
+msgstr "发表于"
+
+#: admin/logs.php:18
+msgid "Status"
+msgstr "状态"
+
+#: admin/logs.php:27
+msgid "No logs Found"
+msgstr "未找到日志"
+
+#: admin/manage-auth.php:7
+#, php-format
+msgid "%s Package updated successfully."
+msgstr "%s 包更新成功。"
+
+#: admin/manage-auth.php:25
+#, php-format
+msgid "Please authorize %s app under Twitter settings to access this page."
+msgstr "请在 Twitter 设置下授权 %s 应用访问此页面。"
+
+#: admin/manage-auth.php:255 admin/menu.php:33
+msgid "Manage Authorizations"
+msgstr "管理授权"
+
+#: admin/manage-auth.php:278
+msgid "Current Plan:"
+msgstr "当前计划："
+
+#: admin/manage-auth.php:280
+msgid "Allowed Twitter users:"
+msgstr "允许的 推特 用户："
+
+#: admin/manage-auth.php:281
+msgid "API limit per account :"
+msgstr "每个帐户的 API 限制："
+
+#: admin/manage-auth.php:281
+msgid "per day"
+msgstr "每天"
+
+#: admin/manage-auth.php:282
+msgid "Package Expiry :"
+msgstr "包裹到期："
+
+#: admin/manage-auth.php:283
+msgid "Package Status :"
+msgstr "包裹状态："
+
+#: admin/manage-auth.php:293
+msgid "Upgrade/Renew"
+msgstr "升级/更新"
+
+#: admin/manage-auth.php:302
+msgid "Show all entries"
+msgstr "显示所有条目"
+
+#: admin/manage-auth.php:303
+msgid "Show entries from current wp installation"
+msgstr "显示当前 wp 安装的条目"
+
+#: admin/manage-auth.php:304
+msgid "Show entries from other wp installations"
+msgstr "显示来自其他 wp 安装的条目"
+
+#: admin/manage-auth.php:309
+msgid "Twitter user name"
+msgstr "推特用户名"
+
+#: admin/manage-auth.php:311
+msgid "Selected groups"
+msgstr "选定的组"
+
+#: admin/manage-auth.php:313
+#, php-format
+msgid "%s url"
+msgstr "%s 网址"
+
+#: admin/manage-auth.php:315
+msgid "Plugin"
+msgstr "插件"
+
+#: admin/manage-auth.php:316
+#, php-format
+msgid "Account ID %s"
+msgstr "帐户 ID %s"
+
+#: admin/manage-auth.php:318
+msgid "Action"
+msgstr "行动"
+
+#: admin/manage-auth.php:345
+msgid "Not Applicable"
+msgstr "不适用"
+
+#: admin/manage-auth.php:352 admin/manage-auth.php:374
+msgid "Delete"
+msgstr "删除"
+
+#: admin/manage-auth.php:365
+msgid "(Inactive)"
+msgstr "（不活动）"
+
+#: admin/manage-auth.php:384
+msgid "No Authorizations"
+msgstr "无授权"
+
+#: admin/manage-auth.php:392
+msgid "Unable to connect. Please check your curl and firewall settings"
+msgstr "无法连接。请检查您的 curl 和防火墙设置"
+
+#: admin/menu.php:14
+msgid "Please check whether the email is correct."
+msgstr "请检查电子邮件是否正确。"
+
+#: admin/menu.php:15
+msgid "Select atleast one list."
+msgstr "选择至少一个列表。"
+
+#: admin/menu.php:16
+msgid "You do not have sufficient permissions"
+msgstr "您没有足够的权限"
+
+#: admin/menu.php:17
+#, php-format
+msgid "Account details successfully deleted from %s"
+msgstr "已成功从 %s 中删除帐户详细信息"
+
+#: admin/menu.php:18
+#, php-format
+msgid "In-active Twitter account successfully deleted from %s"
+msgstr "已从 %s 中成功删除非活动 Twitter 帐户"
+
+#: admin/menu.php:19
+#, php-format
+msgid "Please connect your %s member account"
+msgstr "请连接您的 %s 会员帐户"
+
+#: admin/menu.php:20
+msgid "Thank you for enabling backlink !"
+msgstr "感谢您启用反向链接！"
+
+#: admin/menu.php:31
+msgid "Settings"
+msgstr "设置"
+
+#: admin/menu.php:34
+msgid "Logs"
+msgstr "日志"
+
+#: admin/menu.php:36
+msgid "Suggest a Feature"
+msgstr "建议一个功能"
+
+#: admin/metabox.php:298 admin/settings.php:348
+msgid "Enable auto publish posts to my twitter account"
+msgstr "启用自动将帖子发布到我的 推特 帐户"
+
+#: admin/metabox.php:301 admin/metabox.php:314 admin/settings.php:351
+#: admin/settings.php:492 admin/settings.php:624 admin/settings.php:634
+#: admin/settings.php:731 admin/settings.php:759 admin/settings.php:802
+#: admin/settings.php:815
+msgid "Yes"
+msgstr "没有人"
+
+#: admin/metabox.php:302 admin/metabox.php:312 admin/settings.php:352
+#: admin/settings.php:493 admin/settings.php:625 admin/settings.php:635
+#: admin/settings.php:732 admin/settings.php:760 admin/settings.php:803
+#: admin/settings.php:816
+msgid "No"
+msgstr "不"
+
+#: admin/metabox.php:307 admin/settings.php:489
+msgid "Attach image to twitter post"
+msgstr "将图像附加到推特帖子"
+
+#: admin/metabox.php:320 admin/settings.php:456
+msgid "Message format for posting"
+msgstr "发帖的消息格式"
+
+#: admin/metabox.php:324 admin/settings.php:460
+msgid "Insert the title of your post."
+msgstr "插入帖子的标题。"
+
+#: admin/metabox.php:325 admin/settings.php:461
+msgid "Insert the URL where your post is displayed."
+msgstr "插入显示您的帖子的 URL。"
+
+#: admin/metabox.php:326 admin/settings.php:462
+msgid "Insert the excerpt of your post."
+msgstr "插入您的帖子的摘录。"
+
+#: admin/metabox.php:327 admin/settings.php:463
+msgid "Insert the description of your post."
+msgstr "插入您的帖子的描述。"
+
+#: admin/metabox.php:328 admin/settings.php:464
+msgid "Insert the name of your blog."
+msgstr "插入您的博客名称。"
+
+#: admin/metabox.php:329 admin/settings.php:465
+msgid "Insert the nicename of the author."
+msgstr "插入作者的昵称。"
+
+#: admin/metabox.php:330 admin/settings.php:466
+msgid "Insert the ID of your post."
+msgstr "插入您的帖子的 ID。"
+
+#: admin/metabox.php:331 admin/settings.php:467
+msgid "Insert the publish date of your post."
+msgstr "插入帖子的发布日期。"
+
+#: admin/metabox.php:332 admin/settings.php:468
+msgid "Insert the display name of the author."
+msgstr "插入作者的显示名称。"
+
+#: admin/metabox.php:336 admin/settings.php:472
+msgid "Select"
+msgstr "选择"
+
+#: admin/settings.php:27
+msgid ""
+"Thanks again for using the plugin. We will never show the message again."
+msgstr "再次感谢您使用该插件。我们永远不会再显示该消息。"
+
+#: admin/settings.php:75
+msgid "Please fill Client ID."
+msgstr "请填写客户ID。"
+
+#: admin/settings.php:80
+msgid "Please fill Client Secret."
+msgstr "请填写客户机密。"
+
+#: admin/settings.php:88
+msgid "Please fill api key."
+msgstr "请填写 api 密钥。"
+
+#: admin/settings.php:93
+msgid "Please fill api secret."
+msgstr "请填写api secret。"
+
+#: admin/settings.php:99
+msgid "Please fill twitter access token."
+msgstr "请填写推特访问令牌。"
+
+#: admin/settings.php:104
+msgid "Please fill twitter access token secret."
+msgstr "请填写 推特 访问令牌密码。"
+
+#: admin/settings.php:110
+msgid "Please fill twitter username."
+msgstr "请填写推特用户名。"
+
+#: admin/settings.php:115
+msgid "Please fill message format for posting."
+msgstr "请填写留言格式进行发布。"
+
+#: admin/settings.php:154
+msgid "Settings updated successfully"
+msgstr "设置更新成功"
+
+#: admin/settings.php:176
+#, php-format
+msgid "Successfully connected to %s member area"
+msgstr "已成功连接到 %s 会员区"
+
+#: admin/settings.php:185
+msgid "Account has been authenticated successfully"
+msgstr "账户已成功认证"
+
+#: admin/settings.php:216
+msgid "Twitter / X Settings"
+msgstr "Twitter / X 设置"
+
+#: admin/settings.php:217
+msgid "General Settings"
+msgstr "通用设置"
+
+#: admin/settings.php:226 admin/settings.php:250
+msgid "Note:"
+msgstr "注意:"
+
+#: admin/settings.php:226 admin/settings.php:250
+msgid ""
+"You have to create a Twitter application before filling in following fields."
+msgstr "在填写以下字段之前，您必须创建一个 推特 应用程序。"
+
+#: admin/settings.php:229
+#, php-format
+msgid "%sClick here%s to create a new application."
+msgstr "%s单击此处%s创建一个新的应用程序。"
+
+#: admin/settings.php:234 admin/settings.php:257
+#, php-format
+msgid "In the twitter application, navigate to <b>%s</b>."
+msgstr "在 twitter 应用程序中，导航到 <b>%s</b>。"
+
+#: admin/settings.php:237
+#, php-format
+msgid "Set <b>App permissions</b> to <b>%s</b>."
+msgstr "将<b>应用程序权限</b>设置为<b>%s</b>。"
+
+#: admin/settings.php:240 admin/settings.php:266
+#, php-format
+msgid "Specify <b>Website URL</b> as %s"
+msgstr "将<b>网站网址</b>指定为 %s"
+
+#: admin/settings.php:245
+#, php-format
+msgid "After updation , navigate to <b>%s</b> where you will get <b>%s</b>."
+msgstr "更新后，导航到<b>%s</b>，您将获得<b>%s</b>。"
+
+#: admin/settings.php:246 admin/settings.php:272
+#, php-format
+msgid ""
+"For detailed step by step instructions <b><a href=\"%s\" target=\"_blank\"> "
+"Click here"
+msgstr "详细的分步说明<b><a href=\"%s\" target=\"_blank\"> 点击这里"
+
+#: admin/settings.php:252
+#, php-format
+msgid "%s Click here %s to create a new application."
+msgstr "%s 单击此处 %s 来创建一个新的应用程序。"
+
+#: admin/settings.php:261
+#, php-format
+msgid ""
+"Set <b>App permissions</b> to <b>%s</b>, and <b>Type of App</b> to <b>%s</"
+"b> .<br>Under <b>App info</b> section set <b>Redirect URI</b> to: %s ."
+msgstr ""
+"将<b>应用权限</b>设置为<b>%s</b>，并将<b>应用类型</b>设置为<b>%s</b>。<br>在"
+"<b>应用信息</b>部分，将<b>重定向 URI</b>设置为：%s。"
+
+#: admin/settings.php:271
+#, php-format
+msgid ""
+"After updation , navigate to <b>%s</b> where you will get <b>%s</b><br>under "
+"<b>%s</b>."
+msgstr "更新后，导航到<b>%s</b>，您将在<b>%s</b>下获得<b>%s</b><br>。"
+
+#: admin/settings.php:289 admin/settings.php:329
+msgid "Application needs authorisation"
+msgstr "应用程序需要授权"
+
+#: admin/settings.php:294 admin/settings.php:332
+msgid "Authorize"
+msgstr "授权"
+
+#: admin/settings.php:303 admin/settings.php:341
+msgid "Reauthorize"
+msgstr "重新授权"
+
+#: admin/settings.php:312
+msgid "All fields given below are mandatory"
+msgstr "下面给出的所有字段均为必填项"
+
+#: admin/settings.php:356
+msgid "Application Selection"
+msgstr "应用选择"
+
+#: admin/settings.php:360
+msgid "Own App- Traditional (Deprecating soon. Use OAuth 2.0) "
+msgstr "自己的应用程序 - 传统（即将弃用。使用 OAuth 2.0 "
+
+#: admin/settings.php:363
+msgid "Own App (OAuth2.0 :Recommended)"
+msgstr "自己的应用程序（OAuth2.0：推荐"
+
+#: admin/settings.php:369
+#, php-format
+msgid "%s App (ready to publish)"
+msgstr "%s 应用程序（准备发布）"
+
+#: admin/settings.php:369
+msgid "Starts from 10 USD per year"
+msgstr "每年 10 美元起"
+
+#: admin/settings.php:374
+msgid "30 DAYS FREE TRIAL AVAILABLE"
+msgstr "提供 30 天免费试用"
+
+#: admin/settings.php:377
+#, php-format
+msgid "How to use %s application?"
+msgstr "如何使用 %s 应用程序？"
+
+#: admin/settings.php:390
+#, php-format
+msgid "Connect your %s account"
+msgstr "连接您的 %s 帐户"
+
+#: admin/settings.php:397
+msgid "API key"
+msgstr "API 密钥"
+
+#: admin/settings.php:405
+msgid "API secret"
+msgstr "API 秘密"
+
+#: admin/settings.php:415
+msgid "Client ID"
+msgstr "客户ID"
+
+#: admin/settings.php:423
+msgid "Client Secret "
+msgstr "客户秘密 "
+
+#: admin/settings.php:432
+msgid "Twitter username"
+msgstr "推特用户名"
+
+#: admin/settings.php:440
+msgid "Access token"
+msgstr "访问令牌"
+
+#: admin/settings.php:448
+msgid "Access token secret"
+msgstr "访问令牌秘密"
+
+#: admin/settings.php:498
+msgid "Twitter character limit"
+msgstr "推特字数限制"
+
+#: admin/settings.php:501
+msgid "The character limit of tweets is 280."
+msgstr "推文的字符数限制为 280。"
+
+#: admin/settings.php:502
+msgid ""
+"Use 140 for languages like Chinese, Japanese and Korean <br/> which won't "
+"get the 280 character limit."
+msgstr "对中文、日文和韩文等语言使用 140<br/>，这样就没有 280 个字符的限制。"
+
+#: admin/settings.php:513
+msgid "Save"
+msgstr "保存"
+
+#: admin/settings.php:618
+msgid "Basic Settings"
+msgstr "基本设置"
+
+#: admin/settings.php:621
+msgid "Publish wordpress `pages` to twitter"
+msgstr "将 wordpress `pages` 发布到 推特"
+
+#: admin/settings.php:631
+msgid "Publish wordpress `posts` to twitter"
+msgstr "将 wordpress `posts` 发布到 推特"
+
+#: admin/settings.php:655
+msgid "Select wordpress custom post types for auto publish"
+msgstr "为自动发布选择 wordpress 自定义帖子类型"
+
+#: admin/settings.php:675
+msgid "Advanced Settings"
+msgstr "高级设置"
+
+#: admin/settings.php:679
+msgid "Select post categories for auto publish"
+msgstr "选择自动发布的帖子类别"
+
+#: admin/settings.php:685
+msgid "All"
+msgstr "全部"
+
+#: admin/settings.php:687
+msgid "Specific"
+msgstr "具体的"
+
+#: admin/settings.php:722
+msgid "NIL"
+msgstr "零"
+
+#: admin/settings.php:727
+msgid "Add twitter cards while posting to twitter"
+msgstr "在推特上发帖时添加推特卡"
+
+#: admin/settings.php:729
+msgid ""
+"By crawling twitter card specific meta tags, twitter can generate a "
+"summarised preview of the tweeted link."
+msgstr ""
+"通过抓取 twitter 卡片特定的元标记，twitter 可以生成推文链接的摘要预览。"
+
+#: admin/settings.php:729
+msgid ""
+"To generate tweet preview of post,set <b>Attach media to twitter post</b> as "
+"<b>No</b>"
+msgstr "要生成帖子的推文预览，请将<b>将媒体附加到推特帖子</b>设置为<b>否</b>"
+
+#: admin/settings.php:737
+msgid "Auto publish on creating posts/pages/custom post types"
+msgstr "在创建帖子/页面/自定义帖子类型时自动发布"
+
+#: admin/settings.php:740 admin/settings.php:750
+msgid "Enabled"
+msgstr "启用"
+
+#: admin/settings.php:741 admin/settings.php:751
+msgid "Disabled"
+msgstr "禁用"
+
+#: admin/settings.php:742 admin/settings.php:752
+msgid "Use metabox settings"
+msgstr "使用元框设置"
+
+#: admin/settings.php:747
+msgid "Auto publish on editing posts/pages/custom post types"
+msgstr "在编辑帖子/页面/自定义帖子类型时自动发布"
+
+#: admin/settings.php:757
+msgid "Enable SSL peer verification in remote requests"
+msgstr "在远程请求中启用 SSL 对等验证"
+
+#: admin/settings.php:765
+msgid "Apply filters during publishing"
+msgstr "在发布期间应用过滤器"
+
+#: admin/settings.php:795
+msgid "Other Settings"
+msgstr "其他设置"
+
+#: admin/settings.php:799
+msgid "Enable credit link to author"
+msgstr "启用作者的信用链接"
+
+#: admin/settings.php:812
+msgid "Enable premium version ads"
+msgstr "启用高级版广告"
+
+#: admin/settings.php:830
+msgid "Update Settings"
+msgstr "更新设置"
+
+#: admin/suggest_feature.php:10
+msgid "Thank you for the suggestion."
+msgstr "感谢您的建议。"
+
+#: admin/suggest_feature.php:18
+#, php-format
+msgid "%s not able to process the request."
+msgstr "%s 无法处理请求。"
+
+#: admin/suggest_feature.php:26
+msgid "Please suggest a feature"
+msgstr "请推荐一个功能"
+
+#: admin/suggest_feature.php:66
+msgid "Contribute And Get Rewarded"
+msgstr "贡献并获得奖励"
+
+#: admin/suggest_feature.php:67
+msgid ""
+"Suggest a feature for this plugin and stand a chance to get a free copy of "
+"premium version of this plugin."
+msgstr "建议此插件的功能并有机会获得此插件的高级版本的免费副本。"
+
+#: admin/suggest_feature.php:73
+msgid "Send Mail To Us"
+msgstr "发送邮件给我们"
+
+#: twitter-auto-publish.php:32
+msgid "Hi there! Im just a plugin, not much I can do when called directly."
+msgstr "你好呀！我只是一个插件，直接调用时我无能为力。"
+
+#: xyz-functions.php:229
+msgid "Every 2 hours"
+msgstr "每2小时一次"
+
+#~ msgid "Own App (Traditional: This is for supporting old users) "
+#~ msgstr "自己的应用程序（传统：这是为了支持老用户） "
+
+#~ msgid " We advise switching to OAuth 2.0) "
+#~ msgstr " 我们建议切换到 OAuth 2.0） "
+
+#~ msgid "Help"
+#~ msgstr "帮助"
+
+#~ msgid "Just 29 USD"
+#~ msgstr "只需 29 美元"
+
+#~ msgid "Click here "
+#~ msgstr "点击这里 "
+
+#~ msgid "to create new application. "
+#~ msgstr "创建新的应用程序 "
+
+#~ msgid "Starts from 69 USD"
+#~ msgstr "69 美元起"
+
+#, php-format
+#~ msgid ""
+#~ "%s API package for 1 year, worth 10 USD(1 twitter account ,10 api calls "
+#~ "per hour)"
+#~ msgstr "%s API 包 1 年，价值 10 美元（1 个推特账号，每小时 10 次 API 调用）"
+
+#~ msgid "1 month free subscription"
+#~ msgstr "1个月免费订阅"
+
+#~ msgid "1 year free subscription"
+#~ msgstr "1年免费订阅"
+
+#, php-format
+#~ msgid "Fully Featured %s Plugin"
+#~ msgstr "功能齐全的 %s 插件"
+
+#~ msgid ""
+#~ "Click here </a></b> to create new application. Specify the website for "
+#~ "the application as"
+#~ msgstr "单击此处</a></b>创建新应用程序。将应用程序的网站指定为"
+
+#, php-format
+#~ msgid "Select <b>%s</b> option."
+#~ msgstr "选择 <b>%s</b> 选项。"
+
+#~ msgid "Own App"
+#~ msgstr "自己的应用程序"

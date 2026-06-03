@@ -1,0 +1,1228 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: twitter-auto-publish\n"
+"POT-Creation-Date: 2025-10-28 14:41+0530\n"
+"PO-Revision-Date: 2025-10-28 14:42+0530\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.0.1\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-KeywordsList: _e;__;esc_html_e\n"
+"X-Poedit-SearchPath-0: admin/about.php\n"
+"X-Poedit-SearchPath-1: admin/admin-notices.php\n"
+"X-Poedit-SearchPath-2: admin/ajax-backlink.php\n"
+"X-Poedit-SearchPath-3: admin/destruction.php\n"
+"X-Poedit-SearchPath-4: admin/footer.php\n"
+"X-Poedit-SearchPath-5: admin/header.php\n"
+"X-Poedit-SearchPath-6: admin/install.php\n"
+"X-Poedit-SearchPath-7: admin/logs.php\n"
+"X-Poedit-SearchPath-8: admin/manage-auth.php\n"
+"X-Poedit-SearchPath-9: admin/menu.php\n"
+"X-Poedit-SearchPath-10: admin/metabox.php\n"
+"X-Poedit-SearchPath-11: admin/publish.php\n"
+"X-Poedit-SearchPath-12: admin/settings.php\n"
+"X-Poedit-SearchPath-13: admin/suggest_feature.php\n"
+"X-Poedit-SearchPath-14: twitter-auto-publish.php\n"
+"X-Poedit-SearchPath-15: xyz-functions.php\n"
+
+#: admin/about.php:9
+#, php-format
+msgid ""
+"%s automatically publishes posts from your blog to your Twitter pages. It "
+"allows you to filter posts based on post-types and categories. %s is "
+"developed and maintained by"
+msgstr ""
+"%s veröffentlicht automatisch Posts aus Ihrem Blog auf Ihren Twitter-Seiten. "
+"Es ermöglicht Ihnen, Beiträge nach Beitragstypen und Kategorien zu filtern. "
+"%s wird entwickelt und gewartet von"
+
+#: admin/about.php:17
+#, php-format
+msgid ""
+"If you would like to have more features , please try <a href=\"%s\" "
+"target=\"_blank\">%s</a> which is a premium version of this plugin. We have "
+"included a quick comparison of the free and premium plugins for your "
+"reference."
+msgstr ""
+"Wenn Sie mehr Funktionen haben möchten, versuchen Sie bitte <a href=\"%s\" "
+"target=\"_blank\">%s</a>, eine Premium-Version dieses Plugins. Wir haben "
+"einen schnellen Vergleich der kostenlosen und Premium-Plugins als Referenz "
+"beigefügt."
+
+#: admin/about.php:24
+msgid "Feature group"
+msgstr "Funktionsgruppe"
+
+#: admin/about.php:25
+msgid "Feature"
+msgstr "Besonderheit"
+
+#: admin/about.php:26
+msgid "Free"
+msgstr "Kostenlos"
+
+#: admin/about.php:28
+msgid "Premium"
+msgstr "Prämie"
+
+#: admin/about.php:30
+#, php-format
+msgid "%s Premium"
+msgstr "%s Prämie"
+
+#: admin/about.php:35
+msgid "Supported Media"
+msgstr "Unterstützte Medien"
+
+#: admin/about.php:36 admin/admin-notices.php:56
+msgid "Facebook"
+msgstr "Facebook"
+
+#: admin/about.php:46 admin/admin-notices.php:57 admin/metabox.php:291
+msgid "Twitter"
+msgstr "Twitter"
+
+#: admin/about.php:55 admin/admin-notices.php:58
+msgid "LinkedIn"
+msgstr "LinkedIn"
+
+#: admin/about.php:64
+msgid "Instagram"
+msgstr "Instagram"
+
+#: admin/about.php:73
+msgid "Tumblr"
+msgstr "Tumblr"
+
+#: admin/about.php:82
+msgid "Pinterest"
+msgstr "Pinterest"
+
+#: admin/about.php:91
+msgid "Telegram"
+msgstr "Telegramm"
+
+#: admin/about.php:100
+msgid "Threads"
+msgstr "Threads"
+
+#: admin/about.php:111
+msgid "Posting Options"
+msgstr "Buchungsoptionen"
+
+#: admin/about.php:112
+msgid "Publish to facebook pages"
+msgstr "Auf Facebook-Seiten veröffentlichen"
+
+#: admin/about.php:123
+msgid "Publish to twitter profile"
+msgstr "Auf twitter-Profil veröffentlichen"
+
+#: admin/about.php:133
+msgid "Publish to linkedin profile/company pages"
+msgstr "Veröffentlichen Sie auf LinkedIn-Profil-/Unternehmensseiten"
+
+#: admin/about.php:142
+msgid "Publish to instagram Business accounts"
+msgstr "Veröffentlichen Sie auf Instagram Business-Konten"
+
+#: admin/about.php:152
+msgid "Publish to tumblr profile"
+msgstr "Auf Tumblr-Profil veröffentlichen"
+
+#: admin/about.php:162
+msgid "Publish to pinterest boards"
+msgstr "Auf Pinterest-Boards veröffentlichen"
+
+#: admin/about.php:172
+msgid "Publish to telegram channels and groups"
+msgstr "Veröffentlichen Sie auf Telegram-Kanälen und -Gruppen"
+
+#: admin/about.php:181
+msgid "Publish to threads profile"
+msgstr "Auf Threads-Profil veröffentlichen"
+
+#: admin/about.php:190
+msgid "Option to add twitter image description for visually impaired people"
+msgstr "Option zum Hinzufügen einer twitter-Bildbeschreibung für Sehbehinderte"
+
+#: admin/about.php:200
+msgid "Option to republish existing posts"
+msgstr "Option zur erneuten Veröffentlichung bestehender Beiträge"
+
+#: admin/about.php:210
+msgid "Publish to multiple social media accounts"
+msgstr "Veröffentlichen Sie auf mehreren Social-Media-Konten"
+
+#: admin/about.php:220
+msgid ""
+"Seperate message formats for publishing to multiple social media accounts"
+msgstr ""
+"Separates Nachrichtenformat für die Veröffentlichung auf mehreren Social-"
+"Media-Konten"
+
+#: admin/about.php:230
+msgid "Save auto publish settings of individual posts"
+msgstr ""
+"Speichern Sie die Einstellungen für die automatische Veröffentlichung "
+"einzelner Beiträge"
+
+#: admin/about.php:240
+msgid ""
+"Hash Tags support for Facebook, Twitter, Linkedin, Instagram, Tumblr, "
+"Threads, Pinterest and Telegram"
+msgstr ""
+"Hash-Tags-Unterstützung für Facebook, Twitter, Linkedin, Instagram, Tumblr,"
+"Threads und Pinterest"
+
+#: admin/about.php:250
+msgid "Option to use post tags as hash tags"
+msgstr "Option zur Verwendung von Post-Tags als Hashtags"
+
+#: admin/about.php:259
+msgid "Option to use post categories as hash tags"
+msgstr "Option zur Verwendung von Beitragskategorien als Hashtags"
+
+#: admin/about.php:269
+msgid "Enable/Disable SSL peer verification"
+msgstr "SSL-Peer-Verifizierung aktivieren/deaktivieren"
+
+#: admin/about.php:278
+msgid "Carousel post support for Instagram and Telegram"
+msgstr "Karussell-Post-Unterstützung für Instagram und Telegram"
+
+#: admin/about.php:289
+msgid "Image Options"
+msgstr "Bildoptionen"
+
+#: admin/about.php:290
+msgid "Publish images along with post content"
+msgstr "Veröffentlichen Sie Bilder zusammen mit Postinhalten"
+
+#: admin/about.php:301
+msgid ""
+"Separate default image url for publishing to multiple social media accounts"
+msgstr ""
+"Separate Standard-Bild-URL für die Veröffentlichung auf mehreren Social-"
+"Media-Konten"
+
+#: admin/about.php:311
+msgid ""
+"Option to specify preference from featured image, post content, post meta "
+"and open graph tags"
+msgstr ""
+"Option zum Festlegen von Präferenzen für vorgestellte Bilder, Post-Inhalte, "
+"Post-Meta und Open-Graph-Tags"
+
+#: admin/about.php:321
+msgid ""
+"Publish multiple images to facebook, tumblr, linkedin, twitter, threads and "
+"telegram along with post content\t"
+msgstr ""
+"Veröffentlichen Sie mehrere Bilder zusammen mit dem Inhalt der Beiträge auf "
+"Facebook, Tumblr, Threads, Linkedin und twitter "
+
+#: admin/about.php:331
+msgid "Option to specify multiphoto preference from post content and post meta"
+msgstr ""
+"Option zum Festlegen der Multiphoto-Präferenz aus Post-Inhalt und Post-Meta"
+
+#: admin/about.php:343
+msgid "Video/Audio Options"
+msgstr "Video-/Audiooptionen"
+
+#: admin/about.php:344
+msgid ""
+"Publish video to facebook, tumblr,Linkedin, Instagram, twitter, threads and "
+"telegram along with post content"
+msgstr ""
+"Veröffentlichen Sie Videos zusammen mit Post-Inhalten auf Facebook, Tumblr, "
+"LinkedIn, Instagram, Threads und Twitter"
+
+#: admin/about.php:354
+msgid ""
+"Option to specify preference from post content, post meta and open graph tags"
+msgstr ""
+"Option zum Festlegen von Präferenzen für Post-Inhalte, Post-Meta und Open-"
+"Graph-Tags"
+
+#: admin/about.php:364
+msgid "Publish audio to tumblr along with post content"
+msgstr "Veröffentlichen Sie Audio auf Tumblr zusammen mit Post-Inhalten"
+
+#: admin/about.php:373
+msgid ""
+"Option to specify audio preference from  post content, post meta and open "
+"graph tags"
+msgstr ""
+"Option zum Festlegen der Audiopräferenz von Post-Inhalten, Post-Meta und "
+"Open-Graph-Tags"
+
+#: admin/about.php:384
+msgid "Filter Options"
+msgstr "Filteroptionen"
+
+#: admin/about.php:385
+msgid "Filter posts to publish based on categories"
+msgstr "Filtern Sie zu veröffentlichende Beiträge basierend auf Kategorien"
+
+#: admin/about.php:395
+msgid "Filter posts to publish based on custom post types"
+msgstr ""
+"Filtern Sie zu veröffentlichende Beiträge basierend auf benutzerdefinierten "
+"Beitragstypen"
+
+#: admin/about.php:404
+msgid "Filter posts to publish based on sticky posts"
+msgstr "Filtern Sie zu veröffentlichende Posts basierend auf Sticky Posts"
+
+#: admin/about.php:413
+msgid "Configuration to enable/disable page publishing"
+msgstr "Konfiguration zum Aktivieren/Deaktivieren der Seitenveröffentlichung"
+
+#: admin/about.php:423
+msgid "Category filter for individual accounts"
+msgstr "Kategoriefilter für einzelne Konten"
+
+#: admin/about.php:433
+msgid "Custom post type filter for individual accounts"
+msgstr "Benutzerdefinierter Beitragstypfilter für einzelne Konten"
+
+#: admin/about.php:443
+msgid "Enable/Disable page publishing for individual accounts"
+msgstr "Aktivieren/Deaktivieren der Seitenveröffentlichung für einzelne Konten"
+
+#: admin/about.php:453
+msgid "Override auto publish scheduling for individual accounts"
+msgstr ""
+"Überschreiben Sie die automatische Veröffentlichungsplanung für einzelne "
+"Konten"
+
+#: admin/about.php:462
+msgid "Override auto publish based on sticky posts for individual accounts"
+msgstr ""
+"Überschreiben Sie die automatische Veröffentlichung basierend auf Sticky "
+"Posts für einzelne Konten"
+
+#: admin/about.php:473
+msgid "Scheduling"
+msgstr "Planung"
+
+#: admin/about.php:474
+msgid "Instantaneous post publishing"
+msgstr "Sofortige Post-Veröffentlichung"
+
+#: admin/about.php:484
+msgid "Scheduled post publishing using cron"
+msgstr "Geplante Postveröffentlichung mit cron"
+
+#: admin/about.php:494
+msgid "Status summary of auto publish tasks by mail"
+msgstr ""
+"Statuszusammenfassung von Aufgaben zur automatischen Veröffentlichung per E-"
+"Mail"
+
+#: admin/about.php:504
+msgid "Configurable auto publishing time interval"
+msgstr "Konfigurierbares Zeitintervall für die automatische Veröffentlichung"
+
+#: admin/about.php:518
+msgid "Publishing History"
+msgstr "Verlagsgeschichte"
+
+#: admin/about.php:519
+msgid "View auto publish history"
+msgstr "Verlauf der automatischen Veröffentlichung anzeigen"
+
+#: admin/about.php:528
+msgid "View auto publish error logs"
+msgstr "Fehlerprotokolle für die automatische Veröffentlichung anzeigen"
+
+#: admin/about.php:538
+msgid "Option to republish post"
+msgstr "Option zum erneuten Veröffentlichen des Beitrags"
+
+#: admin/about.php:548
+msgid "Option to reschedule publishing"
+msgstr "Option zum Umplanen der Veröffentlichung"
+
+#: admin/about.php:559
+msgid "Installation and Support"
+msgstr "Installation und Unterstützung"
+
+#: admin/about.php:560
+msgid "Free Installation"
+msgstr "Kostenlose Installation"
+
+#: admin/about.php:569
+msgid "Privilege customer support"
+msgstr "Privilege-Kundensupport"
+
+#: admin/about.php:580
+msgid "Addon Features"
+msgstr "Addon-Funktionen"
+
+#: admin/about.php:581
+msgid "Advanced Autopublish Scheduler"
+msgstr "Erweiterter Autopublish-Scheduler"
+
+#: admin/about.php:590
+msgid "URL-Shortener"
+msgstr "URL-Verkürzer"
+
+#: admin/about.php:599
+msgid "Privilege Management"
+msgstr "Privilegienverwaltung"
+
+#: admin/about.php:608
+msgid "Other"
+msgstr "Andere"
+
+#: admin/about.php:609
+msgid "Price"
+msgstr "Preis"
+
+#: admin/about.php:610
+msgid "FREE"
+msgstr "KOSTENLOS"
+
+#: admin/about.php:611
+msgid "Starts from 29 USD"
+msgstr "Ab 29 USD"
+
+#: admin/about.php:612
+msgid "Starts from 59 USD"
+msgstr "Ab 59 USD"
+
+#: admin/about.php:615
+msgid "Purchase"
+msgstr "Kauf"
+
+#: admin/about.php:617 admin/footer.php:27
+msgid "Buy Now"
+msgstr "Kaufe jetzt"
+
+#: admin/about.php:624
+msgid "Pinterest is added on experimental basis."
+msgstr "Pinterest wird auf experimenteller Basis hinzugefügt."
+
+#: admin/admin-notices.php:41
+#, php-format
+msgid ""
+"Thank you for using <a href=\"%s\" target=\"_blank\"> %s </a> plugin from <a "
+"href=\"%s\" target=\"_blank\"> %s </a>. Would you consider supporting us "
+"with the continued development of the plugin using any of the below methods?"
+msgstr ""
+"Vielen Dank, dass Sie das Plug-in <a href=\"%s\" target=\"_blank\"> %s </a> "
+"von <a href=\"%s\" target=\"_blank\"> %s </a> verwenden. Würden Sie erwägen, "
+"uns bei der Weiterentwicklung des Plugins mit einer der folgenden Methoden "
+"zu unterstützen?"
+
+#: admin/admin-notices.php:45
+msgid "Rate it 5★'s on wordpress"
+msgstr "Bewerten Sie es mit 5★ auf WordPress"
+
+#: admin/admin-notices.php:47
+msgid "Enable Backlink"
+msgstr "Backlinks aktivieren"
+
+#: admin/admin-notices.php:49
+msgid "Share on"
+msgstr "Teilen Sie weiter"
+
+#: admin/admin-notices.php:50 admin/header.php:99
+msgid "Donate"
+msgstr "Spenden"
+
+#: admin/admin-notices.php:52
+msgid "Don't Show This Again"
+msgstr "Zeigen Sie dies nicht noch einmal"
+
+#: admin/footer.php:15
+#, php-format
+msgid ""
+"%sUpgrade to the Fully Featured XYZ WP Social Media Auto Publish Premium "
+"Plugin for %sJust 29 USD%s"
+msgstr ""
+"%sUpgrade auf das voll funktionsfähige XYZ WP Social Media Auto Publish "
+"Premium-Plugin für %snur 29 USD%s"
+
+#: admin/footer.php:21
+msgid ""
+"Unlock advanced scheduling, multi-account publishing, hashtag automation, "
+"and seamless social media integration!"
+msgstr ""
+"Schalten Sie erweiterte Planung, Multi-Account-Veröffentlichung, Hashtag-"
+"Automatisierung und nahtlose Social-Media-Integration frei!"
+
+#: admin/footer.php:31
+msgid "Compare Features"
+msgstr "Funktionen vergleichen"
+
+#: admin/footer.php:42
+msgid "We are available for custom development"
+msgstr "Wir stehen für kundenspezifische Entwicklungen zur Verfügung"
+
+#: admin/footer.php:44
+msgid "Get a quote"
+msgstr "Angebot anfordern"
+
+#: admin/footer.php:50
+msgid "Follow Us"
+msgstr "Folge uns"
+
+#: admin/footer.php:58
+msgid "Support"
+msgstr "Unterstützen"
+
+#: admin/footer.php:59
+msgid "Contact Us"
+msgstr "Kontaktiere uns"
+
+#: admin/footer.php:60
+msgid "Please Rate Us"
+msgstr "Bitte bewerten Sie uns"
+
+#: admin/footer.php:64
+msgid "Create a ticket at Wordpress forum"
+msgstr "Erstellen Sie ein Ticket im Wordpress-Forum"
+
+#: admin/footer.php:67
+msgid "Stay tuned for our updates"
+msgstr "Bleiben Sie dran für unsere Updates"
+
+#: admin/footer.php:131
+msgid "Name"
+msgstr "Name"
+
+#: admin/footer.php:147
+msgid "Email"
+msgstr "Email"
+
+#: admin/footer.php:149
+msgid "Subscribe"
+msgstr "Abonnieren"
+
+#: admin/footer.php:161
+msgid "Our Plugins"
+msgstr "Unsere Plugins"
+
+#: admin/footer.php:182
+msgid "Powered by"
+msgstr "Bereitgestellt von"
+
+#: admin/header.php:19
+msgid "Settings updated successfully."
+msgstr "Einstellungen erfolgreich aktualisiert."
+
+#: admin/header.php:19 admin/header.php:32 admin/header.php:49
+#: admin/manage-auth.php:9 admin/manage-auth.php:143 admin/manage-auth.php:207
+#: admin/settings.php:29 admin/settings.php:155 admin/settings.php:168
+#: admin/settings.php:178 admin/settings.php:186 admin/settings.php:195
+#: admin/settings.php:1034 admin/settings.php:1060 admin/suggest_feature.php:11
+#: admin/suggest_feature.php:19 admin/suggest_feature.php:27
+msgid "Dismiss"
+msgstr "Zurückweisen"
+
+#: admin/header.php:31
+msgid "Thank you for enabling backlink."
+msgstr "Vielen Dank für die Aktivierung des Backlinks."
+
+#: admin/header.php:48
+msgid "Please do a favour by enabling backlink to our site."
+msgstr ""
+"Bitte tun Sie einen Gefallen, indem Sie den Backlink zu unserer Website "
+"aktivieren."
+
+#: admin/header.php:48
+msgid "Okay, Enable"
+msgstr "OK, aktivieren"
+
+#: admin/header.php:102
+msgid "FAQ"
+msgstr "Häufig gestellte Fragen"
+
+#: admin/header.php:105
+msgid "Readme"
+msgstr "Liesmich"
+
+#: admin/header.php:108 admin/menu.php:35
+msgid "About"
+msgstr "Etwa"
+
+#: admin/logs.php:9
+msgid "Auto Publish Logs"
+msgstr "Automatische Veröffentlichungsprotokolle"
+
+#: admin/logs.php:10
+msgid "Last ten logs"
+msgstr "Die letzten zehn Protokolle"
+
+#: admin/logs.php:15
+msgid "Post Id"
+msgstr "Beitrags-ID"
+
+#: admin/logs.php:16
+msgid "Post Title"
+msgstr "Titel des Beitrags"
+
+#: admin/logs.php:17
+msgid "Published On"
+msgstr "Veröffentlicht auf"
+
+#: admin/logs.php:18
+msgid "Status"
+msgstr "Status"
+
+#: admin/logs.php:27
+msgid "No logs Found"
+msgstr "Keine Protokolle gefunden"
+
+#: admin/manage-auth.php:7
+#, php-format
+msgid "%s Package updated successfully."
+msgstr "%s Paket erfolgreich aktualisiert."
+
+#: admin/manage-auth.php:25
+#, php-format
+msgid "Please authorize %s app under Twitter settings to access this page."
+msgstr ""
+"Bitte autorisieren Sie die %s-App in den Twitter-Einstellungen für den "
+"Zugriff auf diese Seite."
+
+#: admin/manage-auth.php:255 admin/menu.php:33
+msgid "Manage Authorizations"
+msgstr "Berechtigungen verwalten"
+
+#: admin/manage-auth.php:278
+msgid "Current Plan:"
+msgstr "Derzeitiger Plan:"
+
+#: admin/manage-auth.php:280
+msgid "Allowed Twitter users:"
+msgstr "Zugelassene Twitter-Benutzer:"
+
+#: admin/manage-auth.php:281
+msgid "API limit per account :"
+msgstr "API-Limit pro Konto:"
+
+#: admin/manage-auth.php:281
+msgid "per day"
+msgstr "pro Tag"
+
+#: admin/manage-auth.php:282
+msgid "Package Expiry :"
+msgstr "Ablauf des Pakets :"
+
+#: admin/manage-auth.php:283
+msgid "Package Status :"
+msgstr "Paket Status :"
+
+#: admin/manage-auth.php:293
+msgid "Upgrade/Renew"
+msgstr "Upgrade/Erneuern"
+
+#: admin/manage-auth.php:302
+msgid "Show all entries"
+msgstr "Alle Einträge anzeigen"
+
+#: admin/manage-auth.php:303
+msgid "Show entries from current wp installation"
+msgstr "Einträge der aktuellen wp-Installation anzeigen"
+
+#: admin/manage-auth.php:304
+msgid "Show entries from other wp installations"
+msgstr "Einträge von anderen wp-Installationen anzeigen"
+
+#: admin/manage-auth.php:309
+msgid "Twitter user name"
+msgstr "Twitter Benutzername"
+
+#: admin/manage-auth.php:311
+msgid "Selected groups"
+msgstr "Ausgewählte Gruppen"
+
+#: admin/manage-auth.php:313
+#, php-format
+msgid "%s url"
+msgstr "%s-URL"
+
+#: admin/manage-auth.php:315
+msgid "Plugin"
+msgstr "Plugin"
+
+#: admin/manage-auth.php:316
+#, php-format
+msgid "Account ID %s"
+msgstr "Konto-ID %s"
+
+#: admin/manage-auth.php:318
+msgid "Action"
+msgstr "Aktion"
+
+#: admin/manage-auth.php:345
+msgid "Not Applicable"
+msgstr "Unzutreffend"
+
+#: admin/manage-auth.php:352 admin/manage-auth.php:374
+msgid "Delete"
+msgstr "Löschen"
+
+#: admin/manage-auth.php:365
+msgid "(Inactive)"
+msgstr "(Inaktiv)"
+
+#: admin/manage-auth.php:384
+msgid "No Authorizations"
+msgstr "Keine Berechtigungen"
+
+#: admin/manage-auth.php:392
+msgid "Unable to connect. Please check your curl and firewall settings"
+msgstr ""
+"Verbindung konnte nicht hergestellt werden. Bitte überprüfen Sie Ihre Curl- "
+"und Firewall-Einstellungen"
+
+#: admin/menu.php:14
+msgid "Please check whether the email is correct."
+msgstr "Bitte überprüfen Sie, ob die E-Mail korrekt ist."
+
+#: admin/menu.php:15
+msgid "Select atleast one list."
+msgstr "Wählen Sie mindestens eine Liste aus."
+
+#: admin/menu.php:16
+msgid "You do not have sufficient permissions"
+msgstr "Sie haben keine ausreichenden Berechtigungen"
+
+#: admin/menu.php:17
+#, php-format
+msgid "Account details successfully deleted from %s"
+msgstr "Kontodaten erfolgreich von %s gelöscht"
+
+#: admin/menu.php:18
+#, php-format
+msgid "In-active Twitter account successfully deleted from %s"
+msgstr "Inaktives Twitter-Konto erfolgreich von %s gelöscht"
+
+#: admin/menu.php:19
+#, php-format
+msgid "Please connect your %s member account"
+msgstr "Bitte verbinden Sie Ihr %s Mitgliedskonto"
+
+#: admin/menu.php:20
+msgid "Thank you for enabling backlink !"
+msgstr "Vielen Dank für die Aktivierung des Backlinks!"
+
+#: admin/menu.php:31
+msgid "Settings"
+msgstr "Einstellungen"
+
+#: admin/menu.php:34
+msgid "Logs"
+msgstr "Aufzeichnungen"
+
+#: admin/menu.php:36
+msgid "Suggest a Feature"
+msgstr "Schlagen Sie eine Funktion vor"
+
+#: admin/metabox.php:298 admin/settings.php:348
+msgid "Enable auto publish posts to my twitter account"
+msgstr ""
+"Aktivieren Sie die automatische Veröffentlichung von Beiträgen in meinem "
+"twitter-Konto"
+
+#: admin/metabox.php:301 admin/metabox.php:314 admin/settings.php:351
+#: admin/settings.php:492 admin/settings.php:624 admin/settings.php:634
+#: admin/settings.php:731 admin/settings.php:759 admin/settings.php:802
+#: admin/settings.php:815
+msgid "Yes"
+msgstr "Ja"
+
+#: admin/metabox.php:302 admin/metabox.php:312 admin/settings.php:352
+#: admin/settings.php:493 admin/settings.php:625 admin/settings.php:635
+#: admin/settings.php:732 admin/settings.php:760 admin/settings.php:803
+#: admin/settings.php:816
+msgid "No"
+msgstr "Nein"
+
+#: admin/metabox.php:307 admin/settings.php:489
+msgid "Attach image to twitter post"
+msgstr "Bild an twitter-Post anhängen"
+
+#: admin/metabox.php:320 admin/settings.php:456
+msgid "Message format for posting"
+msgstr "Nachrichtenformat für die Veröffentlichung"
+
+#: admin/metabox.php:324 admin/settings.php:460
+msgid "Insert the title of your post."
+msgstr "Geben Sie den Titel Ihres Beitrags ein."
+
+#: admin/metabox.php:325 admin/settings.php:461
+msgid "Insert the URL where your post is displayed."
+msgstr "Fügen Sie die URL ein, unter der Ihr Beitrag angezeigt wird."
+
+#: admin/metabox.php:326 admin/settings.php:462
+msgid "Insert the excerpt of your post."
+msgstr "Fügen Sie den Auszug Ihres Beitrags ein."
+
+#: admin/metabox.php:327 admin/settings.php:463
+msgid "Insert the description of your post."
+msgstr "Geben Sie die Beschreibung Ihres Beitrags ein."
+
+#: admin/metabox.php:328 admin/settings.php:464
+msgid "Insert the name of your blog."
+msgstr "Geben Sie den Namen Ihres Blogs ein."
+
+#: admin/metabox.php:329 admin/settings.php:465
+msgid "Insert the nicename of the author."
+msgstr "Geben Sie den netten Namen des Autors ein."
+
+#: admin/metabox.php:330 admin/settings.php:466
+msgid "Insert the ID of your post."
+msgstr "Geben Sie die ID Ihres Beitrags ein."
+
+#: admin/metabox.php:331 admin/settings.php:467
+msgid "Insert the publish date of your post."
+msgstr "Geben Sie das Veröffentlichungsdatum Ihres Beitrags ein."
+
+#: admin/metabox.php:332 admin/settings.php:468
+msgid "Insert the display name of the author."
+msgstr "Geben Sie den Anzeigenamen des Autors ein."
+
+#: admin/metabox.php:336 admin/settings.php:472
+msgid "Select"
+msgstr "Wählen"
+
+#: admin/settings.php:27
+msgid ""
+"Thanks again for using the plugin. We will never show the message again."
+msgstr ""
+"Nochmals vielen Dank für die Verwendung des Plugins. Wir werden die "
+"Nachricht nie wieder zeigen."
+
+#: admin/settings.php:75
+msgid "Please fill Client ID."
+msgstr "Bitte geben Sie die Kunden-ID ein."
+
+#: admin/settings.php:80
+msgid "Please fill Client Secret."
+msgstr "Bitte füllen Sie das Client-Geheimnis aus."
+
+#: admin/settings.php:88
+msgid "Please fill api key."
+msgstr "Bitte geben Sie den API-Schlüssel ein."
+
+#: admin/settings.php:93
+msgid "Please fill api secret."
+msgstr "Bitte füllen Sie das API-Geheimnis."
+
+#: admin/settings.php:99
+msgid "Please fill twitter access token."
+msgstr "Bitte füllen Sie das twitter-zugangstoken."
+
+#: admin/settings.php:104
+msgid "Please fill twitter access token secret."
+msgstr "Bitte füllen Sie das twitter geheimnis des zugriffstokens."
+
+#: admin/settings.php:110
+msgid "Please fill twitter username."
+msgstr "Bitte geben Sie den twitter-Benutzernamen ein."
+
+#: admin/settings.php:115
+msgid "Please fill message format for posting."
+msgstr "Bitte füllen Sie das Nachrichtenformat für die Veröffentlichung aus."
+
+#: admin/settings.php:154
+msgid "Settings updated successfully"
+msgstr "Einstellungen erfolgreich aktualisiert"
+
+#: admin/settings.php:176
+#, php-format
+msgid "Successfully connected to %s member area"
+msgstr "Erfolgreich mit %s Mitgliederbereich verbunden"
+
+#: admin/settings.php:185
+msgid "Account has been authenticated successfully"
+msgstr "Konto wurde erfolgreich authentifiziert"
+
+#: admin/settings.php:216
+msgid "Twitter / X Settings"
+msgstr "Twitter-Twitter / X-Einstellungen"
+
+#: admin/settings.php:217
+msgid "General Settings"
+msgstr "Allgemeine Einstellungen"
+
+#: admin/settings.php:226 admin/settings.php:250
+msgid "Note:"
+msgstr "Notiz:"
+
+#: admin/settings.php:226 admin/settings.php:250
+msgid ""
+"You have to create a Twitter application before filling in following fields."
+msgstr ""
+"Sie müssen eine Twitter-Anwendung erstellen, bevor Sie die folgenden Felder "
+"ausfüllen."
+
+#: admin/settings.php:229
+#, php-format
+msgid "%sClick here%s to create a new application."
+msgstr "%sKlicken Sie hier%s, um eine neue Anwendung zu erstellen."
+
+#: admin/settings.php:234 admin/settings.php:257
+#, php-format
+msgid "In the twitter application, navigate to <b>%s</b>."
+msgstr "Navigieren Sie in der Twitter-Anwendung zu <b>%s</b>."
+
+#: admin/settings.php:237
+#, php-format
+msgid "Set <b>App permissions</b> to <b>%s</b>."
+msgstr "Setzen Sie die <b>App-Berechtigungen</b> auf <b>%s</b>."
+
+#: admin/settings.php:240 admin/settings.php:266
+#, php-format
+msgid "Specify <b>Website URL</b> as %s"
+msgstr "Geben Sie die <b>Website-URL</b> als %s an"
+
+#: admin/settings.php:245
+#, php-format
+msgid "After updation , navigate to <b>%s</b> where you will get <b>%s</b>."
+msgstr ""
+"Navigieren Sie nach der Aktualisierung zu <b>%s</b>, wo Sie <b>%s</b> "
+"erhalten."
+
+#: admin/settings.php:246 admin/settings.php:272
+#, php-format
+msgid ""
+"For detailed step by step instructions <b><a href=\"%s\" target=\"_blank\"> "
+"Click here"
+msgstr ""
+"Für eine detaillierte Schritt-für-Schritt-Anleitung <b><a href=\"%s\" "
+"target=\"_blank\"> klicken Sie hier"
+
+#: admin/settings.php:252
+#, php-format
+msgid "%s Click here %s to create a new application."
+msgstr "%s Klicken Sie hier, %s um eine neue Anwendung zu erstellen."
+
+#: admin/settings.php:261
+#, php-format
+msgid ""
+"Set <b>App permissions</b> to <b>%s</b>, and <b>Type of App</b> to <b>%s</"
+"b> .<br>Under <b>App info</b> section set <b>Redirect URI</b> to: %s ."
+msgstr ""
+"Setzen Sie die <b>App-Berechtigungen</b> auf <b>%s</b> und den <b>App-Typ</"
+"b> auf <b>%s</b>.<br>Setzen Sie im Abschnitt <b>App-Info</b> die "
+"<b>Umleitungs-URI</b> auf: %s."
+
+#: admin/settings.php:271
+#, php-format
+msgid ""
+"After updation , navigate to <b>%s</b> where you will get <b>%s</b><br>under "
+"<b>%s</b>."
+msgstr ""
+"Navigieren Sie nach der Aktualisierung zu <b>%s</b>, wo Sie <b>%s</"
+"b><br>unter <b>%s</b> erhalten."
+
+#: admin/settings.php:289 admin/settings.php:329
+msgid "Application needs authorisation"
+msgstr "Die Anwendung benötigt eine Autorisierung"
+
+#: admin/settings.php:294 admin/settings.php:332
+msgid "Authorize"
+msgstr "Autorisieren"
+
+#: admin/settings.php:303 admin/settings.php:341
+msgid "Reauthorize"
+msgstr "Erneut autorisieren"
+
+#: admin/settings.php:312
+msgid "All fields given below are mandatory"
+msgstr "Alle unten angegebenen Felder sind Pflichtfelder"
+
+#: admin/settings.php:356
+msgid "Application Selection"
+msgstr "Anwendungsauswahl"
+
+#: admin/settings.php:360
+msgid "Own App- Traditional (Deprecating soon. Use OAuth 2.0) "
+msgstr ""
+"Eigene App – Traditionell (Wird bald veraltet. Verwenden Sie OAuth 2.0) "
+
+#: admin/settings.php:363
+msgid "Own App (OAuth2.0 :Recommended)"
+msgstr "Eigene App (OAuth2.0: Empfohlen)"
+
+#: admin/settings.php:369
+#, php-format
+msgid "%s App (ready to publish)"
+msgstr "%s-App (bereit zur Veröffentlichung)"
+
+#: admin/settings.php:369
+msgid "Starts from 10 USD per year"
+msgstr "Ab 10 USD pro Jahr"
+
+#: admin/settings.php:374
+msgid "30 DAYS FREE TRIAL AVAILABLE"
+msgstr "30 TAGE KOSTENLOSE TESTVERSION VERFÜGBAR"
+
+#: admin/settings.php:377
+#, php-format
+msgid "How to use %s application?"
+msgstr "Wie verwende ich die %s-Anwendung?"
+
+#: admin/settings.php:390
+#, php-format
+msgid "Connect your %s account"
+msgstr "Verbinden Sie Ihr %s-Konto"
+
+#: admin/settings.php:397
+msgid "API key"
+msgstr "API-Schlüssel"
+
+#: admin/settings.php:405
+msgid "API secret"
+msgstr "API-Geheimnis"
+
+#: admin/settings.php:415
+msgid "Client ID"
+msgstr "Kunden-ID"
+
+#: admin/settings.php:423
+msgid "Client Secret "
+msgstr "Client-Geheimnis "
+
+#: admin/settings.php:432
+msgid "Twitter username"
+msgstr "Twitter Benutzername"
+
+#: admin/settings.php:440
+msgid "Access token"
+msgstr "Zugangstoken"
+
+#: admin/settings.php:448
+msgid "Access token secret"
+msgstr "Geheimnis des Zugriffstokens"
+
+#: admin/settings.php:498
+msgid "Twitter character limit"
+msgstr "Twitter character limit"
+
+#: admin/settings.php:501
+msgid "The character limit of tweets is 280."
+msgstr "Die Zeichenbeschränkung für Tweets beträgt 280."
+
+#: admin/settings.php:502
+msgid ""
+"Use 140 for languages like Chinese, Japanese and Korean <br/> which won't "
+"get the 280 character limit."
+msgstr ""
+"Verwenden Sie 140 für Sprachen wie Chinesisch, Japanisch und Koreanisch <br/"
+">, für die die Beschränkung auf 280 Zeichen nicht gilt."
+
+#: admin/settings.php:513
+msgid "Save"
+msgstr "Speichern"
+
+#: admin/settings.php:618
+msgid "Basic Settings"
+msgstr "Grundeinstellungen"
+
+#: admin/settings.php:621
+msgid "Publish wordpress `pages` to twitter"
+msgstr "Veröffentlichen Sie WordPress-`Seiten` auf twitter"
+
+#: admin/settings.php:631
+msgid "Publish wordpress `posts` to twitter"
+msgstr "Veröffentlichen Sie WordPress-Posts auf twitter"
+
+#: admin/settings.php:655
+msgid "Select wordpress custom post types for auto publish"
+msgstr ""
+"Wählen Sie benutzerdefinierte WordPress-Beitragstypen für die automatische "
+"Veröffentlichung aus"
+
+#: admin/settings.php:675
+msgid "Advanced Settings"
+msgstr "Erweiterte Einstellungen"
+
+#: admin/settings.php:679
+msgid "Select post categories for auto publish"
+msgstr ""
+"Wählen Sie Beitragskategorien für die automatische Veröffentlichung aus"
+
+#: admin/settings.php:685
+msgid "All"
+msgstr "Alle"
+
+#: admin/settings.php:687
+msgid "Specific"
+msgstr "Spezifisch"
+
+#: admin/settings.php:722
+msgid "NIL"
+msgstr "Nichts"
+
+#: admin/settings.php:727
+msgid "Add twitter cards while posting to twitter"
+msgstr "Fügen Sie twitter-Karten hinzu, während Sie auf twitter posten"
+
+#: admin/settings.php:729
+msgid ""
+"By crawling twitter card specific meta tags, twitter can generate a "
+"summarised preview of the tweeted link."
+msgstr ""
+"Durch das Crawlen von Twitter-Karten-spezifischen Meta-Tags kann Twitter "
+"eine zusammengefasste Vorschau des getwitterten Links generieren."
+
+#: admin/settings.php:729
+msgid ""
+"To generate tweet preview of post,set <b>Attach media to twitter post</b> as "
+"<b>No</b>"
+msgstr ""
+"Um eine Tweet-Vorschau des Beitrags zu generieren, setzen Sie <b>Medien an "
+"Twitter-Beitrag anhängen</b> auf <b>Nein</b>"
+
+#: admin/settings.php:737
+msgid "Auto publish on creating posts/pages/custom post types"
+msgstr ""
+"Automatische Veröffentlichung beim Erstellen von Beiträgen/Seiten/"
+"benutzerdefinierten Beitragstypen"
+
+#: admin/settings.php:740 admin/settings.php:750
+msgid "Enabled"
+msgstr "Ermöglicht"
+
+#: admin/settings.php:741 admin/settings.php:751
+msgid "Disabled"
+msgstr "Behindert"
+
+#: admin/settings.php:742 admin/settings.php:752
+msgid "Use metabox settings"
+msgstr "Verwenden Sie Metabox-Einstellungen"
+
+#: admin/settings.php:747
+msgid "Auto publish on editing posts/pages/custom post types"
+msgstr ""
+"Automatische Veröffentlichung beim Bearbeiten von Beiträgen/Seiten/"
+"benutzerdefinierten Beitragstypen"
+
+#: admin/settings.php:757
+msgid "Enable SSL peer verification in remote requests"
+msgstr "Aktivieren Sie die SSL-Peer-Verifizierung in Remote-Anfragen"
+
+#: admin/settings.php:765
+msgid "Apply filters during publishing"
+msgstr "Wenden Sie Filter während der Veröffentlichung an"
+
+#: admin/settings.php:795
+msgid "Other Settings"
+msgstr "Andere Einstellungen"
+
+#: admin/settings.php:799
+msgid "Enable credit link to author"
+msgstr "Credit-Link zum Autor aktivieren"
+
+#: admin/settings.php:812
+msgid "Enable premium version ads"
+msgstr "Anzeigen der Premium-Version aktivieren"
+
+#: admin/settings.php:830
+msgid "Update Settings"
+msgstr "Update Einstellungen"
+
+#: admin/suggest_feature.php:10
+msgid "Thank you for the suggestion."
+msgstr "Vielen Dank für den Vorschlag."
+
+#: admin/suggest_feature.php:18
+#, php-format
+msgid "%s not able to process the request."
+msgstr "%s kann die Anfrage nicht verarbeiten."
+
+#: admin/suggest_feature.php:26
+msgid "Please suggest a feature"
+msgstr "Bitte schlagen Sie eine Funktion vor"
+
+#: admin/suggest_feature.php:66
+msgid "Contribute And Get Rewarded"
+msgstr "Machen Sie mit und werden Sie belohnt"
+
+#: admin/suggest_feature.php:67
+msgid ""
+"Suggest a feature for this plugin and stand a chance to get a free copy of "
+"premium version of this plugin."
+msgstr ""
+"Schlagen Sie eine Funktion für dieses Plugin vor und erhalten Sie die "
+"Chance, eine kostenlose Kopie der Premium-Version dieses Plugins zu erhalten."
+
+#: admin/suggest_feature.php:73
+msgid "Send Mail To Us"
+msgstr "Mail an uns senden"
+
+#: twitter-auto-publish.php:32
+msgid "Hi there! Im just a plugin, not much I can do when called directly."
+msgstr ""
+"Hi! Ich bin nur ein Plugin, ich kann nicht viel tun, wenn es direkt "
+"aufgerufen wird."
+
+#: xyz-functions.php:229
+msgid "Every 2 hours"
+msgstr "Alle 2 Stunden"
+
+#~ msgid "Own App (Traditional: This is for supporting old users) "
+#~ msgstr ""
+#~ "Eigene App (Traditionell: Dies dient der Unterstützung alter Benutzer. "
+#~ "Wir empfehlen die Umstellung auf OAuth 2.0) "
+
+#~ msgid " We advise switching to OAuth 2.0) "
+#~ msgstr " Wir empfehlen den Umstieg auf OAuth 2.0) "
+
+#~ msgid "Help"
+#~ msgstr "Hilfe"
+
+#~ msgid "Just 29 USD"
+#~ msgstr "Nur 29 US-Dollar"
+
+#~ msgid "Click here "
+#~ msgstr "Klicken Sie hier "
+
+#~ msgid "Starts from 69 USD"
+#~ msgstr "Ab 69 USD"
+
+#, php-format
+#~ msgid ""
+#~ "%s API package for 1 year, worth 10 USD(1 twitter account ,10 api calls "
+#~ "per hour)"
+#~ msgstr ""
+#~ "%s API-Paket für 1 Jahr im Wert von 10 USD (1 Twitter-Konto, 10 API-"
+#~ "Aufrufe pro Stunde)"
+
+#~ msgid "1 month free subscription"
+#~ msgstr "1 Monat kostenloses Abonnement"
+
+#~ msgid "1 year free subscription"
+#~ msgstr "1 Jahr kostenloses Abonnement"
+
+#, php-format
+#~ msgid "Fully Featured %s Plugin"
+#~ msgstr "Voll funktionsfähiges %s-Plugin"
+
+#~ msgid ""
+#~ "Click here </a></b> to create new application. Specify the website for "
+#~ "the application as"
+#~ msgstr ""
+#~ "Klicken Sie hier </a></b> , um eine neue Anwendung zu erstellen. Geben "
+#~ "Sie die Website für die Anwendung an als"
+
+#, php-format
+#~ msgid "Select <b>%s</b> option."
+#~ msgstr "Wählen Sie die Option <b>%s</b>."
+
+#~ msgid "Own App"
+#~ msgstr "Eigene App"

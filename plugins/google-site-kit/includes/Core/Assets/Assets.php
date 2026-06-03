@@ -14,6 +14,7 @@ use Google\Site_Kit\Context;
 use Google\Site_Kit\Core\Modules\Module_Sharing_Settings;
 use Google\Site_Kit\Core\Permissions\Permissions;
 use Google\Site_Kit\Core\Storage\Options;
+use Google\Site_Kit\Core\Util\Date;
 use Google\Site_Kit\Core\Util\Feature_Flags;
 use WP_Dependencies;
 use WP_Post_Type;
@@ -42,14 +43,6 @@ final class Assets {
 	 * @var array
 	 */
 	private $assets = array();
-
-	/**
-	 * Internal flag for whether assets have been registered yet.
-	 *
-	 * @since 1.2.0
-	 * @var bool
-	 */
-	private $assets_registered = false;
 
 	/**
 	 * Internal list of print callbacks already done.
@@ -81,12 +74,6 @@ final class Assets {
 			if ( ! is_admin() ) {
 				return;
 			}
-
-			if ( $this->assets_registered ) {
-				return;
-			}
-
-			$this->assets_registered = true;
 			$this->register_assets();
 		};
 		add_action( 'admin_enqueue_scripts', $register_callback );
@@ -192,11 +179,7 @@ final class Assets {
 	 * @param string $handle Asset handle.
 	 */
 	public function enqueue_asset( $handle ) {
-		// Register assets on-the-fly if necessary (currently the case for admin bar in frontend).
-		if ( ! $this->assets_registered ) {
-			$this->assets_registered = true;
-			$this->register_assets();
-		}
+		$this->register_assets();
 
 		$assets = $this->get_assets();
 		if ( empty( $assets[ $handle ] ) ) {
@@ -257,11 +240,36 @@ final class Assets {
 	 * @since 1.0.0
 	 */
 	private function register_assets() {
+		if ( $this->has_registered_assets() ) {
+			return;
+		}
+
 		$assets = $this->get_assets();
 
 		foreach ( $assets as $asset ) {
 			$asset->register( $this->context );
 		}
+	}
+
+	/**
+	 * Checks if assets have already been registered.
+	 *
+	 * @since 1.173.0
+	 * @return bool True if already registered, false otherwise.
+	 */
+	private function has_registered_assets() {
+		$assets = $this->get_assets();
+		if ( empty( $assets ) ) {
+			return false;
+		}
+
+		$first = reset( $assets );
+		if ( ! $first instanceof Asset ) {
+			return false;
+		}
+
+		$handle = $first->get_handle();
+		return wp_script_is( $handle, 'registered' );
 	}
 
 	/**
@@ -322,6 +330,10 @@ final class Assets {
 			'googlesitekit-widgets',
 			'googlesitekit-notifications',
 		);
+
+		if ( Feature_Flags::enabled( 'pdfGeneration' ) ) {
+			array_push( $dependencies, 'googlesitekit-datastore-pdf' );
+		}
 
 		if ( 'dashboard' === $context || 'dashboard-sharing' === $context ) {
 			array_push( $dependencies, 'googlesitekit-components' );
@@ -567,6 +579,15 @@ final class Assets {
 				)
 			),
 			new Script(
+				'googlesitekit-datastore-pdf',
+				array(
+					'src'          => $base_url . 'js/googlesitekit-datastore-pdf.js',
+					'dependencies' => array(
+						'googlesitekit-data',
+					),
+				)
+			),
+			new Script(
 				'googlesitekit-modules',
 				array(
 					'src'          => $base_url . 'js/googlesitekit-modules.js',
@@ -669,6 +690,13 @@ final class Assets {
 					'dependencies' => array(
 						'googlesitekit-fonts',
 					),
+				)
+			),
+			new Script(
+				'googlesitekit-admin-pointers-tracking',
+				array(
+					'src'          => $base_url . 'js/googlesitekit-admin-pointers-tracking.js',
+					'dependencies' => $this->get_asset_dependencies(),
 				)
 			),
 			// WP Dashboard assets.
@@ -774,13 +802,14 @@ final class Assets {
 			'ampMode'           => $this->context->get_amp_mode(),
 			'isNetworkMode'     => $this->context->is_network_mode(),
 			'timezone'          => get_option( 'timezone_string' ),
+			'startOfWeek'       => (int) get_option( 'start_of_week' ),
 			'siteName'          => wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ),
 			'siteLocale'        => $this->context->get_locale(),
 			'enabledFeatures'   => Feature_Flags::get_enabled_features(),
 			'webStoriesActive'  => defined( 'WEBSTORIES_VERSION' ),
 			'postTypes'         => $this->get_post_types(),
 			'storagePrefix'     => $this->get_storage_prefix(),
-			'referenceDate'     => apply_filters( 'googlesitekit_reference_date', null ),
+			'referenceDate'     => Date::reference_date(),
 			'productPostType'   => $this->get_product_post_type(),
 			'anyoneCanRegister' => (bool) get_option( 'users_can_register' ),
 			'isMultisite'       => is_multisite(),
@@ -874,6 +903,7 @@ final class Assets {
 			'user' => array(
 				'id'      => $current_user->ID,
 				'email'   => $current_user->user_email,
+				'wpEmail' => $current_user->user_email, // Preserved for features that need the original WP email (email gets overridden during proxy auth).
 				'name'    => $current_user->display_name,
 				'picture' => get_avatar_url( $current_user->user_email ),
 			),
