@@ -5,6 +5,8 @@
  * Fonte: api.football-data.org v4 (competição WC)
  */
 
+require_once __DIR__ . '/selecoes_pt.php';
+
 add_action('init', function () {
     $request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
@@ -17,7 +19,7 @@ add_action('init', function () {
 
     $api_token      = 'f5c2e920e49b4657b44ff0ef77c87350';
     $competition    = 'WC';
-    $cache_key      = 'copa_mundo_ftb';
+    $cache_key      = 'copa_mundo_ftb_v3';
     $stale_key      = $cache_key . '_stale';
     $cache_duration = 30 * MINUTE_IN_SECONDS;
 
@@ -67,11 +69,14 @@ add_action('init', function () {
         }
         $tabela = [];
         foreach ($standing['table'] ?? [] as $row) {
-            $t = $row['team'];
+            $t        = $row['team'];
+            $fallback = $t['shortName'] ?? $t['name'] ?? '';
+            $info     = bahia_selecao_info($t['tla'] ?? '', $fallback);
             $tabela[] = [
                 'id'    => $t['id'],
-                'nome'  => $t['shortName'] ?? $t['name'] ?? '',
+                'nome'  => $info['nome'],
                 'sigla' => $t['tla'] ?? '',
+                'flag'  => $info['flag'],
                 'crest' => $t['crest'] ?? '',
                 'pg'    => (int) $row['points'],
                 'j'     => (int) $row['playedGames'],
@@ -84,7 +89,7 @@ add_action('init', function () {
             ];
         }
         $grupos[] = [
-            'nome'          => $standing['group'] ?? 'Grupo',
+            'nome'          => bahia_traduz_grupo($standing['group'] ?? ''),
             'classificacao' => $tabela,
         ];
     }
@@ -95,15 +100,22 @@ add_action('init', function () {
         $dt = new DateTime($match['utcDate'], new DateTimeZone('UTC'));
         $dt->setTimezone(new DateTimeZone('America/Sao_Paulo'));
 
+        $home_fallback = $match['homeTeam']['shortName'] ?? $match['homeTeam']['name'] ?? 'A definir';
+        $away_fallback = $match['awayTeam']['shortName'] ?? $match['awayTeam']['name'] ?? 'A definir';
+        $home_info     = bahia_selecao_info($match['homeTeam']['tla'] ?? '', $home_fallback);
+        $away_info     = bahia_selecao_info($match['awayTeam']['tla'] ?? '', $away_fallback);
+
         $jogos[] = [
             'id'      => (string) $match['id'],
-            'fase'    => $match['stage'] ?? '',
-            'grupo'   => $match['group'] ?? null,
-            'time1'   => $match['homeTeam']['shortName'] ?? $match['homeTeam']['name'] ?? 'A definir',
+            'fase'    => bahia_traduz_fase($match['stage'] ?? ''),
+            'grupo'   => bahia_traduz_grupo($match['group'] ?? ''),
+            'time1'   => $home_info['nome'],
             'sigla1'  => $match['homeTeam']['tla'] ?? '',
+            'flag1'   => $home_info['flag'],
             'crest1'  => $match['homeTeam']['crest'] ?? '',
-            'time2'   => $match['awayTeam']['shortName'] ?? $match['awayTeam']['name'] ?? 'A definir',
+            'time2'   => $away_info['nome'],
             'sigla2'  => $match['awayTeam']['tla'] ?? '',
+            'flag2'   => $away_info['flag'],
             'crest2'  => $match['awayTeam']['crest'] ?? '',
             'placar1' => $match['score']['fullTime']['home'] ?? null,
             'placar2' => $match['score']['fullTime']['away'] ?? null,

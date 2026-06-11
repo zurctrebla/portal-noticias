@@ -8,5 +8,6 @@
             </div>
         </div>
     </div>
+    <?php include get_template_directory() . '/widget-selecao-brasileira.php'; ?>
     <?php include get_template_directory() . '/ad-long.php'; ?>
 </aside>

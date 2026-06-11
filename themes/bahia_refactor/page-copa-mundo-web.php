@@ -59,10 +59,10 @@
                 htmlGrupos += "<h3>" + g.nome + "</h3>";
                 htmlGrupos += "<table><thead><tr><th>#</th><th style='text-align:left'>Seleção</th><th>P</th><th>J</th><th>SG</th></tr></thead><tbody>";
                 (g.classificacao || []).forEach(function (t, i) {
-                    var crest = t.crest ? "<img class='crest' src='" + t.crest + "' alt=''>" : "";
+                    var flag = t.flag ? "<img class='crest' src='" + t.flag + "' alt=''>" : "";
                     htmlGrupos += "<tr>";
                     htmlGrupos += "<td>" + (i + 1) + "</td>";
-                    htmlGrupos += "<td class='timeNome'>" + crest + t.nome + "</td>";
+                    htmlGrupos += "<td class='timeNome'>" + flag + t.nome + "</td>";
                     htmlGrupos += "<td>" + t.pg + "</td>";
                     htmlGrupos += "<td>" + t.j + "</td>";
                     htmlGrupos += "<td>" + t.sg + "</td>";
@@ -80,14 +80,14 @@
                     : "vs";
                 var dataFmt = formatarDataCopa(j.data) + (j.horario ? " - " + j.horario : "");
                 var fase = j.grupo ? j.grupo : (j.fase || '').replace(/_/g, ' ');
-                var crest1 = j.crest1 ? "<img src='" + j.crest1 + "' alt=''>" : "";
-                var crest2 = j.crest2 ? "<img src='" + j.crest2 + "' alt=''>" : "";
+                var flag1 = j.flag1 ? "<img src='" + j.flag1 + "' alt=''>" : "";
+                var flag2 = j.flag2 ? "<img src='" + j.flag2 + "' alt=''>" : "";
 
                 htmlJogos += "<div class='copaJogo'>";
                 htmlJogos += "<div class='jogoData'>" + dataFmt + "</div>";
-                htmlJogos += "<div class='jogoTime right'><span>" + j.time1 + "</span>" + crest1 + "</div>";
+                htmlJogos += "<div class='jogoTime right'><span>" + j.time1 + "</span>" + flag1 + "</div>";
                 htmlJogos += "<div class='jogoPlacar'>" + placar + "</div>";
-                htmlJogos += "<div class='jogoTime'>" + crest2 + "<span>" + j.time2 + "</span></div>";
+                htmlJogos += "<div class='jogoTime'>" + flag2 + "<span>" + j.time2 + "</span></div>";
                 htmlJogos += "<div class='jogoFase'>" + fase + "</div>";
                 htmlJogos += "</div>";
             });

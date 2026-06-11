@@ -233,13 +233,87 @@ function formatarData(data) {
     }
 }
 })(jQuery);
+
+// --- Copa do Mundo 2026: últimos jogos no sidebar ---
+(function($) {
+    $(document).ready(function () {
+        $.ajax({
+            method: "GET",
+            url: '/api_copa_mundo.php',
+            dataType: 'json'
+        }).done(function (dados) {
+            var $box = $('#sidebarCopaUltimos');
+            if (!dados || dados.error || !dados.jogos || dados.jogos.length === 0) {
+                $box.html("<p style='font-size:12px;color:#777;'>Jogos ainda não disponíveis.</p>");
+                return;
+            }
+
+            // Filtra encerrados e ordena por data desc, pega últimos 5
+            var ultimos = dados.jogos.filter(function (j) {
+                return j.status === 'FINISHED';
+            }).sort(function (a, b) {
+                return (b.data + ' ' + b.horario).localeCompare(a.data + ' ' + a.horario);
+            }).slice(0, 5);
+
+            if (ultimos.length === 0) {
+                $box.html("<p style='font-size:12px;color:#777;'>Nenhum jogo encerrado ainda.</p>");
+                return;
+            }
+
+            var html = '';
+            ultimos.forEach(function (j) {
+                var flag1 = j.flag1 ? "<img class='flagSidebar' src='" + j.flag1 + "' alt=''>" : "";
+                var flag2 = j.flag2 ? "<img class='flagSidebar' src='" + j.flag2 + "' alt=''>" : "";
+                var p1 = (j.placar1 !== null && j.placar1 !== undefined) ? j.placar1 : '-';
+                var p2 = (j.placar2 !== null && j.placar2 !== undefined) ? j.placar2 : '-';
+                var rotulo = j.grupo || j.fase || '';
+                var dataFmt = formatarDataSidebar(j.data);
+
+                html += "<div class='sidebarJogoCopa'>";
+                html += "<div class='sidebarJogoMeta'><span>" + dataFmt + "</span><span>" + rotulo + "</span></div>";
+                html += "<div class='sidebarJogoLinha'>";
+                html += "<span class='sidebarJogoTime'>" + flag1 + (j.sigla1 || j.time1) + "</span>";
+                html += "<strong class='sidebarJogoPlacar'>" + p1 + " x " + p2 + "</strong>";
+                html += "<span class='sidebarJogoTime sidebarJogoTimeRight'>" + (j.sigla2 || j.time2) + flag2 + "</span>";
+                html += "</div>";
+                html += "</div>";
+            });
+            $box.html(html);
+        }).fail(function () {
+            $('#sidebarCopaUltimos').html("<p style='font-size:12px;color:#777;'>Erro ao carregar jogos da Copa.</p>");
+        });
+    });
+
+    function formatarDataSidebar(data) {
+        if (!data) return '';
+        var p = data.split('-');
+        return p[2] + '/' + p[1];
+    }
+})(jQuery);
 </script>
+
+<style>
+    .sidebarCopaUltimos .sidebarJogoCopa { padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 12px; }
+    .sidebarCopaUltimos .sidebarJogoCopa:last-child { border-bottom: 0; }
+    .sidebarCopaUltimos .sidebarJogoMeta { display: flex; justify-content: space-between; font-size: 10px; color: #777; text-transform: uppercase; margin-bottom: 3px; }
+    .sidebarCopaUltimos .sidebarJogoLinha { display: flex; align-items: center; justify-content: space-between; }
+    .sidebarCopaUltimos .sidebarJogoTime { flex: 1; display: flex; align-items: center; gap: 4px; }
+    .sidebarCopaUltimos .sidebarJogoTimeRight { justify-content: flex-end; }
+    .sidebarCopaUltimos .sidebarJogoPlacar { flex: 0 0 auto; margin: 0 8px; font-weight: 700; }
+    .sidebarCopaUltimos img.flagSidebar { width: 18px; height: 12px; vertical-align: middle; }
+</style>
 
 <aside>
     <div class="box-news-int">
 
         <label class="tituloBrasileirao2017"><a href="?category=copa-mundo">COPA DO MUNDO 2026</a></label>
-        <div class="ui divider" style="margin-top: 4px; margin-bottom: 12px;"></div>
+        <div class="ui divider" style="margin-top: 4px;"></div>
+        <div class="sidebarCopaUltimos" id="sidebarCopaUltimos">
+            <div class="trLoading"><img class="imgLoading" src="<?php bloginfo('template_url');?>/assets/imgs/loader.gif"></div>
+        </div>
+        <div class="tituloTabelaCompletaWrap" style="margin-bottom: 18px;">
+            <label class="tituloTabelaCompleta"><a href="?category=copa-mundo"><i class="list layout icon"></i> TABELA COMPLETA</a></label>
+        </div>
 
         <label class="tituloBrasileirao2017"><a href="?category=brasileirao">BRASILEIRÃO 2026</a></label>
         <div class="ui divider" style="margin-top: 4px;"></div>
