@@ -40,6 +40,9 @@ if ($category) {
                 <div class="circular ui icon top pointing dropdown button btnDropdownCategorias" style="left: 43.5%; margin-top: -10px !important; position: absolute; float: left;">
                     <i class="sidebar icon"></i>
                     <div class="menu">
+                        <div class="<?php echo $category == 'copa-mundo' ? 'active' : ''; ?> item">
+                            <a style="color: #545454;" href="?category=copa-mundo">COPA DO MUNDO 2026</a>
+                        </div>
                         <div class="<?php echo $category == 'brasileirao' ? 'active' : ''; ?> item">
                             <a style="color: #545454;" href="?category=brasileirao">BRASILEIRÃO 2026</a>
                         </div>
@@ -58,6 +61,8 @@ if ($category) {
                 // Se for categoria de tabela (Brasileirão ou Série B), inclui página especial
                 if ($category == 'brasileirao' || $category == 'serie-b') {
                     include("page-brasileirao-mobile.php");
+                } elseif ($category == 'copa-mundo') {
+                    include("page-copa-mundo-mobile.php");
                 } else {
                 ?>
 

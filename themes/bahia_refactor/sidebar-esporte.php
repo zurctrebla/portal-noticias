@@ -238,6 +238,9 @@ function formatarData(data) {
 <aside>
     <div class="box-news-int">
 
+        <label class="tituloBrasileirao2017"><a href="?category=copa-mundo">COPA DO MUNDO 2026</a></label>
+        <div class="ui divider" style="margin-top: 4px; margin-bottom: 12px;"></div>
+
         <label class="tituloBrasileirao2017"><a href="?category=brasileirao">BRASILEIRÃO 2026</a></label>
         <div class="ui divider" style="margin-top: 4px;"></div>
         <table class="ui striped table tableClassificacao">
