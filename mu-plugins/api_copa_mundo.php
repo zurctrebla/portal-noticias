@@ -29,37 +29,62 @@ add_action('init', function () {
         exit;
     }
 
+    $avisos = [];
+
     // --- Busca classificação (grupos) ---
-    $standings_raw = wp_remote_get(
+    $standings_data = ['standings' => []];
+    $standings_raw  = wp_remote_get(
         "https://api.football-data.org/v4/competitions/{$competition}/standings",
         ['headers' => ['X-Auth-Token' => $api_token], 'timeout' => 15]
     );
-
-    if (is_wp_error($standings_raw) || wp_remote_retrieve_response_code($standings_raw) !== 200) {
-        $stale = get_option($stale_key);
-        if ($stale) { echo $stale; exit; }
-        http_response_code(502);
-        echo json_encode(['error' => 'Falha ao buscar classificação da Copa. Código: ' . wp_remote_retrieve_response_code($standings_raw)]);
-        exit;
+    if (is_wp_error($standings_raw)) {
+        $avisos[] = 'Standings: ' . $standings_raw->get_error_message();
+    } else {
+        $code = wp_remote_retrieve_response_code($standings_raw);
+        $body = wp_remote_retrieve_body($standings_raw);
+        if ($code !== 200) {
+            $avisos[] = 'Standings HTTP ' . $code . ': ' . substr(strip_tags((string) $body), 0, 200);
+        } else {
+            $decoded = json_decode($body, true);
+            if (is_array($decoded)) {
+                $standings_data = $decoded;
+            }
+        }
     }
 
-    $standings_data = json_decode(wp_remote_retrieve_body($standings_raw), true);
-
     // --- Busca jogos ---
-    $matches_raw = wp_remote_get(
+    $matches_data = ['matches' => []];
+    $matches_raw  = wp_remote_get(
         "https://api.football-data.org/v4/competitions/{$competition}/matches",
         ['headers' => ['X-Auth-Token' => $api_token], 'timeout' => 15]
     );
-
-    if (is_wp_error($matches_raw) || wp_remote_retrieve_response_code($matches_raw) !== 200) {
-        $stale = get_option($stale_key);
-        if ($stale) { echo $stale; exit; }
-        http_response_code(502);
-        echo json_encode(['error' => 'Falha ao buscar jogos da Copa. Código: ' . wp_remote_retrieve_response_code($matches_raw)]);
-        exit;
+    if (is_wp_error($matches_raw)) {
+        $avisos[] = 'Matches: ' . $matches_raw->get_error_message();
+    } else {
+        $code = wp_remote_retrieve_response_code($matches_raw);
+        $body = wp_remote_retrieve_body($matches_raw);
+        if ($code !== 200) {
+            $avisos[] = 'Matches HTTP ' . $code . ': ' . substr(strip_tags((string) $body), 0, 200);
+        } else {
+            $decoded = json_decode($body, true);
+            if (is_array($decoded)) {
+                $matches_data = $decoded;
+            }
+        }
     }
 
-    $matches_data = json_decode(wp_remote_retrieve_body($matches_raw), true);
+    // Se ambas as chamadas falharam e não temos nada para mostrar, devolve stale ou erro 200 com aviso
+    if (empty($standings_data['standings']) && empty($matches_data['matches'])) {
+        $stale = get_option($stale_key);
+        if ($stale) { echo $stale; exit; }
+        echo json_encode([
+            'atualizacao' => (new DateTime('now', new DateTimeZone('America/Sao_Paulo')))->format('d/m/Y H:i'),
+            'grupos'      => [],
+            'jogos'       => [],
+            'aviso'       => implode(' | ', $avisos) ?: 'Sem dados disponíveis no momento.',
+        ]);
+        exit;
+    }
 
     // --- Monta grupos ---
     $grupos = [];
@@ -129,6 +154,7 @@ add_action('init', function () {
         'atualizacao' => (new DateTime('now', new DateTimeZone('America/Sao_Paulo')))->format('d/m/Y H:i'),
         'grupos'      => $grupos,
         'jogos'       => $jogos,
+        'aviso'       => $avisos ? implode(' | ', $avisos) : null,
     ]);
 
     set_transient($cache_key, $json_final, $cache_duration);

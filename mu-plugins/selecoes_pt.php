@@ -23,6 +23,7 @@ if (!function_exists('bahia_traduz_fase')) {
     {
         $map = [
             'GROUP_STAGE'       => 'Fase de grupos',
+            'LAST_32'           => 'Repescagem (16-avos)',
             'LAST_16'           => 'Oitavas de final',
             'ROUND_OF_16'       => 'Oitavas de final',
             'QUARTER_FINALS'    => 'Quartas de final',
@@ -44,6 +45,7 @@ if (!function_exists('bahia_selecao_info')) {
             'BRA' => ['nome' => 'Brasil',          'iso' => 'br'],
             'ARG' => ['nome' => 'Argentina',       'iso' => 'ar'],
             'URU' => ['nome' => 'Uruguai',         'iso' => 'uy'],
+            'URY' => ['nome' => 'Uruguai',         'iso' => 'uy'],
             'PAR' => ['nome' => 'Paraguai',        'iso' => 'py'],
             'COL' => ['nome' => 'Colômbia',        'iso' => 'co'],
             'CHI' => ['nome' => 'Chile',           'iso' => 'cl'],
