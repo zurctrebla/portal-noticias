@@ -16,7 +16,8 @@ RUN test -f themes/bahia_refactor/dist/css/main.min.css || (echo "ERRO: CSS não
 RUN test -f themes/bahia_refactor/dist/js/theme.min.js || (echo "ERRO: JS não gerado" && exit 1)
 
 # Stage 2: Imagem final WordPress
-FROM wordpress:6.4-php8.2-fpm
+# FROM wordpress:6.4-php8.2-fpm
+FROM wordpress:6.8-php8.2-fpm
 
 # PHP config customizado
 COPY php/php.ini /usr/local/etc/php/conf.d/custom.ini
