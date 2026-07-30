@@ -1,10 +1,12 @@
 <?php
 /**
  * Plugin Name: Bahia Futebol Display
- * Description: Shortcode [bahia_brasileirao] que renderiza a tabela de classificação + jogos
- *   por rodada do Brasileirão Série A, consumindo o endpoint /bahia-api/brasileirao
- *   (mu-plugin api_brasileirao.php, fonte football-data.org). Autossuficiente: CSS próprio
- *   (sem Semantic UI) e JS vanilla (fetch). Responsivo (desktop + mobile).
+ * Description: Shortcode [bahia_brasileirao] que renderiza, no topo, dois boxes de destaque
+ *   com o último/próximo jogo do EC Bahia (id 1777) e do EC Vitória (id 1782) — fonte
+ *   api.football-data.org v4, /teams/{id}/matches, cache transient 30min — e, abaixo, a tabela
+ *   de classificação + jogos por rodada do Brasileirão Série A, consumindo o endpoint
+ *   /bahia-api/brasileirao (mu-plugin api_brasileirao.php, mesma fonte football-data.org).
+ *   Autossuficiente: CSS próprio (sem Semantic UI) e JS vanilla (fetch). Responsivo (desktop + mobile).
  *
  * Escudos: reutiliza os PNGs já versionados em themes/bahia_refactor/brasileirao/brasao/.
  * Copa do Mundo 2026: desabilitada (item de menu removido); não há shortcode de Copa.
@@ -16,6 +18,142 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Busca o último jogo (FINISHED) e o próximo jogo (SCHEDULED) de um clube
+ * em api.football-data.org v4. MESMA fonte/token do Brasileirão (api_brasileirao.php)
+ * e mesmo padrão da branch de produção (themes/bahia_refactor/widget-clubes-ba.php).
+ *
+ * Team IDs football-data.org: 1777 = EC Bahia, 1782 = EC Vitória.
+ * Cache via transient de 30 min (uma chave por clube).
+ *
+ * @param int    $team_id   ID do time em api.football-data.org
+ * @param string $cache_key chave do transient
+ * @return array{ultimo: ?array, proximo: ?array}
+ */
+if (!function_exists('bahia_fut_clube_jogos_dados')) {
+    function bahia_fut_clube_jogos_dados($team_id, $cache_key) {
+        $cached = get_transient($cache_key);
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        $api_token = 'f5c2e920e49b4657b44ff0ef77c87350';
+
+        $fetch = function ($status) use ($api_token, $team_id) {
+            $resp = wp_remote_get(
+                "https://api.football-data.org/v4/teams/{$team_id}/matches?status={$status}&limit=1",
+                array('headers' => array('X-Auth-Token' => $api_token), 'timeout' => 10)
+            );
+            if (is_wp_error($resp) || wp_remote_retrieve_response_code($resp) !== 200) {
+                return null;
+            }
+            $body = json_decode(wp_remote_retrieve_body($resp), true);
+            return isset($body['matches'][0]) ? $body['matches'][0] : null;
+        };
+
+        $ultimo_raw  = $fetch('FINISHED');
+        $proximo_raw = $fetch('SCHEDULED');
+
+        $format = function ($match) use ($team_id) {
+            if (!$match) return null;
+            $dt = new DateTime($match['utcDate'], new DateTimeZone('UTC'));
+            $dt->setTimezone(new DateTimeZone('America/Sao_Paulo'));
+
+            $home_id = isset($match['homeTeam']['id']) ? $match['homeTeam']['id'] : null;
+            $is_home = ($home_id == $team_id);
+
+            $clube = $is_home ? (isset($match['homeTeam']) ? $match['homeTeam'] : array())
+                              : (isset($match['awayTeam']) ? $match['awayTeam'] : array());
+            $adv   = $is_home ? (isset($match['awayTeam']) ? $match['awayTeam'] : array())
+                              : (isset($match['homeTeam']) ? $match['homeTeam'] : array());
+
+            return array(
+                'data'         => $dt->format('d/m/Y'),
+                'horario'      => $dt->format('H:i'),
+                'clube_nome'   => isset($clube['shortName']) ? $clube['shortName'] : (isset($clube['name']) ? $clube['name'] : ''),
+                'adversario'   => isset($adv['shortName']) ? $adv['shortName'] : (isset($adv['name']) ? $adv['name'] : ''),
+                'adv_crest'    => isset($adv['crest']) ? $adv['crest'] : '',
+                'mando'        => $is_home ? 'casa' : 'fora',
+                'placar_clube' => $is_home ? (isset($match['score']['fullTime']['home']) ? $match['score']['fullTime']['home'] : null)
+                                           : (isset($match['score']['fullTime']['away']) ? $match['score']['fullTime']['away'] : null),
+                'placar_adv'   => $is_home ? (isset($match['score']['fullTime']['away']) ? $match['score']['fullTime']['away'] : null)
+                                           : (isset($match['score']['fullTime']['home']) ? $match['score']['fullTime']['home'] : null),
+                'competicao'   => isset($match['competition']['name']) ? $match['competition']['name'] : '',
+            );
+        };
+
+        $dados = array(
+            'ultimo'  => $format($ultimo_raw),
+            'proximo' => $format($proximo_raw),
+        );
+
+        set_transient($cache_key, $dados, 30 * MINUTE_IN_SECONDS);
+        return $dados;
+    }
+}
+
+/**
+ * Renderiza um box de destaque (último + próximo jogo) para um clube,
+ * no padrão visual próprio do widget do Brasileirão (Newspaper-neutral).
+ *
+ * @param string $rotulo      Rótulo do cabeçalho (ex: "EC Bahia").
+ * @param string $classe      Classe de cor do clube ("bahia" | "vitoria").
+ * @param array  $dados       Retorno de bahia_fut_clube_jogos_dados().
+ * @param string $clube_crest URL do escudo LOCAL do clube (brasao/*.png).
+ */
+if (!function_exists('bahia_fut_render_box_clube')) {
+    function bahia_fut_render_box_clube($rotulo, $classe, $dados, $clube_crest) {
+        if (!$dados || (empty($dados['ultimo']) && empty($dados['proximo']))) {
+            return;
+        }
+        $esc = function ($url) {
+            return $url ? '<img class="bahia-cl-esc" src="' . esc_url($url) . '" alt="" onerror="this.style.visibility=\'hidden\'">' : '';
+        }; ?>
+        <div class="bahia-cl-box <?php echo esc_attr($classe); ?>">
+          <div class="bahia-cl-head"><?php echo esc_html($rotulo); ?></div>
+          <div class="bahia-cl-body">
+            <?php if (!empty($dados['ultimo'])) : $u = $dados['ultimo']; ?>
+              <div class="bahia-cl-jogo">
+                <div class="bahia-cl-rot">Último jogo</div>
+                <div class="bahia-cl-row">
+                  <div class="bahia-cl-lado casa">
+                    <span class="bahia-cl-nome"><?php echo esc_html($u['clube_nome']); ?></span>
+                    <?php echo $esc($clube_crest); ?>
+                  </div>
+                  <div class="bahia-cl-mid">
+                    <?php echo ($u['placar_clube'] !== null ? intval($u['placar_clube']) : '-'); ?><span class="bahia-cl-x">x</span><?php echo ($u['placar_adv'] !== null ? intval($u['placar_adv']) : '-'); ?>
+                  </div>
+                  <div class="bahia-cl-lado fora">
+                    <?php echo $esc($u['adv_crest']); ?>
+                    <span class="bahia-cl-nome"><?php echo esc_html($u['adversario']); ?></span>
+                  </div>
+                </div>
+                <div class="bahia-cl-meta"><?php echo esc_html($u['data'] . ' · ' . $u['competicao']); ?></div>
+              </div>
+            <?php endif; ?>
+            <?php if (!empty($dados['proximo'])) : $p = $dados['proximo']; ?>
+              <div class="bahia-cl-jogo">
+                <div class="bahia-cl-rot">Próximo jogo</div>
+                <div class="bahia-cl-row">
+                  <div class="bahia-cl-lado casa">
+                    <span class="bahia-cl-nome"><?php echo esc_html($p['clube_nome']); ?></span>
+                    <?php echo $esc($clube_crest); ?>
+                  </div>
+                  <div class="bahia-cl-mid"><span class="bahia-cl-x">×</span></div>
+                  <div class="bahia-cl-lado fora">
+                    <?php echo $esc($p['adv_crest']); ?>
+                    <span class="bahia-cl-nome"><?php echo esc_html($p['adversario']); ?></span>
+                  </div>
+                </div>
+                <div class="bahia-cl-meta"><?php echo esc_html($p['data'] . ' às ' . $p['horario'] . ' · ' . $p['competicao']); ?></div>
+              </div>
+            <?php endif; ?>
+          </div>
+        </div>
+        <?php
+    }
+}
+
 add_shortcode('bahia_brasileirao', 'bahia_brasileirao_shortcode');
 function bahia_brasileirao_shortcode($atts) {
     $atts = shortcode_atts(array('serie' => 'A'), $atts, 'bahia_brasileirao');
@@ -23,8 +161,18 @@ function bahia_brasileirao_shortcode($atts) {
     $endpoint = home_url('/bahia-api/brasileirao');
     $brasao_base = content_url('/themes/bahia_refactor/brasileirao/brasao/');
 
+    // Destaques: último/próximo jogo do EC Bahia e do EC Vitória (football-data.org v4).
+    $bahia_jogos   = bahia_fut_clube_jogos_dados(1777, 'bahia_fut_ecbahia_v1');
+    $vitoria_jogos = bahia_fut_clube_jogos_dados(1782, 'bahia_fut_ecvitoria_v1');
+
     ob_start(); ?>
 <div class="bahia-bra" data-endpoint="<?php echo esc_url($endpoint); ?>" data-serie="<?php echo esc_attr($serie); ?>" data-brasao="<?php echo esc_url($brasao_base); ?>">
+  <div class="bahia-bra-clubes">
+    <?php
+    bahia_fut_render_box_clube('EC Bahia', 'bahia', $bahia_jogos, $brasao_base . 'bahia.png');
+    bahia_fut_render_box_clube('EC Vitória', 'vitoria', $vitoria_jogos, $brasao_base . 'vitoria.png');
+    ?>
+  </div>
   <div class="bahia-bra-grid">
     <div class="bahia-bra-tabela-wrap">
       <table class="bahia-bra-tabela">
@@ -68,6 +216,28 @@ function bahia_brasileirao_shortcode($atts) {
 <style>
 .bahia-bra{--lib:#1f7a3d;--sul:#e07a1f;--reb:#d23b3b;--bahia:#0a58ca;--vitoria:#c8102e;font-family:inherit;color:#222;margin:0 0 30px}
 .bahia-bra *{box-sizing:border-box}
+.bahia-bra-clubes{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+.bahia-cl-box{flex:1 1 300px;min-width:280px;border:1px solid #e5e5e5;border-radius:4px;overflow:hidden;background:#fff}
+.bahia-cl-head{color:#fff;font-weight:700;font-size:14px;letter-spacing:.03em;text-transform:uppercase;padding:9px 14px}
+.bahia-cl-box.bahia .bahia-cl-head{background:var(--bahia)}
+.bahia-cl-box.vitoria .bahia-cl-head{background:var(--vitoria)}
+.bahia-cl-body{padding:4px 14px}
+.bahia-cl-jogo{padding:12px 0;border-bottom:1px solid #eee}
+.bahia-cl-jogo:last-child{border-bottom:0}
+.bahia-cl-rot{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#888;font-weight:700;margin-bottom:8px}
+.bahia-cl-row{display:flex;align-items:center}
+.bahia-cl-lado{flex:1;display:flex;align-items:center;gap:8px;min-width:0}
+.bahia-cl-lado.casa{justify-content:flex-end;text-align:right}
+.bahia-cl-lado.fora{justify-content:flex-start;text-align:left}
+.bahia-cl-nome{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bahia-cl-esc{width:30px;height:30px;object-fit:contain;flex:0 0 auto}
+.bahia-cl-mid{flex:0 0 auto;min-width:60px;text-align:center;font-weight:700;font-size:18px}
+.bahia-cl-x{color:#bbb;font-weight:400;margin:0 5px}
+.bahia-cl-meta{font-size:11px;color:#999;margin-top:8px;text-align:center}
+@media(max-width:767px){
+  .bahia-cl-nome{font-size:13px}
+  .bahia-cl-esc{width:26px;height:26px}
+}
 .bahia-bra-grid{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
 .bahia-bra-tabela-wrap{flex:1 1 560px;min-width:0}
 .bahia-bra-jogos-wrap{flex:1 1 300px;min-width:280px}
