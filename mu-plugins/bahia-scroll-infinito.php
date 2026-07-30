@@ -409,7 +409,9 @@ function bahia_si_home_css() {
 .tdb_loop_2 a.td_ajax_load_more{display:inline-block !important;float:none !important;width:auto !important;height:auto !important;line-height:1 !important;cursor:pointer;font-family:'Roboto',Arial,sans-serif !important;font-size:11px !important;font-weight:700 !important;text-transform:uppercase !important;letter-spacing:.6px !important;color:#fff !important;background-color:#222 !important;padding:15px 32px !important;border:0 !important;border-radius:0 !important;transition:background-color .2s ease;}
 .tdb_loop_2 a.td_ajax_load_more:hover{background-color:#000 !important;color:#fff !important;}
 .tdb_loop_2 a.td_ajax_load_more .td-load-more-icon{display:none !important;}
-@media (max-width:767px){.tdb_loop_2 .td-load-more-wrap{display:none !important;}}
+/* Mobile = scroll infinito: nenhum botão "load more" na home (feed principal e
+   blocos secundários tipo "Mais Populares"). */
+@media (max-width:767px){.td-load-more-wrap{display:none !important;}}
 CSS;
 }
 
@@ -423,16 +425,20 @@ function bahia_si_home_js() {
     var Q = D.mobileQuery;
     var LABEL = D.label || 'Ver mais notícias';
     var OFFSET = D.scrollOffset || 600;
-    var SEL = '.tdb_loop_2 .td-load-more-wrap a.td_ajax_load_more';
+    // Todos os botões "load more" do TagDiv na home (feed principal + "Mais Populares"…) —
+    // usados para trocar o texto em inglês.
+    var SEL_ALL = 'a.td_ajax_load_more';
+    // Só o feed principal dispara scroll infinito no mobile.
+    var SEL_MAIN = '.tdb_loop_2 .td-load-more-wrap a.td_ajax_load_more';
 
     function isMobile() {
         return window.matchMedia && window.matchMedia(Q).matches;
     }
 
-    // Troca "Load more" -> "Ver mais notícias" (o TagDiv re-renderiza o botão a cada
-    // carga; por isso reaplica via MutationObserver).
+    // Troca "Load more" -> "Ver mais notícias" em TODOS os botões da home (o TagDiv
+    // re-renderiza o botão a cada carga; por isso reaplica via MutationObserver).
     function relabel() {
-        document.querySelectorAll(SEL).forEach(function (a) {
+        document.querySelectorAll(SEL_ALL).forEach(function (a) {
             if (a.getAttribute('data-bahia-relabel') === '1') { return; }
             a.textContent = LABEL;
             a.setAttribute('data-bahia-relabel', '1');
@@ -442,7 +448,7 @@ function bahia_si_home_js() {
     var cooling = false;
     function maybeScroll() {
         if (!isMobile() || cooling) { return; }
-        var btn = document.querySelector(SEL);
+        var btn = document.querySelector(SEL_MAIN);
         if (!btn) { return; } // sem botão = não há mais posts
         var scrollBottom = $(window).scrollTop() + $(window).height();
         if (scrollBottom >= $(document).height() - OFFSET) {
@@ -461,7 +467,9 @@ function bahia_si_home_js() {
 
     $(function () {
         relabel();
-        var host = document.querySelector('.tdb_loop_2') || document.body;
+        // Observa a área de conteúdo inteira (não só o feed) p/ re-rotular também o botão
+        // de "Mais Populares" quando o TagDiv o re-renderiza.
+        var host = document.querySelector('.td-main-content-wrap') || document.body;
         new MutationObserver(debounce(relabel, 60)).observe(host, { childList: true, subtree: true });
         $(window).on('scroll.bahiaSiHome', debounce(maybeScroll, 150));
         setTimeout(maybeScroll, 600);
