@@ -16,12 +16,15 @@ if (!defined('ABSPATH')) {
 }
 
 // Bump esta versão sempre que alterar rewrite/slug/args para forçar novo flush.
-define('BAHIA_EDITORIAS_CPT_VER', '1.0.0');
+define('BAHIA_EDITORIAS_CPT_VER', '1.1.0');
 
 /**
- * Editorias: slug (== nome do CPT == rewrite slug) => [label, with_front].
+ * Editorias: slug (== nome do CPT == taxonomia {slug}_cat/_tag) => [label, with_front, rewrite?].
  * 'with_front' reproduz exatamente o que cada arquivo original definia
  * (false onde o tema usava 'with_front' => false; true = default do WP).
+ * 'rewrite' (opcional) define um slug de URL diferente do nome interno do CPT
+ * (usado por editorias novas cujo nome interno precisa ser um identificador
+ * válido de post_type, mas a URL deve ter hífens — ex: dende_poder -> /dende-e-poder).
  */
 function bahia_editorias_map() {
     return array(
@@ -42,6 +45,9 @@ function bahia_editorias_map() {
         'mais_noticias'  => array('label' => 'Mais Notícias', 'with_front' => false),
         'artigo'         => array('label' => 'Artigos',       'with_front' => false),
         'carnaval'       => array('label' => 'Carnaval',      'with_front' => false),
+        // Editoria nova (não existia no tema antigo): nome interno com underscore,
+        // URL com hífens (/dende-e-poder), taxonomia dende_poder_cat / dende_poder_tag.
+        'dende_poder'    => array('label' => 'Dendê e Poder', 'with_front' => true, 'rewrite' => 'dende-e-poder'),
     );
 }
 
@@ -53,6 +59,9 @@ function bahia_editorias_map() {
 function bahia_editorias_register() {
     foreach (bahia_editorias_map() as $slug => $ed) {
         $label = $ed['label'];
+        // Slug de URL: por padrão == nome interno; editorias novas podem
+        // definir um 'rewrite' diferente (ex: dende_poder -> dende-e-poder).
+        $rewrite_slug = isset($ed['rewrite']) ? $ed['rewrite'] : $slug;
 
         // --- Custom Post Type ---
         register_post_type($slug, array(
@@ -66,7 +75,7 @@ function bahia_editorias_register() {
             'show_ui'            => true,
             'show_in_menu'       => true,
             'query_var'          => true,
-            'rewrite'            => array('slug' => $slug, 'with_front' => $ed['with_front']),
+            'rewrite'            => array('slug' => $rewrite_slug, 'with_front' => $ed['with_front']),
             'capability_type'    => 'post',
             'has_archive'        => true,
             'hierarchical'       => false,
