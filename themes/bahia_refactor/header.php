@@ -266,7 +266,6 @@ $ipad = strpos(getUserAgent(), "iPad");
                                 </span>
                             </div>
                             <div class="menu">
-                                <div class="item url-link" data-url="<?php bloginfo('url'); ?>/esporte?category=copa-mundo"><a href="#/">Copa do Mundo 2026</a></div>
                                 <div class="item url-link" data-url="<?php bloginfo('url'); ?>/esporte?category=brasileirao"><a href="#/">Brasileirão 2026</a></div>
                             </div>
                         </div>
@@ -523,7 +522,6 @@ $ipad = strpos(getUserAgent(), "iPad");
                                                     </span>
                                                 </div>
                                                 <div class="menu">
-                                                    <div class="item url-link" data-url="<?php bloginfo('url'); ?>/esporte?category=copa-mundo"><a href="#/">Copa do Mundo 2026</a></div>
                                                     <div class="item url-link" data-url="<?php bloginfo('url'); ?>/esporte?category=brasileirao"><a href="#/">Brasileirão 2026</a></div>
                                                 </div>
                                             </div>
