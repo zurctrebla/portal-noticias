@@ -136,6 +136,14 @@ function bahia_si_enqueue() {
         return;
     }
 
+    // Busca (?s=...): resultados são um bloco TagDiv tdb_loop (template 547291), agora
+    // com ajax_pagination=load_more. Mesmo tratamento da home (load more nativo), só
+    // com selector e rótulo próprios. Reaproveita a query de busca do TagDiv (FULLTEXT).
+    if (is_search()) {
+        bahia_si_loadmore_enqueue('.tdb_loop', __('Ver mais resultados', 'newspaper'));
+        return;
+    }
+
     $post_type = bahia_si_current_post_type();
     if (!$post_type) {
         return;
@@ -379,38 +387,51 @@ JS;
 }
 
 /* -------------------------------------------------------------------------
- *  HOME (front page) — bloco TagDiv tdb_loop_2 ("Últimas Notícias")
- *  A paginação numérica do bloco foi trocada por load_more nativo do TagDiv
- *  (post_content da página 547281). Aqui só reestilizamos o botão para
- *  "Ver mais notícias" (visual = botão do archive) e, no mobile, escondemos o
- *  botão e disparamos o clique automaticamente ao chegar perto do fim (scroll
- *  infinito). O carregamento em si (query + cards + imagens) é 100% do TagDiv.
+ *  LOAD MORE nativo do TagDiv (bloco tdb_loop) — usado na HOME e na BUSCA.
+ *  A paginação numérica do bloco foi trocada por ajax_pagination=load_more
+ *    - Home  (page 547281):      feed principal .tdb_loop_2  -> "Ver mais notícias"
+ *    - Busca (template 547291):  resultados     .tdb_loop    -> "Ver mais resultados"
+ *  Aqui só reestilizamos o botão (visual = botão do archive) e, no mobile,
+ *  escondemos o botão e disparamos o clique automaticamente ao chegar perto do
+ *  fim (scroll infinito). O carregamento (query + cards + imagens) é 100% do
+ *  TagDiv — na busca, isso preserva a query FULLTEXT nativa.
  * ------------------------------------------------------------------------- */
 function bahia_si_home_enqueue() {
+    // Feed principal da home.
+    bahia_si_loadmore_enqueue('.tdb_loop_2', __('Ver mais notícias', 'newspaper'));
+}
+
+/**
+ * Enfileira CSS/JS de load-more + scroll infinito mobile para um bloco tdb_loop.
+ * @param string $main_selector selector do bloco de loop principal (ex: .tdb_loop_2)
+ * @param string $label         rótulo do botão (ex: "Ver mais notícias")
+ */
+function bahia_si_loadmore_enqueue($main_selector, $label) {
     wp_register_style('bahia-si-css', false);
     wp_enqueue_style('bahia-si-css');
-    wp_add_inline_style('bahia-si-css', bahia_si_home_css());
+    wp_add_inline_style('bahia-si-css', bahia_si_loadmore_css($main_selector));
 
     wp_register_script('bahia-si', false, array('jquery'), BAHIA_SI_VER, true);
     wp_enqueue_script('bahia-si');
     wp_localize_script('bahia-si', 'bahiaScrollInfinitoHome', array(
         'mobileQuery'  => '(max-width: 767px)',
         'scrollOffset' => 600,
-        'label'        => __('Ver mais notícias', 'newspaper'),
+        'label'        => $label,
+        'mainSelector' => $main_selector,
     ));
     wp_add_inline_script('bahia-si', bahia_si_home_js());
 }
 
-function bahia_si_home_css() {
-    // Escopo: bloco de loop principal (.tdb_loop_2). !important porque o TagDiv
+function bahia_si_loadmore_css($sel) {
+    // Escopo: bloco de loop principal ($sel). !important porque o TagDiv
     // imprime CSS por-bloco inline no corpo, depois do <head>.
     return <<<CSS
-.tdb_loop_2 .td-load-more-wrap{clear:both;text-align:center !important;margin:31px 0 34px !important;}
-.tdb_loop_2 a.td_ajax_load_more{display:inline-block !important;float:none !important;width:auto !important;height:auto !important;line-height:1 !important;cursor:pointer;font-family:'Roboto',Arial,sans-serif !important;font-size:11px !important;font-weight:700 !important;text-transform:uppercase !important;letter-spacing:.6px !important;color:#fff !important;background-color:#222 !important;padding:15px 32px !important;border:0 !important;border-radius:0 !important;transition:background-color .2s ease;}
-.tdb_loop_2 a.td_ajax_load_more:hover{background-color:#000 !important;color:#fff !important;}
-.tdb_loop_2 a.td_ajax_load_more .td-load-more-icon{display:none !important;}
-/* Mobile = scroll infinito: nenhum botão "load more" na home (feed principal e
-   blocos secundários tipo "Mais Populares"). */
+$sel .td-load-more-wrap{clear:both;text-align:center !important;margin:31px 0 34px !important;}
+$sel a.td_ajax_load_more{display:inline-block !important;float:none !important;width:auto !important;height:auto !important;line-height:1 !important;cursor:pointer;font-family:'Roboto',Arial,sans-serif !important;font-size:11px !important;font-weight:700 !important;text-transform:uppercase !important;letter-spacing:.6px !important;color:#fff !important;background-color:#222 !important;padding:15px 32px !important;border:0 !important;border-radius:0 !important;transition:background-color .2s ease;}
+$sel a.td_ajax_load_more:hover{background-color:#000 !important;color:#fff !important;}
+$sel a.td_ajax_load_more .td-load-more-icon{display:none !important;}
+/* Mobile = scroll infinito: sem botão "load more" (some também em blocos
+   secundários tipo "Mais Populares"). */
 @media (max-width:767px){.td-load-more-wrap{display:none !important;}}
 CSS;
 }
@@ -425,11 +446,11 @@ function bahia_si_home_js() {
     var Q = D.mobileQuery;
     var LABEL = D.label || 'Ver mais notícias';
     var OFFSET = D.scrollOffset || 600;
-    // Todos os botões "load more" do TagDiv na home (feed principal + "Mais Populares"…) —
+    // Todos os botões "load more" do TagDiv na página (feed/resultados + "Mais Populares"…) —
     // usados para trocar o texto em inglês.
     var SEL_ALL = 'a.td_ajax_load_more';
-    // Só o feed principal dispara scroll infinito no mobile.
-    var SEL_MAIN = '.tdb_loop_2 .td-load-more-wrap a.td_ajax_load_more';
+    // Só o loop principal (home: .tdb_loop_2 / busca: .tdb_loop) dispara scroll infinito no mobile.
+    var SEL_MAIN = (D.mainSelector || '.tdb_loop_2') + ' .td-load-more-wrap a.td_ajax_load_more';
 
     function isMobile() {
         return window.matchMedia && window.matchMedia(Q).matches;

@@ -29,14 +29,14 @@ define('BAHIA_EDITORIA_TAGS_VER', '1.0.0');
  */
 function bahia_editoria_tags_colors() {
     return array(
-        'politica'       => array('#1c6cb5', '#ffffff'), // azul
-        'dende_poder'    => array('#e8710a', '#ffffff'), // laranja
-        'municipios'     => array('#f4c20d', '#222222'), // amarelo (texto escuro p/ contraste)
-        'justica'        => array('#d32f2f', '#ffffff'), // vermelho
-        'esporte'        => array('#2e9e4f', '#ffffff'), // verde
-        'entretenimento' => array('#7b2ea8', '#ffffff'), // roxo
-        'salvador'       => array('#4db2ec', '#ffffff'), // azul claro
-        'artigo'         => array('#808080', '#ffffff'), // cinza
+        'politica'       => array('#042efc', '#ffffff'), // azul
+        'dende_poder'    => array('#e8710a', '#ffffff'), // laranja (mantido)
+        'municipios'     => array('#e49600', '#222222'), // amarelo/âmbar (texto escuro p/ contraste)
+        'justica'        => array('#ff3a2f', '#ffffff'), // vermelho
+        'esporte'        => array('#00bc0d', '#ffffff'), // verde
+        'entretenimento' => array('#5300b1', '#ffffff'), // roxo
+        'salvador'       => array('#4db2ec', '#ffffff'), // azul claro (mantido)
+        'artigo'         => array('#808080', '#ffffff'), // cinza (mantido)
         // DEFAULT (Últimas Notícias / demais editorias): preto
         'DEFAULT'        => array('#111111', '#ffffff'),
     );
