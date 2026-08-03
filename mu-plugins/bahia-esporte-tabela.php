@@ -135,9 +135,12 @@ function bahia_esporte_tabela_inject() {
     var holder=document.getElementById('bahia-esp-tab-holder');
     var tab=holder&&holder.querySelector('.bahia-esp-tab');
     if(!tab) return;
-    var sidebar=document.querySelector('.td-pb-span4 .vc_column-inner .wpb_wrapper')
-             || document.querySelector('.td-pb-span4 .wpb_wrapper')
-             || document.querySelector('.td-pb-span4');
+    // IMPORTANTE: escopar em .td-main-content-wrap — há vários .td-pb-span4 na página
+    // (inclusive no HEADER), e o genérico pegava o do header (tabela ia p/ o topo,
+    // acima do logo). Aqui pegamos a sidebar direita do CONTEÚDO do archive.
+    var sidebar=document.querySelector('.td-main-content-wrap .td-pb-span4 .vc_column-inner .wpb_wrapper')
+             || document.querySelector('.td-main-content-wrap .td-pb-span4 .wpb_wrapper')
+             || document.querySelector('.td-main-content-wrap .td-pb-span4');
     if(sidebar){ sidebar.insertBefore(tab, sidebar.firstChild); tab.style.display=''; }
     if(window.bahiaEspTabInit) window.bahiaEspTabInit();
   }
