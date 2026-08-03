@@ -1,31 +1,28 @@
 <?php
 /**
  * Plugin Name: Bahia FULLTEXT Search
- * Description: Substitui a busca padrão do WordPress (LIKE '%termo%', que faz varredura
- *   completa e leva ~40s em wp_posts com ~435k linhas) por MATCH..AGAINST em NATURAL LANGUAGE
- *   MODE usando o índice FULLTEXT `bahia_ft_search` (post_title, post_excerpt), com resultados
- *   ordenados por relevância. Reduz a busca de dezenas de segundos para ~100ms — corrige a
- *   lupa do header que "travava" (timeout).
+ * Description: Busca rápida por MATCH..AGAINST (índice FULLTEXT) em vez do LIKE '%termo%'
+ *   padrão do WP (que levava ~40s em wp_posts com centenas de milhares de linhas).
  *
- * OBS 1 (escopo do índice): cobre TÍTULO + RESUMO, não o corpo (post_content). O RDS homolog
- *   derruba conexões de DDL longo (~140s) e indexar o post_content (~957MB) estoura esse limite.
- *   Título+resumo cobre a maioria das buscas de notícia. Para busca no corpo do texto, usar
- *   Relevanssi ou uma janela de manutenção dedicada p/ o índice completo.
+ *   Ordenação por DATA (mais recente primeiro), como portal de notícias — o BOOLEAN MODE
+ *   com "+palavra*" decide QUAIS linhas casam (match parcial/prefixo: "jero" acha
+ *   "jeronimo") e a data ordena. A collation utf8*_general_ci deixa a busca accent/case
+ *   insensitive de graça ("sao" acha "São").
  *
- * OBS 2 (ordenação): resultados vêm por RELEVÂNCIA do FULLTEXT (não por data). É mais rápido
- *   (o MySQL curto-circuita com LIMIT) e normalmente mais útil numa busca. Ordenar por data
- *   forçaria filesort sobre milhares de linhas (lento no RDS pequeno).
+ *   Como ordenar por data TODAS as linhas casadas de um termo comum ("bahia" ~13k) em
+ *   wp_posts faz filesort lendo linhas gigantes (post_content ~1GB) e leva 10-16s, usamos
+ *   uma TABELA-SOMBRA enxuta ({prefix}bahia_search_idx: ID, post_date, post_title,
+ *   post_excerpt + FULLTEXT + índice de data) — sem post_content. Nela o match + ordenação
+ *   por data são rápidos (dezenas a ~1500ms). A tabela é mantida em sincronia via hooks
+ *   de save/delete e pode ser reconstruída via bahia_ft_rebuild() (WP-CLI: wp eval).
  *
- * OBS 3 (termos curtos): palavras com menos de innodb_ft_min_token_size (3) são ignoradas pelo
- *   FULLTEXT; buscas só com termos curtos retornam vazio instantaneamente (em vez de cair no
- *   LIKE lento).
+ *   Fallback seguro: se a tabela-sombra ainda não existir/estiver vazia (ex.: produção
+ *   antes do rebuild), cai no MATCH sobre wp_posts (índice FULLTEXT bahia_ft_search),
+ *   ordenado por relevância; e se nem esse índice existir, na busca padrão do WP.
  *
- * Seguro por padrão: se o índice ainda não existir (ex.: produção antes do ALTER), o filtro
- * não altera nada e a busca cai no comportamento original. Rode o ALTER e limpe o transient
- * `bahia_ft_index_ready` para ativar.
- *
- * Índice necessário:
- *   ALTER TABLE wp_posts ADD FULLTEXT INDEX bahia_ft_search (post_title, post_excerpt);
+ * Índices necessários:
+ *   - Tabela-sombra: criada automaticamente (estrutura) + bahia_ft_rebuild() para popular.
+ *   - Fallback:  ALTER TABLE wp_posts ADD FULLTEXT INDEX bahia_ft_search (post_title, post_excerpt);
  *
  * @author bahia.ba / Claude Code
  */
@@ -34,10 +31,52 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * O índice FULLTEXT existe? (cacheado em transient para não bater no information_schema a
- * cada request). Retorna false até o ALTER ser executado.
- */
+if (!defined('BAHIA_FT_MAX_COUNT')) {
+    define('BAHIA_FT_MAX_COUNT', 500); // teto de resultados (mais recentes) exibidos/contados
+}
+
+/** Nome da tabela-sombra de busca. */
+function bahia_ft_table() {
+    global $wpdb;
+    return $wpdb->prefix . 'bahia_search_idx';
+}
+
+/** Post types indexados/buscáveis: editorias (CPTs) + post padrão. */
+function bahia_ft_types() {
+    $types = function_exists('bahia_editorias_map') ? array_keys(bahia_editorias_map()) : array();
+    $types[] = 'post';
+    return array_values(array_unique($types));
+}
+
+/* -------------------------------------------------------------------------
+ *  Detecção de disponibilidade (cacheadas em transient)
+ * ------------------------------------------------------------------------- */
+
+/** A tabela-sombra existe e tem linhas? */
+function bahia_ft_ready() {
+    static $ready = null;
+    if ($ready !== null) {
+        return $ready;
+    }
+    $cached = get_transient('bahia_ft_shadow_ready');
+    if ($cached === '1' || $cached === '0') {
+        return $ready = ($cached === '1');
+    }
+    global $wpdb;
+    $t = bahia_ft_table();
+    $exists = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(1) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s",
+        $t
+    ));
+    $ready = false;
+    if ($exists) {
+        $ready = ((int) $wpdb->get_var("SELECT COUNT(1) FROM (SELECT 1 FROM {$t} LIMIT 1) x")) > 0;
+    }
+    set_transient('bahia_ft_shadow_ready', $ready ? '1' : '0', HOUR_IN_SECONDS);
+    return $ready;
+}
+
+/** O índice FULLTEXT no wp_posts existe? (fallback) */
 function bahia_ft_index_ready() {
     static $ready = null;
     if ($ready !== null) {
@@ -50,19 +89,18 @@ function bahia_ft_index_ready() {
     global $wpdb;
     $exists = (int) $wpdb->get_var(
         "SELECT COUNT(1) FROM information_schema.STATISTICS
-         WHERE TABLE_SCHEMA = DATABASE()
-           AND TABLE_NAME = '{$wpdb->posts}'
-           AND INDEX_NAME = 'bahia_ft_search'"
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$wpdb->posts}' AND INDEX_NAME = 'bahia_ft_search'"
     );
     $ready = $exists > 0;
     set_transient('bahia_ft_index_ready', $ready ? '1' : '0', DAY_IN_SECONDS);
     return $ready;
 }
 
-/**
- * Normaliza o termo digitado para NATURAL LANGUAGE MODE: remove operadores do fulltext,
- * colapsa espaços. Retorna '' se vazio.
- */
+/* -------------------------------------------------------------------------
+ *  Normalização de termos
+ * ------------------------------------------------------------------------- */
+
+/** Termo limpo (para detectar se há busca). '' se vazio. */
 function bahia_ft_terms($s) {
     $s = wp_unslash((string) $s);
     $s = str_replace(array('+', '-', '<', '>', '(', ')', '~', '*', '"', '@', '\\'), ' ', $s);
@@ -70,21 +108,44 @@ function bahia_ft_terms($s) {
 }
 
 /**
- * O nosso MATCH se aplica a esta query? (é busca + índice pronto + termo não vazio)
+ * Expressão BOOLEAN MODE com match parcial/prefixo: cada palavra vira "+palavra*".
+ * Ex.: "jero" => "+jero*"; "sao paulo" => "+sao* +paulo*". Palavras < min token (3)
+ * são ignoradas. '' se não sobrar termo utilizável.
  */
+function bahia_ft_boolean($s) {
+    $clean = bahia_ft_terms($s);
+    if ($clean === '') {
+        return '';
+    }
+    $out = array();
+    foreach (explode(' ', $clean) as $w) {
+        $len = function_exists('mb_strlen') ? mb_strlen($w) : strlen($w);
+        if ($len >= 3) {
+            $out[] = '+' . $w . '*';
+        }
+    }
+    return implode(' ', $out);
+}
+
+/** A nossa busca se aplica? (é busca + tem alguma fonte pronta + termo não vazio) */
 function bahia_ft_applies($wp_query) {
     if (empty($wp_query->query_vars['s'])) {
         return false;
     }
-    if (!bahia_ft_index_ready()) {
+    if (!bahia_ft_ready() && !bahia_ft_index_ready()) {
         return false;
     }
     return bahia_ft_terms($wp_query->query_vars['s']) !== '';
 }
 
+/* -------------------------------------------------------------------------
+ *  Reescrita da busca
+ * ------------------------------------------------------------------------- */
+
 /**
- * Substitui a cláusula de busca (LIKE) por MATCH..AGAINST em NATURAL LANGUAGE MODE.
- * Aplica-se a qualquer WP_Query de busca (query principal, blocos do TagDiv e AJAX da lupa).
+ * Substitui a cláusula LIKE por:
+ *  - tabela-sombra pronta: ID IN (500 casamentos MAIS RECENTES) — data correta e rápido;
+ *  - senão: MATCH em wp_posts (fallback).
  */
 add_filter('posts_search', 'bahia_ft_posts_search', 10, 2);
 function bahia_ft_posts_search($search, $wp_query) {
@@ -92,16 +153,40 @@ function bahia_ft_posts_search($search, $wp_query) {
     if (!bahia_ft_applies($wp_query)) {
         return $search;
     }
-    $terms = bahia_ft_terms($wp_query->query_vars['s']);
+    $bool = bahia_ft_boolean($wp_query->query_vars['s']);
+    if ($bool === '') {
+        return ' AND 1=0 '; // só termos curtos -> vazio rápido
+    }
+
+    if (bahia_ft_ready()) {
+        $t   = bahia_ft_table();
+        $cap = (int) BAHIA_FT_MAX_COUNT;
+        // Subquery na tabela enxuta: os N casamentos mais RECENTES (rápido). A query
+        // externa restringe wp_posts a esses IDs e ordena por data.
+        return $wpdb->prepare(
+            " AND {$wpdb->posts}.ID IN (
+                SELECT bahia_ft_id FROM (
+                  SELECT {$t}.ID AS bahia_ft_id
+                  FROM {$t}
+                  WHERE MATCH({$t}.post_title, {$t}.post_excerpt) AGAINST (%s IN BOOLEAN MODE)
+                  ORDER BY {$t}.post_date DESC
+                  LIMIT %d
+                ) bahia_ft_sub
+            ) ",
+            $bool, $cap
+        );
+    }
+
+    // Fallback: MATCH direto em wp_posts.
     return $wpdb->prepare(
-        " AND MATCH({$wpdb->posts}.post_title, {$wpdb->posts}.post_excerpt) AGAINST (%s) ",
-        $terms
+        " AND MATCH({$wpdb->posts}.post_title, {$wpdb->posts}.post_excerpt) AGAINST (%s IN BOOLEAN MODE) ",
+        $bool
     );
 }
 
 /**
- * Ordena por relevância do FULLTEXT (rápido, curto-circuita com LIMIT). Substitui o ORDER BY
- * da query de busca inteiro.
+ * Ordenação: por DATA quando temos a tabela-sombra (o IN já traz os mais recentes);
+ * no fallback (wp_posts), por relevância (evita o filesort de milhares de linhas grandes).
  */
 add_filter('posts_orderby', 'bahia_ft_posts_orderby', 10, 2);
 function bahia_ft_posts_orderby($orderby, $wp_query) {
@@ -109,36 +194,26 @@ function bahia_ft_posts_orderby($orderby, $wp_query) {
     if (!bahia_ft_applies($wp_query)) {
         return $orderby;
     }
-    $terms = bahia_ft_terms($wp_query->query_vars['s']);
+    if (bahia_ft_ready()) {
+        return "{$wpdb->posts}.post_date DESC, {$wpdb->posts}.ID DESC";
+    }
+    $bool = bahia_ft_boolean($wp_query->query_vars['s']);
+    if ($bool === '') {
+        return $orderby;
+    }
     return $wpdb->prepare(
-        "MATCH({$wpdb->posts}.post_title, {$wpdb->posts}.post_excerpt) AGAINST (%s) DESC",
-        $terms
+        "MATCH({$wpdb->posts}.post_title, {$wpdb->posts}.post_excerpt) AGAINST (%s IN BOOLEAN MODE) DESC",
+        $bool
     );
 }
 
-/**
- * Remove o ORDER BY de relevância padrão do WP (CASE..LIKE nos termos) — substituído pelo
- * ORDER BY de relevância do fulltext acima.
- */
+/** Remove o ORDER BY de relevância padrão do WP (CASE..LIKE). */
 add_filter('posts_search_orderby', 'bahia_ft_search_orderby', 10, 2);
 function bahia_ft_search_orderby($orderby, $wp_query) {
     return bahia_ft_applies($wp_query) ? '' : $orderby;
 }
 
-/**
- * Teto de resultados contados. O RDS homolog é lento para contar TODAS as linhas de um termo
- * comum ("bahia"/"salvador" casam ~15k → ~10s). Como a query principal ordena por relevância e
- * corta no LIMIT (rápida, ~400ms), limitamos o total a este teto: o usuário vê até
- * BAHIA_FT_MAX_COUNT resultados (mais relevantes), o suficiente para uma busca de notícias.
- */
-if (!defined('BAHIA_FT_MAX_COUNT')) {
-    define('BAHIA_FT_MAX_COUNT', 500);
-}
-
-/**
- * Remove o SQL_CALC_FOUND_ROWS da query de busca (o total completo custava vários segundos em
- * termos comuns). O total passa a vir de um COUNT com teto (barato) via found_posts_query.
- */
+/** Remove SQL_CALC_FOUND_ROWS (caro). */
 add_filter('posts_request', 'bahia_ft_posts_request', 10, 2);
 function bahia_ft_posts_request($request, $wp_query) {
     if (!bahia_ft_applies($wp_query)) {
@@ -147,24 +222,122 @@ function bahia_ft_posts_request($request, $wp_query) {
     return preg_replace('/^\s*SELECT\s+SQL_CALC_FOUND_ROWS\b/i', 'SELECT', $request, 1);
 }
 
-/**
- * Fornece found_posts via COUNT com teto (subquery LIMIT), que o MySQL encerra cedo — rápido e
- * estável mesmo em termo comum. Mantém a paginação (max_num_pages) funcionando.
- */
+/** found_posts via COUNT com teto (barato), da fonte disponível. */
 add_filter('found_posts_query', 'bahia_ft_found_posts_query', 10, 2);
 function bahia_ft_found_posts_query($sql, $wp_query) {
     global $wpdb;
     if (!bahia_ft_applies($wp_query)) {
         return $sql;
     }
-    $terms = bahia_ft_terms($wp_query->query_vars['s']);
+    $bool = bahia_ft_boolean($wp_query->query_vars['s']);
+    if ($bool === '') {
+        return "SELECT 0";
+    }
     $cap = (int) BAHIA_FT_MAX_COUNT + 1;
+    if (bahia_ft_ready()) {
+        $t = bahia_ft_table();
+        return $wpdb->prepare(
+            "SELECT COUNT(*) FROM (SELECT 1 FROM {$t}
+             WHERE MATCH({$t}.post_title, {$t}.post_excerpt) AGAINST (%s IN BOOLEAN MODE) LIMIT %d) x",
+            $bool, $cap
+        );
+    }
     return $wpdb->prepare(
         "SELECT COUNT(*) FROM (SELECT 1 FROM {$wpdb->posts}
          WHERE post_status IN ('publish','acf-disabled')
-         AND MATCH({$wpdb->posts}.post_title, {$wpdb->posts}.post_excerpt) AGAINST (%s)
+         AND MATCH({$wpdb->posts}.post_title, {$wpdb->posts}.post_excerpt) AGAINST (%s IN BOOLEAN MODE)
          LIMIT %d) t",
-        $terms,
-        $cap
+        $bool, $cap
     );
+}
+
+/* -------------------------------------------------------------------------
+ *  Manutenção da tabela-sombra
+ * ------------------------------------------------------------------------- */
+
+/** Cria a estrutura da tabela-sombra se não existir (barato; NÃO popula). */
+function bahia_ft_maybe_create_table() {
+    global $wpdb;
+    $t = bahia_ft_table();
+    $exists = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(1) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s",
+        $t
+    ));
+    if ($exists) {
+        return;
+    }
+    $wpdb->query(
+        "CREATE TABLE {$t} (
+            ID bigint unsigned NOT NULL PRIMARY KEY,
+            post_date datetime NOT NULL,
+            post_title text,
+            post_excerpt text,
+            KEY date_idx (post_date),
+            FULLTEXT KEY ft (post_title, post_excerpt)
+         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+    delete_transient('bahia_ft_shadow_ready');
+}
+add_action('init', 'bahia_ft_maybe_create_table', 1);
+
+/** Sincroniza UM post na tabela-sombra (upsert se buscável+publicado; senão remove). */
+function bahia_ft_sync($post_id) {
+    if (wp_is_post_revision($post_id) || (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)) {
+        return;
+    }
+    global $wpdb;
+    $t = bahia_ft_table();
+    $p = get_post($post_id);
+    $ok = $p && $p->post_status === 'publish' && in_array($p->post_type, bahia_ft_types(), true);
+    if ($ok) {
+        $wpdb->query($wpdb->prepare(
+            "REPLACE INTO {$t} (ID, post_date, post_title, post_excerpt) VALUES (%d, %s, %s, %s)",
+            $p->ID, $p->post_date, $p->post_title, $p->post_excerpt
+        ));
+    } else {
+        $wpdb->query($wpdb->prepare("DELETE FROM {$t} WHERE ID = %d", (int) $post_id));
+    }
+}
+add_action('save_post', 'bahia_ft_sync', 20, 1);
+add_action('edit_post', 'bahia_ft_sync', 20, 1);
+add_action('transition_post_status', function ($new, $old, $post) {
+    bahia_ft_sync($post->ID);
+}, 20, 3);
+add_action('deleted_post', function ($post_id) {
+    global $wpdb;
+    $wpdb->query($wpdb->prepare("DELETE FROM " . bahia_ft_table() . " WHERE ID = %d", (int) $post_id));
+});
+
+/**
+ * (Re)constrói a tabela-sombra do zero. Rodar via WP-CLI:
+ *   wp eval 'bahia_ft_rebuild();'
+ * Retorna o número de linhas indexadas.
+ */
+function bahia_ft_rebuild() {
+    global $wpdb;
+    $t = bahia_ft_table();
+    $types = bahia_ft_types();
+    $place = implode(',', array_fill(0, count($types), '%s'));
+
+    $wpdb->query("DROP TABLE IF EXISTS {$t}");
+    $wpdb->query(
+        "CREATE TABLE {$t} (
+            ID bigint unsigned NOT NULL PRIMARY KEY,
+            post_date datetime NOT NULL,
+            post_title text,
+            post_excerpt text,
+            KEY date_idx (post_date)
+         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+    $n = $wpdb->query($wpdb->prepare(
+        "INSERT INTO {$t} (ID, post_date, post_title, post_excerpt)
+         SELECT ID, post_date, post_title, post_excerpt FROM {$wpdb->posts}
+         WHERE post_status = 'publish' AND post_type IN ($place)",
+        $types
+    ));
+    // FULLTEXT depois do bulk insert (mais rápido).
+    $wpdb->query("ALTER TABLE {$t} ADD FULLTEXT KEY ft (post_title, post_excerpt)");
+
+    delete_transient('bahia_ft_shadow_ready');
+    return (int) $n;
 }
