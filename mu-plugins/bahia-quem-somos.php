@@ -42,6 +42,9 @@ function bahia_qs_css() {
 .qs-name{display:block;font-weight:600;font-size:14px;color:#13182B !important;line-height:1.3;}
 .qs-cargo{display:block;font-size:12px;color:#8a8f98;margin-top:2px;}
 @media (max-width:767px){.qs-grid{justify-content:center;gap:22px;}}
+.qs-contact{max-width:820px;margin:34px auto 10px;text-align:center;font-size:17px;line-height:1.7;color:#333;}
+.qs-contact a{color:#4371B6 !important;font-weight:600;text-decoration:none;}
+.qs-contact a:hover{text-decoration:underline;}
 CSS;
 }
 
