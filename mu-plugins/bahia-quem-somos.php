@@ -38,7 +38,8 @@ function bahia_qs_css() {
 .qs-role{color:#4371B6 !important;font-size:18px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #EDECED;padding-bottom:8px;margin:34px 0 22px;}
 .qs-grid{display:flex;flex-wrap:wrap;gap:28px 22px;justify-content:flex-start;margin:0 0 6px;}
 .qs-member{width:132px;text-align:center;}
-.qs-avatar{display:block;width:96px;height:96px;border-radius:50%;background:#EDECED url("$data") no-repeat center;background-size:60px 60px;margin:0 auto 10px;}
+.qs-avatar{display:block;width:96px;height:96px;border-radius:50%;background:#EDECED url("$data") no-repeat center;background-size:60px 60px;margin:0 auto 10px;overflow:hidden;}
+.qs-avatar .qs-photo{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:top center;}
 .qs-name{display:block;font-weight:600;font-size:14px;color:#13182B !important;line-height:1.3;}
 .qs-cargo{display:block;font-size:12px;color:#8a8f98;margin-top:2px;}
 @media (max-width:767px){.qs-grid{justify-content:center;gap:22px;}}
