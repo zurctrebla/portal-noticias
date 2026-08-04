@@ -144,6 +144,15 @@ function bahia_si_enqueue() {
         return;
     }
 
+    // Página "Últimas Notícias" (slug ultimas-noticias): feed cronológico de TODAS as
+    // editorias montado por um bloco TagDiv td_flex_block_1 no conteúdo, com
+    // ajax_pagination=load_more. Mesmo tratamento nativo da home/busca (o load more +
+    // scroll infinito no mobile), reproduzindo o comportamento da produção.
+    if (is_page('ultimas-noticias')) {
+        bahia_si_loadmore_enqueue('.td_flex_block_1', __('Ver mais notícias', 'newspaper'));
+        return;
+    }
+
     $post_type = bahia_si_current_post_type();
     if (!$post_type) {
         return;

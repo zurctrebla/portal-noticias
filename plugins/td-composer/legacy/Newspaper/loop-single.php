@@ -58,8 +58,9 @@ if (have_posts()) {
             </div>
 
             <?php echo $td_mod_single->get_social_sharing_bottom(); ?>
-            <?php $td_mod_single->show_next_prev_posts() ?>
+            <?php // Bahia.ba: bio do repórter ANTES da navegação anterior/próximo (ordem invertida). ?>
             <?php $td_mod_single->show_author_box() ?>
+            <?php $td_mod_single->show_next_prev_posts() ?>
             <?php $td_mod_single->show_item_scope_meta() ?>
         </footer>
 
