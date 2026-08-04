@@ -7,6 +7,13 @@
         $td_archive_title .= __('Monthly Archives:', 'newspaper') . ' ' . get_the_date('F Y');
     } elseif (is_year()) {
         $td_archive_title .= __('Yearly Archives:', 'newspaper') . ' ' . get_the_date('Y');
+    } elseif (is_post_type_archive()) {
+        // Editorias do bahia.ba são CPTs (has_archive): /politica, /municipios, ...
+        // O core do WP não é chamado aqui, então sem este ramo todo archive de CPT
+        // caía no genérico "Arquivos". post_type_archive_title() devolve o
+        // labels->name do CPT (ex.: "Municípios", "Justiça") definido em
+        // mu-plugins/bahia-editorias-cpt.php.
+        $td_archive_title .= post_type_archive_title('', false);
     } else {
         $td_archive_title .= __('Archives', 'newspaper');
     }
