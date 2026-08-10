@@ -108,41 +108,55 @@ if (!function_exists('bahia_fut_render_box_clube')) {
         }
         $esc = function ($url) {
             return $url ? '<img class="bahia-cl-esc" src="' . esc_url($url) . '" alt="" onerror="this.style.visibility=\'hidden\'">' : '';
+        };
+        // Mando de campo: o mandante ocupa sempre o lado esquerdo da linha (.casa).
+        // Quando o clube joga fora, clube e adversario — e os placares — trocam de lado.
+        // O clube segue identificavel pelo cabecalho colorido do box e pelo escudo local.
+        $lados = function ($j) use ($clube_crest) {
+            $fora = (isset($j['mando']) && $j['mando'] === 'fora');
+            return array(
+                'esq_nome'   => $fora ? $j['adversario']   : $j['clube_nome'],
+                'esq_crest'  => $fora ? $j['adv_crest']    : $clube_crest,
+                'esq_placar' => $fora ? $j['placar_adv']   : $j['placar_clube'],
+                'dir_nome'   => $fora ? $j['clube_nome']   : $j['adversario'],
+                'dir_crest'  => $fora ? $clube_crest       : $j['adv_crest'],
+                'dir_placar' => $fora ? $j['placar_clube'] : $j['placar_adv'],
+            );
         }; ?>
         <div class="bahia-cl-box <?php echo esc_attr($classe); ?>">
           <div class="bahia-cl-head"><?php echo esc_html($rotulo); ?></div>
           <div class="bahia-cl-body">
-            <?php if (!empty($dados['ultimo'])) : $u = $dados['ultimo']; ?>
+            <?php if (!empty($dados['ultimo'])) : $u = $dados['ultimo']; $lu = $lados($u); ?>
               <div class="bahia-cl-jogo">
                 <div class="bahia-cl-rot">Último jogo</div>
                 <div class="bahia-cl-row">
                   <div class="bahia-cl-lado casa">
-                    <span class="bahia-cl-nome"><?php echo esc_html($u['clube_nome']); ?></span>
-                    <?php echo $esc($clube_crest); ?>
+                    <span class="bahia-cl-nome"><?php echo esc_html($lu['esq_nome']); ?></span>
+                    <?php echo $esc($lu['esq_crest']); ?>
                   </div>
                   <div class="bahia-cl-mid">
-                    <?php echo ($u['placar_clube'] !== null ? intval($u['placar_clube']) : '-'); ?><span class="bahia-cl-x">x</span><?php echo ($u['placar_adv'] !== null ? intval($u['placar_adv']) : '-'); ?>
+                    <?php echo ($lu['esq_placar'] !== null ? intval($lu['esq_placar']) : '-'); ?><span class="bahia-cl-x">x</span><?php echo ($lu['dir_placar'] !== null ? intval($lu['dir_placar']) : '-'); ?>
                   </div>
                   <div class="bahia-cl-lado fora">
-                    <?php echo $esc($u['adv_crest']); ?>
-                    <span class="bahia-cl-nome"><?php echo esc_html($u['adversario']); ?></span>
+                    <?php echo $esc($lu['dir_crest']); ?>
+                    <span class="bahia-cl-nome"><?php echo esc_html($lu['dir_nome']); ?></span>
                   </div>
                 </div>
                 <div class="bahia-cl-meta"><?php echo esc_html($u['data'] . ' · ' . $u['competicao']); ?></div>
               </div>
             <?php endif; ?>
-            <?php if (!empty($dados['proximo'])) : $p = $dados['proximo']; ?>
+            <?php if (!empty($dados['proximo'])) : $p = $dados['proximo']; $lp = $lados($p); ?>
               <div class="bahia-cl-jogo">
                 <div class="bahia-cl-rot">Próximo jogo</div>
                 <div class="bahia-cl-row">
                   <div class="bahia-cl-lado casa">
-                    <span class="bahia-cl-nome"><?php echo esc_html($p['clube_nome']); ?></span>
-                    <?php echo $esc($clube_crest); ?>
+                    <span class="bahia-cl-nome"><?php echo esc_html($lp['esq_nome']); ?></span>
+                    <?php echo $esc($lp['esq_crest']); ?>
                   </div>
                   <div class="bahia-cl-mid"><span class="bahia-cl-x">×</span></div>
                   <div class="bahia-cl-lado fora">
-                    <?php echo $esc($p['adv_crest']); ?>
-                    <span class="bahia-cl-nome"><?php echo esc_html($p['adversario']); ?></span>
+                    <?php echo $esc($lp['dir_crest']); ?>
+                    <span class="bahia-cl-nome"><?php echo esc_html($lp['dir_nome']); ?></span>
                   </div>
                 </div>
                 <div class="bahia-cl-meta"><?php echo esc_html($p['data'] . ' às ' . $p['horario'] . ' · ' . $p['competicao']); ?></div>
