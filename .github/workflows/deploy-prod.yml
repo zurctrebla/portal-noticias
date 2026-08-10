@@ -1,35 +1,121 @@
-name: Deploy wp-content (prod)
+name: Build e Deploy (prod)
+
+# Ate 2026-08-10 este workflow fazia `git reset --hard` em /opt/bahia-website e
+# `docker service update` numa VPS Docker Swarm -- infra desativada na migracao
+# para o EKS. Ele rodava, marcava verde, e nao afetava bahia.ba: producao puxava
+# a tag flutuante `homolog-latest`, construida por push na `staging`. Resultado:
+# tudo que era mergeado na main nunca chegava ao ar.
+#
+# Agora: build da main -> ECR com tag imutavel por SHA -> kubectl set image no
+# cluster bahia-eks-prod. Sem nenhum ponto de contato com o fluxo de homolog.
 
 on:
   push:
     branches:
       - main
 
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 774710032593.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REPOSITORY: bahia-wordpress
+  EKS_CLUSTER: bahia-eks-prod
+  NAMESPACE: bahia-wordpress
+
 jobs:
-  deploy-prod:
-    runs-on: self-hosted
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Atualiza wp-content
-        run: |
-          cd /opt/bahia-website/wp-content
-          git fetch origin
-          git reset --hard origin/main
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Instalar dependências
-        run: |
-          cd /opt/bahia-website/wp-content/themes/bahia_refactor
-          npm ci
-          npm run theme:build
+      - name: Login no ECR
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Reiniciar WordPress
+      - name: Build e Push imagem
+        env:
+          IMAGE_TAG: prod-${{ github.sha }}
         run: |
-          #docker ps | grep wordpress && docker restart wordpress || true
-          docker service update --force bahia-wordpress_wordpress
-      - name: Purgar cache Varnish
+          docker build -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" .
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          # `prod-latest` e apenas um alias legivel, referenciado pelo
+          # deployment-prod.yaml para que um `kubectl apply` isolado (via
+          # tf-apply.yml do repo de infra) nunca aponte para uma tag inexistente.
+          # Quem determina o que roda e o `set image` por SHA, mais abaixo.
+          docker tag "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" "$ECR_REGISTRY/$ECR_REPOSITORY:prod-latest"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:prod-latest"
+
+      - name: Configurar kubectl (cluster de PROD)
         run: |
-          VARNISH_ID=$(docker ps --filter "name=bahia-wordpress_varnish" --filter "status=running" --format "{{.ID}}" | head -1)
-          docker exec $VARNISH_ID varnishadm 'ban req.url ~ "."'
+          aws eks update-kubeconfig --region "$AWS_REGION" --name "$EKS_CLUSTER"
+          echo "contexto: $(kubectl config current-context)"
+
+      - name: Registrar imagem atual (para rollback)
+        id: anterior
+        run: |
+          CURRENT=$(kubectl get deployment/wordpress -n "$NAMESPACE" \
+            -o jsonpath='{.spec.template.spec.containers[?(@.name=="wordpress")].image}')
+          echo "imagem antes do deploy: $CURRENT"
+          echo "previous_image=$CURRENT" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy no EKS de prod
+        env:
+          IMAGE_TAG: prod-${{ github.sha }}
+        run: |
+          IMG="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          # O initContainer copy-wp-files e quem popula /var/www/html no volume
+          # compartilhado que o php-fpm e o nginx enxergam. Se ele ficar na imagem
+          # antiga, o codigo novo simplesmente nao chega -- os dois tem que ser
+          # atualizados na mesma operacao.
+          kubectl set image deployment/wordpress \
+            copy-wp-files="$IMG" \
+            wordpress="$IMG" \
+            -n "$NAMESPACE"
+
+          kubectl rollout status deployment/wordpress -n "$NAMESPACE" --timeout=600s
+
+      - name: Purgar fastcgi_cache
+        run: |
+          # O cache fica no sidecar nginx DENTRO do pod wordpress (/tmp/nginx-cache,
+          # emptyDir) -- purgar o Deployment `nginx` separado nao tem efeito nenhum.
+          # Pods novos ja nascem com o emptyDir vazio; isto cobre qualquer pod que
+          # tenha sobrevivido ao rollout.
+          for pod in $(kubectl get pods -n "$NAMESPACE" -l app=wordpress -o name); do
+            echo "purgando $pod"
+            kubectl exec "$pod" -c nginx -n "$NAMESPACE" -- sh -c 'rm -rf /tmp/nginx-cache/*' || true
+          done
+
+      - name: Resumo
+        if: always()
+        env:
+          IMAGE_TAG: prod-${{ github.sha }}
+        run: |
+          {
+            echo "### Deploy de producao"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Cluster | \`$EKS_CLUSTER\` |"
+            echo "| Imagem | \`$ECR_REPOSITORY:$IMAGE_TAG\` |"
+            echo "| Imagem anterior | \`${{ steps.anterior.outputs.previous_image }}\` |"
+            echo ""
+            echo "**Rollback:**"
+            echo ""
+            echo '```'
+            echo "aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER"
+            echo "kubectl set image deployment/wordpress \\"
+            echo "  copy-wp-files=${{ steps.anterior.outputs.previous_image }} \\"
+            echo "  wordpress=${{ steps.anterior.outputs.previous_image }} \\"
+            echo "  -n $NAMESPACE"
+            echo "kubectl rollout status deployment/wordpress -n $NAMESPACE"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
