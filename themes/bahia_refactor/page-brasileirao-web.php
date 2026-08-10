@@ -16,7 +16,7 @@ var rodadaAtual = 1;
 $(document).ready(function () {
     $.ajax({
         method: "GET",
-        url: '/api_brasileirao.php',
+        url: '/bahia-api/brasileirao',
         data: {serie: '<?=$serie?>'},
         dataType: 'json'
     }).fail(function(xhr, status, error) {

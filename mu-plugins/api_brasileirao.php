@@ -9,7 +9,10 @@
 add_action('init', function () {
     $request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-    if ($request_uri !== '/api_brasileirao.php') {
+    // Rota antiga (/api_brasileirao.php) dá 404 no php-fpm (arquivo físico inexistente).
+    // Rota nova, roteável pelo WordPress: /bahia-api/brasileirao
+    $rotas = array('/api_brasileirao.php', '/bahia-api/brasileirao', '/bahia-api/brasileirao/');
+    if (!in_array($request_uri, $rotas, true)) {
         return;
     }
 

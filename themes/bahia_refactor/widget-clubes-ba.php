@@ -96,53 +96,67 @@ if (!function_exists('bahia_render_box_clube')) {
         if (!$dados || (empty($dados['ultimo']) && empty($dados['proximo']))) {
             return;
         }
+        // Mando de campo: o mandante ocupa sempre o lado esquerdo da linha.
+        // Quando o clube joga fora, clube e adversário — e os placares — trocam de lado.
+        // O clube segue identificável pelo rótulo do box e pelo escudo local.
+        $lados = function ($j) use ($clube_crest) {
+            $fora = (isset($j['mando']) && $j['mando'] === 'fora');
+            return array(
+                'esq_nome'   => $fora ? $j['adversario']   : $j['clube_nome'],
+                'esq_crest'  => $fora ? $j['adv_crest']    : $clube_crest,
+                'esq_placar' => $fora ? $j['placar_adv']   : $j['placar_clube'],
+                'dir_nome'   => $fora ? $j['clube_nome']   : $j['adversario'],
+                'dir_crest'  => $fora ? $clube_crest       : $j['adv_crest'],
+                'dir_placar' => $fora ? $j['placar_clube'] : $j['placar_adv'],
+            );
+        };
         ?>
         <div class="box-news-int box-clube-jogos" style="float: left;">
             <span class="box-categoria"><?php echo esc_html($rotulo); ?></span>
             <div class="box-maislidos">
                 <div class="cont-tab">
-                    <?php if (!empty($dados['ultimo'])): $u = $dados['ultimo']; ?>
+                    <?php if (!empty($dados['ultimo'])): $u = $dados['ultimo']; $lu = $lados($u); ?>
                         <div class="clube-jogo clube-ultimo">
                             <div class="clube-rotulo">Último jogo</div>
                             <div class="clube-linha">
                                 <span class="clube-time">
-                                    <?php if ($clube_crest): ?>
-                                        <img src="<?php echo esc_url($clube_crest); ?>" alt="" width="26" height="26">
+                                    <?php if ($lu['esq_crest']): ?>
+                                        <img src="<?php echo esc_url($lu['esq_crest']); ?>" alt="" width="26" height="26">
                                     <?php endif; ?>
-                                    <span class="clube-nome"><?php echo esc_html($u['clube_nome']); ?></span>
+                                    <span class="clube-nome"><?php echo esc_html($lu['esq_nome']); ?></span>
                                 </span>
                                 <strong class="clube-placar">
-                                    <?php echo ($u['placar_clube'] !== null ? intval($u['placar_clube']) : '-'); ?>
+                                    <?php echo ($lu['esq_placar'] !== null ? intval($lu['esq_placar']) : '-'); ?>
                                     x
-                                    <?php echo ($u['placar_adv'] !== null ? intval($u['placar_adv']) : '-'); ?>
+                                    <?php echo ($lu['dir_placar'] !== null ? intval($lu['dir_placar']) : '-'); ?>
                                 </strong>
                                 <span class="clube-time">
-                                    <?php if ($u['adv_crest']): ?>
-                                        <img src="<?php echo esc_url($u['adv_crest']); ?>" alt="" width="26" height="26">
+                                    <?php if ($lu['dir_crest']): ?>
+                                        <img src="<?php echo esc_url($lu['dir_crest']); ?>" alt="" width="26" height="26">
                                     <?php endif; ?>
-                                    <span class="clube-nome"><?php echo esc_html($u['adversario']); ?></span>
+                                    <span class="clube-nome"><?php echo esc_html($lu['dir_nome']); ?></span>
                                 </span>
                             </div>
                             <div class="clube-meta"><?php echo esc_html($u['data'] . ' • ' . $u['competicao']); ?></div>
                         </div>
                     <?php endif; ?>
 
-                    <?php if (!empty($dados['proximo'])): $p = $dados['proximo']; ?>
+                    <?php if (!empty($dados['proximo'])): $p = $dados['proximo']; $lp = $lados($p); ?>
                         <div class="clube-jogo clube-proximo">
                             <div class="clube-rotulo">Próximo jogo</div>
                             <div class="clube-linha">
                                 <span class="clube-time">
-                                    <?php if ($clube_crest): ?>
-                                        <img src="<?php echo esc_url($clube_crest); ?>" alt="" width="26" height="26">
+                                    <?php if ($lp['esq_crest']): ?>
+                                        <img src="<?php echo esc_url($lp['esq_crest']); ?>" alt="" width="26" height="26">
                                     <?php endif; ?>
-                                    <span class="clube-nome"><?php echo esc_html($p['clube_nome']); ?></span>
+                                    <span class="clube-nome"><?php echo esc_html($lp['esq_nome']); ?></span>
                                 </span>
                                 <span class="clube-vs">vs</span>
                                 <span class="clube-time">
-                                    <?php if ($p['adv_crest']): ?>
-                                        <img src="<?php echo esc_url($p['adv_crest']); ?>" alt="" width="26" height="26">
+                                    <?php if ($lp['dir_crest']): ?>
+                                        <img src="<?php echo esc_url($lp['dir_crest']); ?>" alt="" width="26" height="26">
                                     <?php endif; ?>
-                                    <span class="clube-nome"><?php echo esc_html($p['adversario']); ?></span>
+                                    <span class="clube-nome"><?php echo esc_html($lp['dir_nome']); ?></span>
                                 </span>
                             </div>
                             <div class="clube-meta"><?php echo esc_html($p['data'] . ' às ' . $p['horario'] . ' • ' . $p['competicao']); ?></div>
