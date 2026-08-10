@@ -6,8 +6,11 @@
 /wflogs
 /smush-webp
 /index.php
-/languages
 /reports
+
+# Traduções pt_BR: versionadas p/ entrarem na imagem Docker (senão date_i18n cai p/ inglês).
+# Mantém runtime (.mo/.l10n.php/.json), ignora fonte .po (não usada em runtime, ~3MB).
+languages/**/*.po
 
 # Node.js
 themes/bahia_refactor/node_modules
