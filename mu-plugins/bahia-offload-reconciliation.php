@@ -45,14 +45,24 @@ class Bahia_Offload_Reconciliation {
 	 * antiga (pre-migracao para o EKS) ainda serve esses arquivos por HTTP e e a
 	 * unica origem para o acervo legado.
 	 *
-	 * E temporaria: quando a VPS for desligada, defina a constante como string
-	 * vazia (ou remova o define) e a rotina apenas registra o que nao encontrou,
-	 * sem tentar a rede.
+	 * DESLIGADA POR PADRAO. O IP 172.31.0.178 e da VPS Docker Swarm anterior,
+	 * em outra VPC e provavelmente inalcancavel a partir do EKS -- tentar a rede
+	 * ali so renderia timeouts a cada ciclo do cron. Com origem vazia a rotina
+	 * segue reconciliando normalmente todo arquivo que exista em disco (EFS) e
+	 * apenas registra o que nao encontrou, sem tocar na rede (ver o `continue`
+	 * em copy_missing_files_locally()).
+	 *
+	 * Para reativar, defina a constante no wp-config.php com a origem desejada:
+	 *
+	 *     define( 'BAHIA_OFFLOAD_FALLBACK_ORIGIN', 'http://172.31.0.178' );
+	 *
+	 * ou, em runtime, via o filtro `bahia_offload_fallback_origin`. So faz
+	 * sentido se a origem legada estiver de fato acessivel a partir do cluster.
 	 */
 	public static function fallback_origin() {
 		$origin = defined( 'BAHIA_OFFLOAD_FALLBACK_ORIGIN' )
 			? BAHIA_OFFLOAD_FALLBACK_ORIGIN
-			: 'http://172.31.0.178';
+			: '';
 
 		return apply_filters( 'bahia_offload_fallback_origin', $origin );
 	}
