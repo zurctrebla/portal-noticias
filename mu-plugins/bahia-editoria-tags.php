@@ -10,8 +10,9 @@
  *              cobre também os cards carregados via "Ver mais"/scroll infinito.
  *              Cores (bloco 4):
  *                Últimas/fallback=preto, Política=azul, Dendê e Poder=laranja,
- *                Municípios=amarelo, Justiça=vermelho, Esporte=verde,
- *                Entretenimento=roxo, Salvador=azul claro, Artigos=cinza.
+ *                Municípios=amarelo, Justiça=vermelho, Esporte=verde vivo,
+ *                Brasil=verde escuro, Entretenimento=roxo, Salvador=azul claro,
+ *                Mundo=cinza claro (texto escuro), Artigos=cinza-azulado.
  *              Editorias fora da lista herdam o preto (contexto "Últimas Notícias").
  * Version: 1.0.0
  * Author: Bahia.ba
@@ -33,10 +34,15 @@ function bahia_editoria_tags_colors() {
         'dende_poder'    => array('#e8710a', '#ffffff'), // laranja (mantido)
         'municipios'     => array('#e49600', '#222222'), // amarelo/âmbar (texto escuro p/ contraste)
         'justica'        => array('#ff3a2f', '#ffffff'), // vermelho
-        'esporte'        => array('#00bc0d', '#ffffff'), // verde
+        'esporte'        => array('#00bc0d', '#ffffff'), // verde vivo
+        'brasil'         => array('#0b6b2e', '#ffffff'), // verde escuro (6,65:1) — fora do manual
         'entretenimento' => array('#5300b1', '#ffffff'), // roxo
         'salvador'       => array('#4db2ec', '#ffffff'), // azul claro (mantido)
-        'artigo'         => array('#808080', '#ffffff'), // cinza (mantido)
+        // Mundo é a única tag de fundo claro: usa o cinza + azul profundo do manual
+        // (#EDEDED/#13182B, 15,3:1). A exceção à regra de texto branco é proposital —
+        // é o que separa Mundo de Artigos por luminosidade, não só por tom de cinza.
+        'mundo'          => array('#ededed', '#13182b'),
+        'artigo'         => array('#5b6470', '#ffffff'), // cinza-azulado (6,1:1); #808080 reprovava AA
         // DEFAULT (Últimas Notícias / demais editorias): preto
         'DEFAULT'        => array('#111111', '#ffffff'),
     );
