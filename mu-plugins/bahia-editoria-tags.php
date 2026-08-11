@@ -183,6 +183,43 @@ CSS;
         $css .= "{$c}{$c}{$c} .td-image-wrap::after{content:'{$label_css}';background:{$bg};color:{$txt};}\n";
     }
 
+    // --- setas de paginação dos blocos, na cor da editoria ------------------
+    //
+    // Mediu-se cinza `#dcdcdc` na borda e `#b7b7b7` no glifo, igual nos sete blocos da
+    // home — ou seja, as setas nunca chegaram a receber a cor. O comentário de
+    // `bahia-cores-ui.php` que dizia "as setas seguem a cor da editoria (itens 3 e 4)"
+    // estava errado: os itens 3 e 4 tratam título e foto no hover, não a paginação.
+    //
+    // A editoria não está no contêiner do bloco, só nos CARDS (`.td-cpt-{slug}`), e as
+    // setas são irmãs dos cards — daí o `:has()`, que sobe do card para o bloco. Conferido
+    // suportado no ambiente (`CSS.supports('selector(:has(a))')` = true) e casando as 4
+    // âncoras do bloco (são dois pares: `td_ajax-*-pagex` e `td-ajax-*-page`).
+    //
+    // Cor: parte da CANÔNICA de `bahia_editoria_tags_colors()`, mas a canônica não pode ir
+    // crua para um TRAÇO sobre branco. Medido ao aplicar sem ajuste: Mundo (#ededed) ficou
+    // invisível — cinza claríssimo sobre fundo branco — e Salvador (#4db2ec) reprovou.
+    //
+    // Elemento de interface não-textual pede 3:1 (WCAG 1.4.11), não os 4,5:1 de texto, daí
+    // o alvo 3.0. O escurecimento é o mesmo de `bahia_hover_ed_cor_legivel()`, que preserva
+    // o matiz multiplicando os canais — e continua fora de `bahia_editoria_tags_colors()`,
+    // que alimenta também badge e overlay.
+    //
+    // No hover a seta inverte (fundo cheio + glifo branco): aí o alvo volta a ser de texto,
+    // e quem calcula é `bahia_editoria_tags_bg_legivel()`, o mesmo do badge.
+    $ajusta = function_exists('bahia_hover_ed_cor_legivel');
+    foreach ($labels as $slug => $label) {
+        if (!isset($colors[$slug])) {
+            continue;
+        }
+        $cor = $colors[$slug][0];
+        $traco = $ajusta ? bahia_hover_ed_cor_legivel($cor, 3.0) : $cor;
+        $cheio = bahia_editoria_tags_bg_legivel($cor, '#ffffff');
+        $b = ".td_block_wrap:has(.td-cpt-{$slug})";
+        $css .= "{$b} .td-next-prev-wrap a{border-color:{$traco};color:{$traco};}\n"
+              . "{$b} .td-next-prev-wrap a:hover{background-color:{$cheio};"
+              . "border-color:{$cheio};color:#fff;}\n";
+    }
+
     return $css;
 }
 

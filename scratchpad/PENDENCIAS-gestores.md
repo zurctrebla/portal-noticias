@@ -231,3 +231,51 @@ já está registrado no documento de handover.
 | 4 | Logotipo branco vetorial | Solicitar arquivo ao designer | Baixa (acabamento) |
 | 5 | Limite de 70/160 caracteres | Nenhuma — só conferir após atualizar o tema | Informativa |
 | 6 | Anúncio novo demora 3h para aparecer | **Operacional** — deixar a data de início em branco | Média (perda de exibição paga) |
+
+---
+
+## Rodada 9 — o que o celular acrescenta a esta lista
+
+### A. Legibilidade da publicidade no celular depende de PEÇA, não de layout
+
+Os slots de celular foram abertos e estão prontos. O que falta é criativo.
+
+Um **728x90** na coluna do celular (350px em aparelho de 390px) é reduzido a **350x43** — 48%
+da largura original. Peça com texto miúdo fica ilegível nesse tamanho. **Isto não é defeito do
+site:** é o que produção já entrega hoje, e as duas alternativas foram medidas e descartadas —
+sangrar até a borda quebra o alinhamento do conteúdo, e rolagem lateral exige um gesto que
+ninguém faz para ver publicidade.
+
+**O caminho é cadastrar peça em formato de celular.** Os grupos existem, têm posição e
+renderizam sozinhos assim que houver criativo ativo:
+
+| Grupo | Nome | Medida | Anúncios | **Ativos** | Onde aparece |
+|-------|------|--------|----------|-----------|--------------|
+| 2 | Home - Formato Proprietário 1 | 320x100 | 2 | **0** | home, após o 1º bloco |
+| 13 | Internas-Botao_Proprietario | 320x100 | 4 | **0** | internas, sob o leaderboard |
+| 10 | HomeMobile-1 | 125x125 | 1 | **0** | fim da listagem |
+| 11 | InternaMobile-1 | 125x125 | 1 | **0** | fim do post |
+
+Um 320x100 **cabe inteiro** na coluna de 350px, com 30px de folga, sem redução nenhuma.
+
+> Enquanto estiverem zerados, os slots **não ocupam espaço**: o contêiner nem chega a ser
+> emitido. Não há buraco no layout e não há nada a corrigir do lado técnico. É decisão
+> comercial pura.
+
+### B. Grupos 4 e 7 entram na mesma fila dos grupos 3 e 5
+
+Levantamento desta rodada, sobre os dois temas legados:
+
+- **Grupo 4** ("Home - Formato Proprietário 2", 320x100, 4 anúncios, 0 ativos): a única
+  chamada existente está **comentada** (`bahia_social/index.php:243`) e no tema de produção
+  não há nenhuma.
+- **Grupo 7** ("Home-Proprietário 3 SubDestaques", 125x125): **nenhuma chamada em nenhum dos
+  dois temas**, e **zero anúncios cadastrados**.
+
+São quatro grupos sem posição de origem — 3, 4, 5 e 7. **Aposentar ou desenhar lugar** é
+decisão comercial; não se inventou posição para nenhum.
+
+### C. A editoria "Dendê e Poder" está no ar e vazia
+
+`/dende-e-poder/` responde 200, com título e menu corretos, e **zero matérias**. O leitor vê
+uma página de seção sem conteúdo. Precisa de pauta ou de saída do menu antes da homologação.

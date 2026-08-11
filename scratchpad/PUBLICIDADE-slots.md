@@ -290,3 +290,98 @@ maior que os grupos 3 e 5 do §4.
    como comprovar entrega a anunciante.
 8. **Anúncio novo demora 3 horas para aparecer**, por um defeito de fuso horário do plugin.
    Contorno: deixar a data de início em branco. Pendência nº 6 de `PENDENCIAS-gestores.md`.
+
+---
+
+## 8. Rodada 9 — os slots de CELULAR
+
+**Levantado e aplicado em:** 11/08/2026. Posições conferidas em **produção** (`bahia.ba`) com
+UA móvel **e cache-buster** — sem o buster o CDN devolve a variante de desktop e a leitura sai
+errada. Foi assim que a primeira medição desta rodada se enganou.
+
+### 8.1 O achado: o leaderboard não era entregue no celular
+
+O `#bar` do legado (`themes/bahia_refactor/header.php:196-210`) está **dentro do ramo
+`is_mobile()`**, com o comentário `<!-- Banners mobile - fora do header fixo -->`. O legado
+entrega leaderboard no celular; o Newspaper não entregava. Medido em 390px, antes da rodada:
+
+```
+data-grupo=12  caixa=0x0  ANCESTRAL display:none -> .td-header-desktop-wrap
+data-grupo=8   caixa=350x252  VISIVEL
+data-grupo=9   caixa=350x252  VISIVEL
+```
+
+Os retângulos da coluna lateral apareciam; o leaderboard, não. **Grupos 1, 12 e 14 são os
+únicos com criativo ativo hoje** — era inventário vendido e vivo perdido justamente onde está
+a maior parte do público de um portal.
+
+Depois da rodada, a troca por largura é limpa e sem duplicata:
+
+| largura | `.bahia-header-ad` | `.bahia-pub-mob` |
+|---------|--------------------|------------------|
+| 390px | 0x0 (oculto) | **350x43 visível** |
+| 1280px | **728x90 visível** | 0x0 (oculto) |
+
+### 8.2 Onde cada grupo de celular ficou
+
+| Grupo | Medida | Posição no celular | Renderiza hoje? |
+|-------|--------|--------------------|-----------------|
+| 1 / 12 / 14 | 728x90 | topo, acima do conteúdo (onde o `#bar` do legado fica) | **sim** |
+| 2 | 320x100 | home, **depois** do primeiro bloco | não — grupo zerado |
+| 13 | 320x100 | internas, logo abaixo do leaderboard | não — grupo zerado |
+| 10 | 125x125 | fim da listagem (home e archives) | não — grupo zerado |
+| 11 | 125x125 | fim do post individual | não — grupo zerado |
+| 4 | 320x100 | **nenhuma** — única chamada do legado está comentada | — |
+| 7 | 125x125 | **nenhuma** — sem chamada em nenhum tema, 0 anúncios | — |
+
+### 8.3 Grupos 2 e 13 ficam SÓ no celular — e isso é infidelidade consciente
+
+No legado o `#bar` é **compartilhado**: `header.php:401/406` é cópia idêntica do ramo mobile,
+ou seja, o legado põe o 320x100 também no desktop. **Não foi transportado para o desktop**, e
+a razão é aritmética: a linha da marca fechada na rodada 8 tem 256px de logo + 728x90 numa row
+de 1068px, com ~20px de folga. **Não cabe um 320x100 ali.**
+
+Enquanto os grupos estiverem zerados nada apareceria e a cópia pareceria inofensiva — mas no
+dia em que o comercial cadastrasse um criativo, o desktop quebraria sozinho e ninguém
+associaria à origem. O legado tinha outra estrutura de cabeçalho.
+
+> **Se o desktop um dia precisar dos grupos 2 e 13, é REDESENHO DE CABEÇALHO, não transporte.**
+
+### 8.4 Slot vazio não deixa buraco — provado nos dois caminhos
+
+Sem criativo elegível o AdRotate devolve **só um comentário HTML** (92 bytes, sem nenhum
+`<div class="g">`). A guarda devolve `''` **antes de montar o contêiner**, então não há div,
+não há margem e não há espaço reservado:
+
+```
+grupo 2   -> '' (contêiner NÃO emitido — colapsa)
+grupo 13  -> '' (contêiner NÃO emitido — colapsa)
+grupo 10  -> '' (contêiner NÃO emitido — colapsa)
+grupo 11  -> '' (contêiner NÃO emitido — colapsa)
+grupo 8   -> <div class="bahia-pub-mob ..." data-grupo="8"><div class="g g-8">…
+```
+
+### 8.5 Encaixe e reserva de altura
+
+Largura útil da coluna medida em **20px de recuo constante** nas três larguras testadas:
+
+| viewport | coluna | 728x90 vira | 320x100 | 125x125 |
+|----------|--------|-------------|---------|---------|
+| 360px | 320px | 320x40 | cabe exato | cabe |
+| 390px | 350px | **350x43** | cabe, folga 30px | cabe |
+| 414px | 374px | 374x46 | cabe, folga 54px | cabe |
+
+**Sem deslocamento de layout.** A caixa recebe `aspect-ratio` por grupo, então tem a altura
+final antes de a imagem carregar — provado removendo o `src` em runtime: a caixa continua com
+43px. CLS medido: **0,0053 na home e 0,0001 no archive** (limite bom é 0,1), e o resíduo da
+home é de `.td-module-meta-info`, não do slot.
+
+A reserva usa a medida **real** (728x90), não a cadastrada (970x90 nos grupos 1 e 12): o
+cadastro está errado desde sempre — 94 de 102 e 96 de 104 criativos são 728. Reservar por 970
+deixaria faixa vazia permanente.
+
+### 8.6 Por que CSS e não `Mobile_Detect` como o legado
+
+O site serve **fastcgi_cache**. Uma variante por user-agent envenenaria o cache: a primeira
+visita decidiria o que todo mundo veria depois. A separação é por media query em 767px, que é
+como o próprio tema já esconde o header de desktop.

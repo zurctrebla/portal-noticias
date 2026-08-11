@@ -45,7 +45,9 @@ add_action('wp_enqueue_scripts', function () {
                                categoria, tag, data — blocos tdb_loop)
      .bahia-load-more-btn   -> botão do mu-plugin bahia-scroll-infinito, usado nos
                                archives de editoria, que são renderizados em PHP
-   Só estes. As setas .td-next-prev-wrap seguem na cor da editoria (itens 3 e 4). */
+   Só estes. As setas .td-next-prev-wrap são pintadas por bahia-editoria-tags.php, com
+   :has() a partir do card — NÃO pelos itens 3 e 4, que tratam título e foto no hover.
+   (Esta linha afirmava o contrário até a rodada 9; media-se cinza #dcdcdc nas sete.) */
 .td-load-more-wrap a,
 .bahia-load-more-btn{
     background-color:{$azul} !important;
@@ -162,6 +164,38 @@ add_action('wp_enqueue_scripts', function () {
 .tdb-menu-items-dropdown .td-pulldown-filter-list li:hover>a .tdb-sub-menu-icon-svg svg,
 .tdb-menu-items-dropdown .td-pulldown-filter-list li:hover>a .tdb-sub-menu-icon-svg svg *{
     fill:{$azul} !important;
+}
+
+/* ------------------------------------------------------------------
+   MENU MOBILE — item ativo (rodada 9)
+
+   O demo pintava o item corrente com `--td_mobile_text_active_color: #00a392`, via
+   `.td-mobile-content .current-menu-item > a`. Era o único resquício visível do demo
+   no celular.
+
+   Por que CHIP e não troca de cor do texto: o painel do menu é TRANSLÚCIDO — a página
+   aparece atrás dele, e isso é estado final (capturas em 3s e 7s idênticas), não
+   animação. Amostrando o pixel renderizado atrás dos 10 itens, o azul da marca como
+   TEXTO dá 1,07–1,69:1: invisível. O mesmo azul como FUNDO, com texto branco por cima,
+   dá 7,27:1 — e é o que faz a cor da marca de fato aparecer.
+
+   `display:inline-block` é necessário: o <a> do menu ocupa a linha inteira, e sem isso
+   o fundo viraria uma barra de ponta a ponta em vez de um chip ajustado ao rótulo.
+
+   O contorno de 1px existe porque o chip é elemento GRÁFICO sobre fundo translúcido
+   variável (WCAG 1.4.11 pede 3:1 do chip contra o que estiver atrás). O fundo atrás
+   muda conforme a foto da matéria que ficou embaixo, então o contorno claro garante a
+   borda do chip mesmo onde o azul se aproxima do fundo.
+   ------------------------------------------------------------------ */
+.td-mobile-content .current-menu-item>a,
+.td-mobile-content .current-menu-ancestor>a,
+.td-mobile-content .current-category-ancestor>a{
+    color:#fff !important;
+    background-color:{$azul};
+    display:inline-block;
+    padding:2px 10px;
+    border-radius:3px;
+    border:1px solid rgba(255,255,255,.55);
 }
 CSS;
 

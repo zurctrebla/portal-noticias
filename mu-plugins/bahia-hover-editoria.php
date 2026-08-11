@@ -147,6 +147,26 @@ function bahia_hover_ed_css() {
 
     $css = "/* itens 3, 4 e 5 — hover na cor da editoria (bahia-hover-editoria.php) */\n";
 
+    // Tudo que depende de PONTEIRO vai para $hover e sai embrulhado em
+    // `@media (hover: hover) and (pointer: fine)` no fim da função.
+    //
+    // Por quê: em tela sensível ao toque não existe "sair de cima". O navegador aplica
+    // :hover no elemento tocado e SÓ o solta no toque seguinte em outro lugar — medido
+    // aqui com injeção de toque real (Input.dispatchTouchEvent; evento sintetizado por
+    // JS não aciona a máquina de hover e daria falso negativo):
+    //
+    //     REPOUSO         título = rgb(17,17,17)
+    //     APÓS TAP        título = rgb(4,46,252)   :hover=true    <- preso
+    //     APÓS TAP FORA   título = rgb(17,17,17)   :hover=false
+    //
+    // Rolagem começando em cima do card NÃO prende (o navegador cancela o hover ao virar
+    // gesto de rolagem), então o caso é o toque genuíno.
+    //
+    // O overlay do item 4 NÃO entra aqui: `.entry-thumb::after` tem `content:none` nos
+    // três estados — o pseudo-elemento nunca gera caixa neste módulo, e a regra abaixo só
+    // define a COR de um véu que o demo ativa (ou não) por conta própria.
+    $hover = '';
+
     foreach (array_keys($labels) as $slug) {
         $base = isset($cores[$slug]) ? $cores[$slug][0] : $cores['DEFAULT'][0];
 
@@ -156,8 +176,8 @@ function bahia_hover_ed_css() {
         // (0,5,2) sem depender de nenhum id .tdi_NN.
         $titulo = bahia_hover_ed_cor_legivel($base);
         $c = ".td-cpt-{$slug}";
-        $css .= "body {$c}{$c}{$c}:hover .td-module-title a,\n"
-              . "body {$c}{$c}{$c}:hover .entry-title a{color:{$titulo} !important;}\n";
+        $hover .= "body {$c}{$c}{$c}:hover .td-module-title a,\n"
+                . "body {$c}{$c}{$c}:hover .entry-title a{color:{$titulo} !important;}\n";
 
         // --- item 4: overlay da foto no hover -----------------------------
         // O mais forte do demo é (0,3,3); com o :not() e a classe repetida chegamos a
@@ -169,8 +189,8 @@ function bahia_hover_ed_css() {
 
     // Editorias sem classe td-cpt-* (post nativo, página): mantém o preto padrão.
     $def = $cores['DEFAULT'][0];
-    $css .= "\n/* fallback: cards sem editoria */\n"
-          . "body .td_module_wrap:hover .td-module-title a{color:" . bahia_hover_ed_cor_legivel($def) . ";}\n";
+    $hover .= "\n/* fallback: cards sem editoria */\n"
+            . "body .td_module_wrap:hover .td-module-title a{color:" . bahia_hover_ed_cor_legivel($def) . ";}\n";
 
     // --- item 5: texto sobre imagem ---------------------------------------
     // Os marcadores são postos no bloco em tempo de saída, só onde o demo tornou a
@@ -194,14 +214,22 @@ function bahia_hover_ed_css() {
     $all = 'body .bahia-sobre-img-all.bahia-sobre-img-all.bahia-sobre-img-all'
          . '.bahia-sobre-img-all.bahia-sobre-img-all';
 
+    // A trava do branco tem DUAS metades e elas não podem viajar juntas: a de repouso vale
+    // sempre (é ela que mantém o título legível sobre a foto no celular), e só a variante
+    // :hover depende de ponteiro. Embrulhar as duas no @media apagaria o texto branco no
+    // toque — que é justamente o que o item 5 existe para garantir.
     $branco = array();
+    $branco_hover = array();
     foreach (array($mod, $all) as $escopo) {
         foreach (array('.td-module-title a', '.entry-title a') as $alvo) {
-            $branco[] = "{$escopo} {$alvo}";
-            $branco[] = "{$escopo}:hover {$alvo}";
+            $branco[]       = "{$escopo} {$alvo}";
+            $branco_hover[] = "{$escopo}:hover {$alvo}";
         }
     }
     $branco = implode(",\n", $branco);
+    // Fica FORA das duas guardas de mídia: em (0,6,2) vence tanto o item 3 (0,5,2), no
+    // desktop, quanto o neutralizador de toque (0,5,2). Uma trava só, válida nos dois mundos.
+    $branco_hover = implode(",\n", $branco_hover) . "{color:#fff !important;}\n";
 
     // Escopo curto (sem repetição) para o que não disputa com o item 3.
     $mc = '.bahia-sobre-img .bahia-sobre-img-mod';
@@ -250,6 +278,43 @@ function bahia_hover_ed_css() {
 {$ac} .td-module-title a,
 {$ac} .entry-title a{text-shadow:0 1px 3px rgba(0,0,0,.65);}
 CSS;
+
+    // `hover: hover` sozinho não basta: aparelhos híbridos (celular com caneta, tablet com
+    // teclado acoplado) respondem `hover: hover` e voltariam a prender o estado no dedo.
+    // `pointer: fine` exige um ponteiro de precisão, e a conjunção é o que descreve "tem
+    // mouse de verdade".
+    $css .= "\n/* --- só onde existe ponteiro: em toque o :hover fica preso até o toque"
+          . " seguinte --- */\n"
+          . "@media (hover: hover) and (pointer: fine) {\n"
+          . $hover
+          . "}\n";
+
+    // --- neutralizador de toque -------------------------------------------
+    // Desligar SÓ as regras acima não basta, e isso foi medido: sem elas quem assume o
+    // :hover é o CSS do próprio demo, que tem cor de hover por bloco. Depois de embrulhar
+    // o item 3, o toque passou a pintar #008d7f no archive e rgb(133,161,178) na home —
+    // trocou-se a cor da editoria por cor de demo, e o estado continuava preso.
+    //
+    // Então em toque a regra não some: ela passa a pintar a cor de REPOUSO, e o resultado
+    // visível do toque é "nada acontece". (0,5,2) + !important para vencer o demo, que
+    // escreve em (0,4,2) + !important.
+    //
+    // `--td_text_color` é a variável de onde sai a cor de título do tema
+    // (`h1>a … h6>a{color:var(--td_text_color,#111111)}`), então o valor é exato no caso
+    // geral. RESSALVA medida: nos blocos em que o demo grava a cor por bloco
+    // (`.tdi_117 .td_module_flex_4 .td-module-title a{color:#000000}`, 22 cards da home) o
+    // repouso é #000 e esta regra devolve #111 — diferença de 17/255, imperceptível
+    // (21:1 contra 19,3:1 de contraste sobre branco) e só durante o toque.
+    $css .= "\n/* --- em toque, hover pinta a cor de repouso: nada muda ao tocar --- */\n"
+          . "@media (hover: none), (pointer: coarse) {\n"
+          . "body .td_module_wrap.td_module_wrap.td_module_wrap:hover .td-module-title a,\n"
+          . "body .td_module_wrap.td_module_wrap.td_module_wrap:hover .entry-title a{"
+          . "color:var(--td_text_color, #111111) !important;}\n"
+          . "}\n";
+
+    // Fora das guardas: vale nos dois mundos (ver comentário na montagem de $branco_hover).
+    $css .= "\n/* --- título sobre foto: branco também no hover, com ou sem ponteiro --- */\n"
+          . $branco_hover;
 
     return $css;
 }
