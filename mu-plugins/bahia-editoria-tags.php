@@ -135,6 +135,34 @@ CSS;
     return $css;
 }
 
+/**
+ * Garante a classe `td-cpt-{editoria}` nos cards que NÃO passam pelos módulos do TagDiv.
+ *
+ * Os módulos do tagDiv já põem essa classe sozinhos, e é dela que dependem tanto o badge
+ * colorido acima quanto o selo EXCLUSIVO. Mas os archives de editoria são renderizados
+ * por themes/Newspaper/loop-archive.php (e o "ver mais" por bahia-scroll-infinito.php),
+ * que chamam post_class() puro — por isso os cards dos archives apareciam sem badge
+ * nenhum, ao contrário dos da home.
+ *
+ * Só no front-end e só para os CPTs de editoria; posts nativos e páginas ficam intactos.
+ */
+add_filter('post_class', function ($classes, $class, $post_id) {
+    // wp_doing_ajax: admin-ajax.php faz is_admin() devolver true, e sem esta ressalva
+    // os cards trazidos pelo "ver mais" saíam sem a classe — badge só na 1ª carga.
+    if (is_admin() && !wp_doing_ajax()) {
+        return $classes;
+    }
+    $pt = get_post_type($post_id);
+    if (!$pt || !array_key_exists($pt, bahia_editoria_tags_map())) {
+        return $classes;
+    }
+    $alvo = 'td-cpt-' . $pt;
+    if (!in_array($alvo, $classes, true)) {
+        $classes[] = $alvo;
+    }
+    return $classes;
+}, 10, 3);
+
 function bahia_editoria_tags_enqueue() {
     if (is_admin()) {
         return;

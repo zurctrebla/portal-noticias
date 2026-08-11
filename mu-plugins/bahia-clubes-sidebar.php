@@ -47,7 +47,14 @@ function bahia_clubes_sidebar_css() {
 CSS;
 }
 
-add_shortcode('bahia_clubes_sidebar', function () {
+/**
+ * Boxes de último/próximo jogo do EC Bahia e do EC Vitória.
+ *
+ * @param bool $com_botao Inclui o botão "TABELA COMPLETA" abaixo dos boxes.
+ *                        Verdadeiro na home; falso em /esporte/, onde a tabela de
+ *                        classificação logo acima já traz o mesmo botão.
+ */
+function bahia_clubes_sidebar_boxes_html($com_botao = true) {
     if (!function_exists('bahia_fut_clube_jogos_dados') || !function_exists('bahia_fut_render_box_clube')) {
         return '';
     }
@@ -60,6 +67,15 @@ add_shortcode('bahia_clubes_sidebar', function () {
     echo '<div class="bahia-cl-sidebar">';
     bahia_fut_render_box_clube('EC Bahia', 'bahia', $bahia, $brasao . 'bahia.png');
     bahia_fut_render_box_clube('EC Vitória', 'vitoria', $vitoria, $brasao . 'vitoria.png');
+    // Mesmo botão (rótulo, destino e estilo) da tabela de classificação em /esporte/.
+    if ($com_botao && function_exists('bahia_esporte_tabela_link_html')) {
+        echo bahia_esporte_tabela_link_css();
+        echo bahia_esporte_tabela_link_html();
+    }
     echo '</div>';
     return ob_get_clean();
+}
+
+add_shortcode('bahia_clubes_sidebar', function () {
+    return bahia_clubes_sidebar_boxes_html(true);
 });

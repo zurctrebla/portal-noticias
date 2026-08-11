@@ -80,6 +80,9 @@ function bahia_si_render_card() {
     }
     ?>
     <div class="td-block-span6">
+        <?php /* A classe td-cpt-{editoria} entra pelo filtro post_class em
+                 bahia-editoria-tags.php, que cobre também o render inicial do archive
+                 (themes/Newspaper/loop-archive.php). */ ?>
         <div <?php post_class('td_module_1 td_module_wrap clearfix'); ?>>
             <div class="td-module-image">
                 <div class="td-module-thumb">
@@ -117,6 +120,42 @@ function bahia_si_render_card() {
         </div>
     </div>
     <?php
+}
+
+/**
+ * Molde da URL paginada do contexto atual, com "%d" no lugar do número da página
+ * (ex.: "https://site/politica/page/%d/").
+ *
+ * Serve ao href real do botão "ver mais": o Google deixou de usar rel=next/prev como
+ * sinal de rastreamento em 2019, então a profundidade do arquivo precisa estar num
+ * <a href> que o crawler consiga seguir. O JS intercepta o clique, de modo que o
+ * usuário nunca navega — mas sem JS o botão degrada para link comum.
+ *
+ * Devolve '' quando o contexto não tem paginação real (ver bahia_si_paged_ok()).
+ */
+function bahia_si_pagenum_template() {
+    if (!bahia_si_paged_ok()) {
+        return '';
+    }
+    // Sonda com um número improvável de colidir com o resto da URL.
+    $probe = 987654321;
+    $url   = get_pagenum_link($probe, false);
+    if (!is_string($url) || strpos($url, (string) $probe) === false) {
+        return '';
+    }
+    return str_replace((string) $probe, '%d', $url);
+}
+
+/**
+ * O contexto atual tem paginação de verdade?
+ *
+ * /ultimas-noticias/ é uma PÁGINA cujo feed vem de um bloco TagDiv: /page/2/ responde
+ * 200 mas devolve exatamente o mesmo conteúdo da página 1 (verificado). Apontar um href
+ * rastreável para lá criaria conteúdo duplicado — pior que não ter href. Nesse caso o
+ * botão segue com href="#" e só o AJAX funciona.
+ */
+function bahia_si_paged_ok() {
+    return !is_page('ultimas-noticias');
 }
 
 /**
@@ -198,6 +237,9 @@ function bahia_si_enqueue() {
         'excludeIds'   => array_map('intval', $exclude_ids),
         'mobileQuery'  => '(max-width: 767px)',
         'scrollOffset' => 600, // px do fim para disparar o carregamento no mobile
+        // href real do botão: molde da URL paginada + página em que estamos.
+        'pagedTemplate' => bahia_si_pagenum_template(),
+        'currentPage'   => max(1, (int) get_query_var('paged')),
         'i18n'         => array(
             'loadMore' => __('Ver mais notícias', 'newspaper'),
             'loading'  => __('Carregando...', 'newspaper'),
@@ -218,9 +260,9 @@ add_action('wp_enqueue_scripts', 'bahia_si_enqueue', 20);
 function bahia_si_inline_css() {
     return <<<CSS
 .bahia-si-controls{clear:both;text-align:center;margin:6px 0 34px;padding:0 14px;}
-.bahia-load-more-btn{display:inline-block;cursor:pointer;font-family:'Roboto',Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;line-height:1;color:#fff;background-color:#222;padding:15px 32px;border:0;border-radius:0;transition:background-color .2s ease;-webkit-appearance:none;}
-.bahia-load-more-btn:hover{background-color:#000;}
-.bahia-load-more-btn:disabled,.bahia-load-more-btn.is-loading{opacity:.6;cursor:default;}
+.bahia-load-more-btn{display:inline-block;cursor:pointer;font-family:'Roboto',Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;line-height:1;color:#fff;background-color:#222;padding:15px 32px;border:0;border-radius:0;transition:background-color .2s ease;-webkit-appearance:none;text-decoration:none;}
+.bahia-load-more-btn:hover,.bahia-load-more-btn:focus{background-color:#000;color:#fff;text-decoration:none;}
+.bahia-load-more-btn.is-loading{opacity:.6;cursor:default;pointer-events:none;}
 /* Loader = mesmo do TagDiv/home (.td-loader-gif.td-loader-infinite se auto-centraliza
    via position:absolute;left:50%;margin-left:-16px dentro deste box relativo). */
 .bahia-si-loaderbox{position:relative;display:none;height:40px;margin:14px 0 4px;}
@@ -240,8 +282,19 @@ function bahia_si_inline_js() {
         loading: false,
         hasMore: true,
         loadedIds: new Set(),
-        totalPosts: D.totalPosts || 0
+        totalPosts: D.totalPosts || 0,
+        // Página que o href do botão já representa (avança a cada carga).
+        // parseInt: wp_localize_script serializa tudo como string, e sem isso
+        // "3" + 1 concatenaria em "31".
+        page: parseInt(D.currentPage, 10) || 1
     };
+
+    // URL da página N do archive, a partir do molde vindo do PHP. Sem molde
+    // (contexto sem paginação real) devolve "#", preservando o href antigo.
+    function pageUrl(n) {
+        if (!D.pagedTemplate) { return '#'; }
+        return D.pagedTemplate.replace('%d', n);
+    }
 
     (D.excludeIds || []).forEach(function (id) {
         id = parseInt(id, 10);
@@ -272,7 +325,11 @@ function bahia_si_inline_js() {
         $container = $lastRow.parent();
 
         $controls = $('<div class="bahia-si-controls"></div>');
-        $btn = $('<button type="button" class="bahia-load-more-btn"></button>').text(D.i18n.loadMore);
+        // <a href> de verdade para a próxima página do archive (rastreável), com o
+        // clique interceptado abaixo. Sem template de paginação, cai para "#".
+        $btn = $('<a class="bahia-load-more-btn" rel="next"></a>')
+            .attr('href', pageUrl(state.page + 1))
+            .text(D.i18n.loadMore);
         // Loader idêntico ao "load more" da home (TagDiv tdLoadingBox).
         $loader = $('<div class="bahia-si-loaderbox" aria-hidden="true"><div class="td-loader-gif td-loader-infinite"></div></div>');
         $nomore = $('<div class="bahia-si-nomore"></div>').text(D.i18n.noMore);
@@ -300,7 +357,8 @@ function bahia_si_inline_js() {
     function loadMore() {
         if (state.loading || !state.hasMore) { return; }
         state.loading = true;
-        $btn.prop('disabled', true).addClass('is-loading');
+        // is-loading tranca o clique via pointer-events (o <a> não aceita :disabled).
+        $btn.addClass('is-loading').attr('aria-disabled', 'true');
         showLoader();
 
         $.ajax({
@@ -333,6 +391,9 @@ function bahia_si_inline_js() {
                     state.totalPosts = parseInt(data.total_posts, 10) || state.totalPosts;
                 }
                 state.hasMore = !!data.has_more && state.loadedIds.size < state.totalPosts;
+                // O href passa a apontar para a página seguinte à que acabou de entrar.
+                state.page += 1;
+                $btn.attr('href', pageUrl(state.page + 1));
                 updateHasMore();
 
                 // No mobile, se ainda estiver perto do fim, continua carregando.
@@ -345,7 +406,7 @@ function bahia_si_inline_js() {
             },
             complete: function () {
                 state.loading = false;
-                $btn.prop('disabled', false).removeClass('is-loading');
+                $btn.removeClass('is-loading').removeAttr('aria-disabled');
                 hideLoader();
             }
         });
@@ -380,7 +441,12 @@ function bahia_si_inline_js() {
         }
 
         // Desktop: clique no botão. (No mobile o CSS esconde o botão.)
-        $btn.on('click', loadMore);
+        // preventDefault: o href existe para o crawler e para o caso de o JS falhar;
+        // com JS ativo o carregamento é sempre por AJAX, sem navegação.
+        $btn.on('click', function (e) {
+            e.preventDefault();
+            loadMore();
+        });
 
         // Mobile: scroll infinito.
         $(window).on('scroll.bahiaSi', debounce(maybeLoadOnScroll, 150));
@@ -422,6 +488,9 @@ function bahia_si_loadmore_enqueue($main_selector, $label) {
         'scrollOffset' => 600,
         'label'        => $label,
         'mainSelector' => $main_selector,
+        // href real no botão do loop principal (o TagDiv emite href="#").
+        'pagedTemplate' => bahia_si_pagenum_template(),
+        'currentPage'   => max(1, (int) get_query_var('paged')),
     ));
     wp_add_inline_script('bahia-si', bahia_si_home_js());
 }
@@ -453,11 +522,46 @@ function bahia_si_home_js() {
     // Todos os botões "load more" do TagDiv na página (feed/resultados + "Mais Populares"…) —
     // usados para trocar o texto em inglês.
     var SEL_ALL = 'a.td_ajax_load_more';
-    // Só o loop principal (home: .tdb_loop_2 / busca: .tdb_loop) dispara scroll infinito no mobile.
-    var SEL_MAIN = (D.mainSelector || '.tdb_loop_2') + ' .td-load-more-wrap a.td_ajax_load_more';
+    // Só o loop principal dispara scroll infinito no mobile e recebe href real.
+    // O seletor vem do PHP, mas a home já foi reconstruída uma vez (o bloco passou de
+    // .tdb_loop_2 para .tdb_loop) e um seletor obsoleto derruba silenciosamente tanto o
+    // href quanto o scroll infinito. Por isso: se o configurado não casar com nada na
+    // página, cai para o primeiro bloco de loop que tenha um botão "load more".
+    var SUFFIX = ' .td-load-more-wrap a.td_ajax_load_more';
+    var SEL_MAIN = (D.mainSelector || '.tdb_loop_2') + SUFFIX;
+
+    function resolveMain() {
+        if (document.querySelector(SEL_MAIN)) { return; }
+        var fallback = ['.tdb_loop', '.tdb_loop_2', '.td_flex_block_1'].filter(function (s) {
+            return document.querySelector(s + SUFFIX);
+        })[0];
+        if (fallback) { SEL_MAIN = fallback + SUFFIX; }
+    }
 
     function isMobile() {
         return window.matchMedia && window.matchMedia(Q).matches;
+    }
+
+    // Página que o href do botão principal já representa (avança a cada carga).
+    // parseInt porque wp_localize_script entrega strings ("3" + 1 daria "31").
+    var page = parseInt(D.currentPage, 10) || 1;
+
+    function pageUrl(n) {
+        if (!D.pagedTemplate) { return ''; }
+        return D.pagedTemplate.replace('%d', n);
+    }
+
+    // O TagDiv emite href="#": damos ao botão do loop PRINCIPAL um href real para a
+    // próxima página, que o crawler segue. O handler de clique do próprio TagDiv já faz
+    // preventDefault(), então o usuário continua sem navegar. Só o loop principal — os
+    // blocos secundários ("Mais Populares") não representam profundidade de arquivo.
+    function rehref() {
+        var url = pageUrl(page + 1);
+        if (!url) { return; }
+        document.querySelectorAll(SEL_MAIN).forEach(function (a) {
+            a.setAttribute('href', url);
+            a.setAttribute('rel', 'next');
+        });
     }
 
     // Troca "Load more" -> "Ver mais notícias" em TODOS os botões da home (o TagDiv
@@ -468,6 +572,7 @@ function bahia_si_home_js() {
             a.textContent = LABEL;
             a.setAttribute('data-bahia-relabel', '1');
         });
+        rehref();
     }
 
     var cooling = false;
@@ -491,7 +596,14 @@ function bahia_si_home_js() {
     }
 
     $(function () {
+        resolveMain();
         relabel();
+        // Cada carga do loop principal avança o href para a página seguinte. O TagDiv
+        // re-renderiza o botão logo depois, e o MutationObserver reaplica o href novo.
+        $(document).on('click', SEL_MAIN, function () {
+            page += 1;
+            setTimeout(rehref, 0);
+        });
         // Observa a área de conteúdo inteira (não só o feed) p/ re-rotular também o botão
         // de "Mais Populares" quando o TagDiv o re-renderiza.
         var host = document.querySelector('.td-main-content-wrap') || document.body;

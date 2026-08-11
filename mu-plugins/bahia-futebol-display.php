@@ -93,6 +93,38 @@ if (!function_exists('bahia_fut_clube_jogos_dados')) {
 }
 
 /**
+ * Nome curto da competição para a linha de meta dos cards.
+ *
+ * A API devolve "Campeonato Brasileiro Série A", que estoura a largura do card e
+ * quebra em duas linhas — em 390px chega a empurrar o layout. "Brasileirão Série A"
+ * é o termo corrente e cabe em uma linha nas duas larguras.
+ *
+ * Aplicado no RENDER, e não na normalização, para valer também para o que já está
+ * no transient de 30 min.
+ */
+if (!function_exists('bahia_fut_competicao_curta')) {
+    function bahia_fut_competicao_curta($nome) {
+        if (!is_string($nome) || $nome === '') {
+            return '';
+        }
+        $mapa = array(
+            'Campeonato Brasileiro Série A' => 'Brasileirão Série A',
+            'Campeonato Brasileiro Série B' => 'Brasileirão Série B',
+            'Campeonato Brasileiro'         => 'Brasileirão',
+        );
+        if (isset($mapa[$nome])) {
+            return $mapa[$nome];
+        }
+        // A API às vezes varia o nome ("Brasileiro Serie A", sem acento etc.).
+        return preg_replace(
+            '/^Campeonato\s+Brasileiro\b/iu',
+            'Brasileirão',
+            $nome
+        );
+    }
+}
+
+/**
  * Renderiza um box de destaque (último + próximo jogo) para um clube,
  * no padrão visual próprio do widget do Brasileirão (Newspaper-neutral).
  *
@@ -142,7 +174,7 @@ if (!function_exists('bahia_fut_render_box_clube')) {
                     <span class="bahia-cl-nome"><?php echo esc_html($lu['dir_nome']); ?></span>
                   </div>
                 </div>
-                <div class="bahia-cl-meta"><?php echo esc_html($u['data'] . ' · ' . $u['competicao']); ?></div>
+                <div class="bahia-cl-meta"><?php echo esc_html($u['data'] . ' · ' . bahia_fut_competicao_curta($u['competicao'])); ?></div>
               </div>
             <?php endif; ?>
             <?php if (!empty($dados['proximo'])) : $p = $dados['proximo']; $lp = $lados($p); ?>
@@ -159,7 +191,7 @@ if (!function_exists('bahia_fut_render_box_clube')) {
                     <span class="bahia-cl-nome"><?php echo esc_html($lp['dir_nome']); ?></span>
                   </div>
                 </div>
-                <div class="bahia-cl-meta"><?php echo esc_html($p['data'] . ' às ' . $p['horario'] . ' · ' . $p['competicao']); ?></div>
+                <div class="bahia-cl-meta"><?php echo esc_html($p['data'] . ' às ' . $p['horario'] . ' · ' . bahia_fut_competicao_curta($p['competicao'])); ?></div>
               </div>
             <?php endif; ?>
           </div>

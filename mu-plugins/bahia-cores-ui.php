@@ -61,6 +61,28 @@ add_action('wp_enqueue_scripts', function () {
     border-color:{$escuro} !important;
     color:#fff !important;
 }
+
+/* Textura do demo na barra de editorias.
+   O Magazine PRO põe uma camada .td-element-style-before com bghd.jpg a 20% de
+   opacidade por cima do azul da linha do menu, deixando o fundo sujo. A camada
+   existe duas vezes: na barra normal e na cópia sticky — por isso o escopo é o
+   .td-header-template-wrap, que envolve as duas, e não os ids tdi_NN, que o
+   TagDiv renumera a cada edição do template. Fora do header a mesma classe é
+   usada em fundos legítimos de seção, então não pode ser global.
+   Três classes de propósito: a regra do TagDiv (.tdi_NN_rand_style > .td-element
+   -style-before) também usa !important e tem especificidade (0,2,0); como ela é
+   impressa inline no corpo, DEPOIS do nosso <head>, um empate a faria vencer por
+   ordem de origem. */
+.td-header-template-wrap .td-element-style > .td-element-style-before{
+    background-image:none !important;
+}
+
+/* Rótulo "EM ALTA" — vinha no verde-água do demo (#008d7f). Preto, para casar
+   com "MAIS LIDAS". */
+.td-trending-now-title{
+    background-color:#000 !important;
+    color:#fff !important;
+}
 CSS;
 
     wp_register_style('bahia-cores-ui', false, array(), '1.0.0');

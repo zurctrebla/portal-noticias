@@ -8,8 +8,11 @@
  * Escopo: só atua quando o domínio NÃO é 'default' (WordPress core), para não interferir nas
  * traduções pt_BR nativas do core. As strings do tema/tagDiv usam o domínio 'newspaper'.
  *
- * NÃO inclui: "Load more" (já tratado como "VER MAIS NOTÍCIAS" no mu-plugin bahia-scroll-infinito)
- * e "Tags" (mantido, termo já usual em PT no contexto de notícias) — decisão do editor.
+ * "Load more" passou a entrar aqui: o bahia-scroll-infinito só reescreve o texto VISÍVEL via
+ * JS, mas o mesmo __td() alimenta também o aria-label do botão (td_block.php:3060), que ficava
+ * em inglês para leitores de tela. Traduzindo na fonte, os dois saem certos já no HTML servido.
+ *
+ * NÃO inclui "Tags" (mantido, termo já usual em PT no contexto de notícias) — decisão do editor.
  *
  * @author bahia.ba / Claude Code
  */
@@ -45,6 +48,11 @@ function bahia_traducoes_map() {
         'FOLLOW US'                   => 'SIGA-NOS',
         'Follow us on Instagram'      => 'Siga-nos no Instagram',
         'Read more'                   => 'Leia mais',
+
+        // Yoast: %%page%% no title dos archives paginados
+        // (class-wpseo-replace-vars.php:1029). Saía "Página 3 - Page 3 of 7763".
+        'Page %1$d of %2$d'           => 'Página %1$d de %2$d',
+        'Page %s'                     => 'Página %s',
 
         // Widget social / contadores
         'Fans'                        => 'Fãs',
@@ -147,6 +155,10 @@ add_filter('gettext', 'bahia_traducoes_gettext', 20, 3);
 function bahia_traducoes_td_map() {
     return array(
         'Search' => 'Buscar',
+        // Alimenta o texto E o aria-label do botão de load more (td_block.php:3060).
+        // O bahia-scroll-infinito só reescreve o texto visível por JS; sem isto o
+        // aria-label continuava "Load more" para leitores de tela.
+        'Load more' => 'Ver mais notícias',
     );
 }
 

@@ -19,11 +19,40 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Botão "TABELA COMPLETA" — componente compartilhado.
+ *
+ * Usado em dois lugares: no pé da tabela de classificação em /esporte/ e abaixo dos
+ * boxes de EC Bahia / EC Vitória (bahia-clubes-sidebar.php). Fica aqui, numa função
+ * só, para que rótulo, destino e estilo não divirjam entre os dois pontos.
+ */
+function bahia_esporte_tabela_link_html() {
+    return '<a class="bahia-esp-tab-link" href="' . esc_url(home_url('/brasileirao-2026/')) . '">'
+         . 'Tabela completa &rsaquo;</a>';
+}
+
+/**
+ * CSS do botão acima. Emitido uma vez por requisição, venha de onde vier —
+ * /esporte/ imprime junto da tabela, a home junto dos boxes dos clubes.
+ */
+function bahia_esporte_tabela_link_css() {
+    static $done = false;
+    if ($done) {
+        return '';
+    }
+    $done = true;
+    return '<style>'
+         . '.bahia-esp-tab-link{display:block;text-align:center;margin-top:2px;padding:11px 12px;'
+         . 'background:#13182B;color:#fff !important;font-weight:700;font-size:12px;'
+         . 'text-transform:uppercase;letter-spacing:.5px;text-decoration:none}'
+         . '.bahia-esp-tab-link:hover{background:#4371B6}'
+         . '</style>';
+}
+
 /** HTML do bloco (sem script; o init global cuida da renderização). */
 function bahia_esporte_tabela_html() {
     $endpoint    = home_url('/bahia-api/brasileirao');
     $brasao_base = content_url('/themes/bahia_refactor/brasileirao/brasao/');
-    $tabela_url  = home_url('/brasileirao-2026/');
     ob_start(); ?>
 <div class="bahia-esp-tab" data-endpoint="<?php echo esc_url($endpoint); ?>" data-serie="A" data-brasao="<?php echo esc_url($brasao_base); ?>">
   <div class="bahia-esp-tab-head">Brasileirão 2026</div>
@@ -41,10 +70,10 @@ function bahia_esporte_tabela_html() {
       <tr class="bahia-esp-tab-load"><td colspan="6">Carregando classificação…</td></tr>
     </tbody>
   </table>
-  <a class="bahia-esp-tab-link" href="<?php echo esc_url($tabela_url); ?>">Tabela completa &rsaquo;</a>
+  <?php echo bahia_esporte_tabela_link_html(); ?>
 </div>
 <?php
-    return ob_get_clean();
+    return bahia_esporte_tabela_link_css() . ob_get_clean();
 }
 
 /** Shortcode para uso direto em conteúdo comum. */
@@ -81,8 +110,8 @@ function bahia_esporte_tabela_assets() {
 .bahia-esp-tab-pts{font-weight:700}
 .bahia-esp-tab-table tr.bahia td{background:rgba(10,88,202,.10)}
 .bahia-esp-tab-table tr.vitoria td{background:rgba(200,16,46,.10)}
-.bahia-esp-tab-link{display:block;text-align:center;margin-top:2px;padding:11px 12px;background:#13182B;color:#fff !important;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;text-decoration:none}
-.bahia-esp-tab-link:hover{background:#4371B6}
+/* .bahia-esp-tab-link vive em bahia_esporte_tabela_link_css() — componente
+   compartilhado com os boxes dos clubes. Não duplicar aqui. */
 .bahia-esp-tab-load{color:#888;text-align:center;font-size:12px}
 </style>
 <script>
@@ -127,7 +156,16 @@ function bahia_esporte_tabela_inject() {
     if (is_admin() || !is_post_type_archive('esporte')) {
         return;
     }
-    echo '<div id="bahia-esp-tab-holder" style="display:none">' . bahia_esporte_tabela_html() . '</div>';
+    // Boxes de EC Bahia / EC Vitória (mesma fonte e formato dos da home), inseridos
+    // logo abaixo da classificação. Sem o botão "TABELA COMPLETA": a tabela acima
+    // já traz o mesmo botão, e repetir seria redundante.
+    $clubes = function_exists('bahia_clubes_sidebar_boxes_html')
+        ? bahia_clubes_sidebar_boxes_html(false)
+        : '';
+    echo '<div id="bahia-esp-tab-holder" style="display:none">'
+       . bahia_esporte_tabela_html()
+       . $clubes
+       . '</div>';
     ?>
 <script>
 (function(){
@@ -135,13 +173,19 @@ function bahia_esporte_tabela_inject() {
     var holder=document.getElementById('bahia-esp-tab-holder');
     var tab=holder&&holder.querySelector('.bahia-esp-tab');
     if(!tab) return;
+    var clubes=holder.querySelector('.bahia-cl-sidebar');
     // IMPORTANTE: escopar em .td-main-content-wrap — há vários .td-pb-span4 na página
     // (inclusive no HEADER), e o genérico pegava o do header (tabela ia p/ o topo,
     // acima do logo). Aqui pegamos a sidebar direita do CONTEÚDO do archive.
     var sidebar=document.querySelector('.td-main-content-wrap .td-pb-span4 .vc_column-inner .wpb_wrapper')
              || document.querySelector('.td-main-content-wrap .td-pb-span4 .wpb_wrapper')
              || document.querySelector('.td-main-content-wrap .td-pb-span4');
-    if(sidebar){ sidebar.insertBefore(tab, sidebar.firstChild); tab.style.display=''; }
+    if(sidebar){
+      sidebar.insertBefore(tab, sidebar.firstChild);
+      tab.style.display='';
+      // Cards dos clubes logo abaixo da classificação.
+      if(clubes){ tab.parentNode.insertBefore(clubes, tab.nextSibling); clubes.style.display=''; }
+    }
     if(window.bahiaEspTabInit) window.bahiaEspTabInit();
   }
   if(document.readyState!=='loading'){place();}else{document.addEventListener('DOMContentLoaded',place);}
