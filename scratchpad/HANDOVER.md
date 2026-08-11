@@ -354,24 +354,47 @@ trabalho no rebuild.
 Não há `git` nem `wp-cli` dentro do container. Há `php`, e é por ele que se faz tudo
 (seção 8).
 
-### 10.3 Badge de editoria ausente nos cards de Salvador — PENDENTE
+### 10.3 Badge de editoria ausente nos cards de Salvador — RESOLVIDO (rodada 7)
 
-Os três cards do bloco de Salvador na home **não exibem o badge colorido da editoria**. Os
-demais blocos exibem (Justiça mostra o badge vermelho normalmente).
+Os três cards do bloco de Salvador na home não exibiam o badge colorido da editoria,
+enquanto os demais blocos exibiam.
 
-**É anterior a esta rodada** — está igual nas capturas de antes dos ajustes. Ninguém tinha
-percebido até agora.
+**A hipótese registrada aqui — empilhamento ou `overflow` — estava errada.** Fica o
+registro porque o erro é instrutivo: procurava-se um defeito de RENDERIZAÇÃO quando o
+problema era de CASCATA, e nenhuma inspeção de `z-index` ia encontrar isso.
 
-O que já foi descartado: a âncora existe. Os três cards têm `.td-image-wrap` e
-`.td-module-thumb` no markup, e a classe `td-cpt-salvador` está presente. Ou seja, não é
-falta de `post_class` nem de contêiner — o `::after` de `bahia-editoria-tags.php` deveria
-ter onde se apoiar.
+**A causa real.** O demo escreve, só para aquele bloco:
 
-Onde procurar, na próxima: é o único bloco da home em que o demo torna a meta-info
-absoluta sobre a foto (`td_module_flex_1` dentro do bloco de Salvador — ver o cabeçalho de
-`bahia-hover-editoria.php`), e o demo também estiliza ali `.td-post-category` em branco
-sobre a imagem. A hipótese mais provável é conflito de empilhamento ou de `overflow` nesse
-layout específico, não um problema geral do badge.
+```css
+.tdi_NN .td_module_flex_1 .td-module-thumb a:after{content:'';...width:100%;height:100%}
+```
+
+Naquele markup **o `<a>` É a `.td-image-wrap`**. Ou seja: `.td-module-thumb a:after` e
+`.td-cpt-salvador .td-image-wrap::after` são **o mesmo pseudo-elemento**. O do demo tem
+especificidade (0,3,2); o do badge, na forma simples, (0,2,1). O demo vencia e o badge
+nunca chegava a existir — um elemento tem um `::after` só, e quem ganha a cascata leva.
+
+Não havia como ter os dois: ou o véu do demo, ou o badge.
+
+**A correção** (`bahia-editoria-tags.php`): a classe vai repetida 3x
+(`.td-cpt-x.td-cpt-x.td-cpt-x .td-image-wrap::after`), o que leva a regra a (0,4,1) e
+vence, sem citar `.tdi_NN`. A leitura sobre a foto não se perde porque
+`bahia-hover-editoria.php` desenha o véu em `:before`, que estava livre.
+
+De passagem: o véu da rodada 6 também usava `.td-module-thumb a:after` e era um segundo
+ocupante do mesmo pseudo-elemento. Passou a usar só `:before`.
+
+> **A lição, que vale além deste caso:** antes de procurar defeito de empilhamento,
+> verifique se dois seletores diferentes não estão apontando para o MESMO
+> pseudo-elemento. Em markup do tagDiv, `.td-module-thumb a` e `.td-image-wrap`
+> costumam ser o mesmo nó.
+
+Conferido depois da correção: **40 de 40 cards da home com badge, em 10 blocos.**
+
+**Contraste dos badges** (medido na rodada 7, texto sobre fundo, WCAG 2.1): quatro
+reprovam em AA 4,5:1 para texto pequeno — Salvador (branco sobre `#4db2ec`) **2,36:1**,
+Esporte **2,56:1**, Dendê e Poder **3,09:1**, Justiça **3,56:1**. O branco foi mantido por
+decisão explícita do usuário; a troca de tom depende de decisão de marca.
 
 ### 10.4 Quem manda no tamanho da logo do rodapé é o CSS, não o atributo `width`
 
