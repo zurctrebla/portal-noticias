@@ -299,6 +299,9 @@ Aquecer a URL com `curl` antes da captura reduz muito a chance de estourar o wat
 
 ## 9. Estado do repositório
 
+> **Desatualizado desde a rodada 6.** Os commits abaixo foram enviados para `origin/staging`
+> em 11/08/2026 — ver a seção 10.1. O estado corrente está no `git log`.
+
 Branch `staging`, **quatro commits locais, nenhum enviado**:
 
 ```
@@ -312,3 +315,77 @@ Lembrete de infraestrutura: `push` em `staging` publica em homolog (EKS); `main`
 produção. **Commit em `main` que toque `plugins/` quebra o deploy** (`git reset --hard` como
 usuário `admin`, "Permission denied", exit 128) — commitar apenas `themes/` e `mu-plugins/`,
 que são graváveis.
+
+---
+
+## 10. Rodada 6 — o que ficou sabido
+
+### 10.1 O desacoplamento staging/prod está PROVADO, não só desenhado
+
+O primeiro `push` em `staging` depois de os pipelines terem sido separados foi feito em
+11/08/2026 e medido dos dois lados. Produção não se mexeu em nenhum eixo: imagem
+`prod-3622e1b28f…`, revisão 26, geração 286 e os horários de início dos três pods
+**idênticos** antes e depois; nenhum workflow de produção disparou.
+
+O que sustenta isso, para quem for conferir de novo:
+
+- `deploy-homolog.yml` dispara só em `staging` e publica `<sha>` + `homolog-latest`;
+- o workflow de produção **existe apenas na `main`** — um push em `staging` não tem como
+  alcançá-lo;
+- produção roda em `prod-<sha>` **fixo**, não em tag flutuante.
+
+### 10.2 O pod de homolog é descartável, e isso tem de ser checado ANTES de cada push
+
+`wp-content` é `emptyDir` em homolog: o `push` reconstrói a imagem e **tudo que estiver no
+pod só por `kubectl cp` desaparece**. Antes de empurrar, comparar:
+
+```bash
+kubectl exec -n bahia-wordpress $POD -c wordpress -- \
+  sh -c 'cd /var/www/html/wp-content/mu-plugins && md5sum *.php' | sort -k2 > /tmp/pod.txt
+(cd mu-plugins && md5sum *.php) | sort -k2 > /tmp/local.txt
+diff /tmp/local.txt /tmp/pod.txt
+```
+
+Na rodada 6 esse diff revelou que havia **três commits a mais** do que o briefing supunha
+(10/08: `bahia-header-ad`, `bahia-limites-texto`, cores de tag) — eram exatamente o que
+estava vivo no pod e fora da imagem. Enviar só os "quatro da rodada" teria apagado esse
+trabalho no rebuild.
+
+Não há `git` nem `wp-cli` dentro do container. Há `php`, e é por ele que se faz tudo
+(seção 8).
+
+### 10.3 Badge de editoria ausente nos cards de Salvador — PENDENTE
+
+Os três cards do bloco de Salvador na home **não exibem o badge colorido da editoria**. Os
+demais blocos exibem (Justiça mostra o badge vermelho normalmente).
+
+**É anterior a esta rodada** — está igual nas capturas de antes dos ajustes. Ninguém tinha
+percebido até agora.
+
+O que já foi descartado: a âncora existe. Os três cards têm `.td-image-wrap` e
+`.td-module-thumb` no markup, e a classe `td-cpt-salvador` está presente. Ou seja, não é
+falta de `post_class` nem de contêiner — o `::after` de `bahia-editoria-tags.php` deveria
+ter onde se apoiar.
+
+Onde procurar, na próxima: é o único bloco da home em que o demo torna a meta-info
+absoluta sobre a foto (`td_module_flex_1` dentro do bloco de Salvador — ver o cabeçalho de
+`bahia-hover-editoria.php`), e o demo também estiliza ali `.td-post-category` em branco
+sobre a imagem. A hipótese mais provável é conflito de empilhamento ou de `overflow` nesse
+layout específico, não um problema geral do badge.
+
+### 10.4 Quem manda no tamanho da logo do rodapé é o CSS, não o atributo `width`
+
+Ao trocar a logo do rodapé (rodada 6), o `width` da tag não teve efeito: o contêiner do
+bloco tem ~260px e o `max-width:100%` do tema vence sempre. O resultado só apareceu ao
+**medir a captura** — a marca havia crescido 4% porque a imagem antiga carregava 12px de
+margem dentro do arquivo e a nova sangra até a borda.
+
+A lição vale para qualquer troca de imagem em bloco do tagDiv: **medir o render, não
+confiar no atributo**. A correção foi um `max-width` em porcentagem (96,76% = 717/741), que
+reproduz a proporção antiga em qualquer largura de contêiner.
+
+### 10.5 A home em 390px não chega ao rodapé numa captura
+
+O scroll infinito continua carregando enquanto o `--virtual-time-budget` corre, e o rodapé
+é empurrado para além de 15.000px. Para validar cabeçalho ou rodapé em mobile, capturar uma
+**página curta** (`/quem-somos/`), que compartilha os dois e fecha em ~3.700px.
