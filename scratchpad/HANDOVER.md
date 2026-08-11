@@ -391,10 +391,21 @@ ocupante do mesmo pseudo-elemento. Passou a usar só `:before`.
 
 Conferido depois da correção: **40 de 40 cards da home com badge, em 10 blocos.**
 
-**Contraste dos badges** (medido na rodada 7, texto sobre fundo, WCAG 2.1): quatro
-reprovam em AA 4,5:1 para texto pequeno — Salvador (branco sobre `#4db2ec`) **2,36:1**,
-Esporte **2,56:1**, Dendê e Poder **3,09:1**, Justiça **3,56:1**. O branco foi mantido por
-decisão explícita do usuário; a troca de tom depende de decisão de marca.
+**Contraste dos badges** — RESOLVIDO na rodada 8. Quatro reprovavam AA 4,5:1 para texto
+pequeno: Salvador (branco sobre `#4db2ec`) **2,36:1**, Esporte **2,56:1**, Dendê e Poder
+**3,09:1**, Justiça **3,56:1**.
+
+O fundo passou a ser escurecido até 4,5:1 preservando o matiz (multiplicação dos canais em
+passos de 5%, por `bahia_hover_ed_cor_legivel()`): `#357ca5` (4,59:1), `#008309` (4,94:1),
+`#b95a08` (4,64:1) e `#d83127` (4,79:1). O texto continua branco.
+
+**O ajuste NÃO está em `bahia_editoria_tags_colors()`**, e isso é deliberado: aquele mapa é a
+fonte única de cor de editoria do site, e escurecê-lo levaria junto a linha das seções, as
+setas e o overlay de hover — que não têm texto branco por cima e não tinham problema. O
+escurecimento vive na montagem do CSS do badge (`bahia_editoria_tags_bg_legivel()`), e só ali.
+
+Municípios (`#e49600` + `#222222`, 6,56:1) e Mundo (`#ededed` + `#13182b`, 15,03:1) ficam de
+fora por terem texto escuro — escurecer o fundo delas pioraria a razão.
 
 ### 10.4 Quem manda no tamanho da logo do rodapé é o CSS, não o atributo `width`
 
@@ -412,3 +423,97 @@ reproduz a proporção antiga em qualquer largura de contêiner.
 O scroll infinito continua carregando enquanto o `--virtual-time-budget` corre, e o rodapé
 é empurrado para além de 15.000px. Para validar cabeçalho ou rodapé em mobile, capturar uma
 **página curta** (`/quem-somos/`), que compartilha os dois e fecha em ~3.700px.
+
+---
+
+## 11. Rodada 8 — publicidade
+
+### 11.1 O bug de fuso do AdRotate: 3 horas de anúncio invisível, sem erro
+
+**Sintoma:** cadastra-se um anúncio com data de início "agora", ele aparece como `active` no
+painel, o agendamento parece correto — e ele simplesmente não é exibido pelas 3 horas
+seguintes. Nenhum erro, nenhum aviso, nada no log.
+
+**Causa:** o plugin grava e lê o mesmo instante em duas escalas de tempo diferentes.
+
+- Na **gravação**, o AdRotate monta o `starttime` com `mktime()`. O `mktime()` usa o timezone
+  default do PHP, e o WordPress força esse default para **UTC** (`date_default_timezone_set('UTC')`
+  em `wp-settings.php`). O que o gestor digitou como 14h46 local é gravado como se fosse
+  14h46 **UTC**.
+- Na **exibição**, o filtro de elegibilidade compara com `current_time('timestamp')`, que
+  devolve a hora **local** do site (America/Bahia, UTC−3).
+
+O resultado é um deslocamento fixo de 3 horas, sempre na direção que atrasa a estreia.
+
+**Comprovação medida em homolog (11/08/2026).** O mesmo anúncio foi salvo duas vezes, com
+poucos minutos de diferença, e gerou dois agendamentos:
+
+| schedule | ad | `starttime` | `FROM_UNIXTIME` (UTC) | hora local pretendida |
+|----------|-----|-------------|------------------------|-----------------------|
+| 2311 | 1728 | 1786459560 | 2026-08-11 14:46 | 14:46 — funcionou |
+| 2309 | 1728 | 1786470600 | 2026-08-11 17:50 | 14:50 — **inerte por 3h** |
+
+`1786470600 − 1786459560 = 11.040s = 3h04min` — as 3 horas do fuso mais os 4 minutos entre
+os dois salvamentos. É a assinatura do defeito, não coincidência.
+
+### 11.2 Por que NÃO foi corrigido
+
+O patch teria de mudar `plugins/adrotate/`. Duas razões independentes impedem:
+
+1. **`plugins/` não é versionado** e some no próximo deploy — a correção duraria até o
+   próximo build.
+2. **O deploy de produção quebra** se um commit na `main` tocar `plugins/`: o
+   `deploy-prod.yml` faz `git reset --hard` como usuário `admin`, sem permissão de escrita
+   ali, e sai com *Permission denied* (exit 128) **antes** do build. Ver a memória
+   `deploy-prod-git-reset-plugins-perm`.
+
+**O caminho seguro, se um dia for corrigir:** um mu-plugin que intercepte o `INSERT`/`UPDATE`
+de `wp_adrotate_schedule` e converta `starttime`/`stoptime` de UTC para a escala local antes
+de gravar — isto é, somar o offset que o `mktime()` perdeu. Não se mexe no plugin; corrige-se
+o dado na entrada. **Não implementado nesta rodada**, por estar fora do escopo e por exigir
+decisão sobre o que fazer com os agendamentos já gravados errado (que estão todos 3h
+adiantados e cuja correção em massa mudaria janelas comerciais já contratadas).
+
+### 11.3 Agendamentos 2309 e 2310 — apagados
+
+Eram duplicatas inertes: os anúncios 1728 e 1729 tinham **dois** agendamentos cada, e só o
+segundo par (2311/2312) estava em escala local e vigente. Os 2309/2310 nunca exibiriam nada
+até as 20:50 UTC e só serviam para confundir a leitura do inventário.
+
+Aplicado em **homolog**:
+
+```sql
+DELETE FROM wp_adrotate_linkmeta WHERE id IN (8248,8253);
+DELETE FROM wp_adrotate_schedule WHERE id IN (2309,2310);
+```
+
+**SQL de reversão** (retrato exato tirado antes de apagar):
+
+```sql
+INSERT INTO wp_adrotate_schedule
+  (id, name, starttime, stoptime, maxclicks, maximpressions, spread, spread_all,
+   daystarttime, daystoptime, day_mon, day_tue, day_wed, day_thu, day_fri, day_sat,
+   day_sun, autodelete)
+VALUES
+  (2309, 'Schedule for ad 1728', 1786470600, 1787702340, 0, 0, 'N', 'N',
+   '0000', '0000', 'Y','Y','Y','Y','Y','Y','Y', 'N'),
+  (2310, 'Schedule for ad 1729', 1786470600, 1787702340, 0, 0, 'N', 'N',
+   '0000', '0000', 'Y','Y','Y','Y','Y','Y','Y', 'N');
+
+INSERT INTO wp_adrotate_linkmeta (id, ad, `group`, user, schedule) VALUES
+  (8248, 1728, 0, 0, 2309),
+  (8253, 1729, 0, 0, 2310);
+```
+
+Os anúncios 1728 e 1729 continuam no ar pelos agendamentos 2311 e 2312, que não foram
+tocados.
+
+### 11.4 O inventário publicitário estava sendo entregue no contexto errado
+
+Até esta rodada o Newspaper renderizava **um único slot**, com o grupo 3 cravado em
+`bahia-header-ad.php`, em **todas** as páginas. O grupo 3 chama-se "Home - Leader Board 2":
+inventário de home era servido em internas e em municípios.
+
+O tema legado nunca fez isso. `themes/bahia_refactor/header.php:200-207` escolhe o grupo
+pelo contexto, e é essa lógica que o `bahia-publicidade.php` reproduz. Detalhes e a tabela
+dos 7 grupos com inventário ativo estão em `PUBLICIDADE-slots.md`.

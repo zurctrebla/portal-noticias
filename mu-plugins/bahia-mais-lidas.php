@@ -197,6 +197,11 @@ function render($limit = 7, $show_head = true) {
 
     ob_start();
     static $css = false;
+    // #15559E é o azul institucional (BAHIA_AZUL, em bahia-cores-ui.php), usado abaixo no
+    // número da posição e no hover do título. Até a rodada 8 este bloco usava #4371B6, um
+    // segundo azul que não batia com o do menu nem com o dos botões — ficavam dois azuis
+    // lado a lado na mesma página. O comentário vive aqui, e não dentro do <style>, para
+    // não ser servido no HTML de toda home.
     if (!$css) { $css = true; ?>
 <style>
 /* 48px = ritmo vertical padrão dos blocos da home (valor predominante medido) */
@@ -205,11 +210,11 @@ function render($limit = 7, $show_head = true) {
 .bahia-ml-list{list-style:none;margin:0;padding:0;background:#fff}
 .bahia-ml-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #eef0f3}
 .bahia-ml-item:last-child{border-bottom:0}
-.bahia-ml-num{flex:0 0 auto;width:22px;height:22px;line-height:22px;text-align:center;background:#4371B6;color:#fff;font-weight:700;font-size:12px;border-radius:3px}
+.bahia-ml-num{flex:0 0 auto;width:22px;height:22px;line-height:22px;text-align:center;background:#15559E;color:#fff;font-weight:700;font-size:12px;border-radius:3px}
 .bahia-ml-thumb{flex:0 0 auto;width:56px;height:42px;overflow:hidden;border-radius:3px;display:block}
 .bahia-ml-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .bahia-ml-title{flex:1;font-size:13px;line-height:1.35;color:#13182B !important;font-weight:600;text-decoration:none}
-.bahia-ml-title:hover{color:#4371B6 !important}
+.bahia-ml-title:hover{color:#15559E !important}
 </style>
 <?php } ?>
 <div class="bahia-ml">

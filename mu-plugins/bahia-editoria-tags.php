@@ -67,6 +67,37 @@ function bahia_editoria_tags_map() {
     );
 }
 
+/**
+ * Fundo do badge escurecido até 4,5:1 (WCAG AA) contra o texto branco.
+ *
+ * Quatro editorias reprovavam AA com texto branco: Salvador 2,36:1, Esporte 2,56:1,
+ * Dendê 3,09:1 e Justiça 3,56:1. O ajuste multiplica os canais RGB em passos de 5% até
+ * atingir a razão — o matiz se preserva, só a luminosidade cai:
+ *
+ *     Salvador #4db2ec -> #357ca5 (4,59:1)   Dendê   #e8710a -> #b95a08 (4,64:1)
+ *     Esporte  #00bc0d -> #008309 (4,94:1)   Justiça #ff3a2f -> #d83127 (4,79:1)
+ *
+ * ESCOPO DELIBERADO: o ajuste vive AQUI, na montagem do CSS do badge, e não em
+ * bahia_editoria_tags_colors(). Aquele mapa é a fonte única de cor de editoria do site —
+ * escurecê-lo levaria junto a linha das seções, as setas e o overlay de hover, que não têm
+ * texto branco em cima e não têm problema de contraste. Só o fundo do badge muda.
+ *
+ * Editorias de texto ESCURO ficam de fora: Municípios (#e49600 + #222222 = 6,56:1) e Mundo
+ * (#ededed + #13182b = 15,03:1) já aprovam, e escurecer o fundo delas pioraria a razão.
+ */
+function bahia_editoria_tags_bg_legivel($bg, $txt) {
+    // Sem o helper (bahia-hover-editoria.php ausente) não se inventa cor: devolve o original.
+    if (!function_exists('bahia_hover_ed_cor_legivel')) {
+        return $bg;
+    }
+    // O helper mede contra branco; aplicá-lo a um badge de texto escuro seria escurecer o
+    // fundo na direção errada.
+    if (strtolower($txt) !== '#ffffff') {
+        return $bg;
+    }
+    return bahia_hover_ed_cor_legivel($bg);
+}
+
 function bahia_editoria_tags_css() {
     $colors = bahia_editoria_tags_colors();
     $labels = bahia_editoria_tags_map();
@@ -145,6 +176,7 @@ CSS;
         if (isset($colors[$slug])) {
             list($bg, $txt) = $colors[$slug];
         }
+        $bg = bahia_editoria_tags_bg_legivel($bg, $txt);
         // Mesma repetição 3x da regra base, para que rótulo e cores entrem no mesmo
         // patamar de especificidade — senão a base venceria a cor por vir depois.
         $c = ".td-cpt-{$slug}";

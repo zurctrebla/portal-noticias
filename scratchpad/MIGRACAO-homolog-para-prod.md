@@ -131,8 +131,60 @@ Migram os termos, os itens (`nav_menu_item`) e o `theme_mods[nav_menu_locations]
 
 - **Anúncios AdRotate 1724, 1725 e 1726.** Foram reativados em homolog só como inventário de
   teste. Produção tem o próprio calendário comercial. Ver `REVERSAO-adrotate-homolog.md`.
+- **Anúncios AdRotate 1728 e 1729**, e os agendamentos 2311/2312. Mesma razão: inventário de
+  teste da rodada 8. (Os agendamentos 2309 e 2310 já foram apagados — ver HANDOVER §11.3.)
+- **Nada da tabela `wp_adrotate*`, em geral.** O inventário publicitário de produção é a fonte
+  da verdade; a rodada 8 mexeu apenas em `mu-plugins/`, que viaja pelo git, e não no cadastro
+  de anúncios. Os grupos e as posições já existem em produção com os mesmos IDs.
 - Qualquer `bahia_*_backup_*`.
 - Conteúdo editorial (posts). Produção é a fonte da verdade do acervo.
+
+---
+
+### 1.7 Título da home (rodada 8) — 3 linhas de banco
+
+O `<title>` e o `og:title` da home saíam como **"Home - bahia.ba"**: o Yoast usa o título do
+post quando a home é uma página estática, e a página 547432 se chama literalmente "Home". Era
+o único texto em inglês do site, na tag mais visível no Google.
+
+Passou a **"bahia.ba - A notícia que conecta você à Bahia"**, escrito com as variáveis do
+próprio Yoast, para continuar em sincronia com `blogname` e `blogdescription`:
+
+```sql
+-- 1) as duas metas da página da home (ajustar 547432 para o ID de destino)
+INSERT INTO wp_postmeta (post_id, meta_key, meta_value) VALUES
+  (547432, '_yoast_wpseo_title',           '%%sitename%% %%sep%% %%sitedesc%%'),
+  (547432, '_yoast_wpseo_opengraph-title', '%%sitename%% %%sep%% %%sitedesc%%');
+
+-- 2) o Yoast serve o título a partir do CACHE dele, não do postmeta.
+--    Sem este UPDATE a mudança não aparece.
+UPDATE wp_yoast_indexable
+   SET title = '%%sitename%% %%sep%% %%sitedesc%%',
+       open_graph_title = '%%sitename%% %%sep%% %%sitedesc%%'
+ WHERE object_id = 547432 AND object_type = 'post';
+```
+
+**A armadilha aqui é a tabela `wp_yoast_indexable`.** Com apenas o `INSERT` no `wp_postmeta`,
+o site continua servindo o título antigo indefinidamente — foi o que aconteceu na primeira
+tentativa em homolog. Conferir depois de aplicar:
+
+```bash
+curl -s https://SEU-HOST/ | grep -o '<title>[^<]*</title>'
+```
+
+**Reversão:**
+
+```sql
+DELETE FROM wp_postmeta
+ WHERE post_id = 547432
+   AND meta_key IN ('_yoast_wpseo_title','_yoast_wpseo_opengraph-title');
+
+UPDATE wp_yoast_indexable SET title = NULL, open_graph_title = NULL
+ WHERE object_id = 547432 AND object_type = 'post';
+```
+
+Confere que `blogname` = `bahia.ba` e `blogdescription` = `A notícia que conecta você à Bahia`
+no destino **antes** de aplicar — as variáveis leem de lá.
 
 ---
 

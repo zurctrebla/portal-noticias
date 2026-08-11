@@ -13,8 +13,18 @@ if (!defined('ABSPATH')) {
 
 define('BAHIA_HEADER_AD_VER', '1.0.0');
 
-/** Grupo do AdRotate servido no header. 3 = "Home - Leader Board 2" (728x90). */
-define('BAHIA_HEADER_AD_GROUP', 3);
+/**
+ * Grupo de reserva do leaderboard do header.
+ *
+ * O valor NORMAL vem de bahia_pub_grupo_topo() (bahia-publicidade.php), que escolhe o grupo
+ * pelo contexto da página como o tema legado fazia: 1 na home, 14 em municípios, 12 nas
+ * internas. Até a rodada 8 este arquivo cravava o grupo 3 — "Home - Leader Board 2" — em
+ * TODAS as páginas, ou seja, entregava inventário de home nas internas.
+ *
+ * Este 12 só vale se o bahia-publicidade.php estiver ausente: é o grupo de internas, que é o
+ * contexto da maioria das páginas do site. Antes o fallback era inventário de home.
+ */
+define('BAHIA_HEADER_AD_GROUP', 12);
 
 /**
  * Banner do header.
@@ -32,7 +42,11 @@ function bahia_header_ad_shortcode() {
         return '';
     }
 
-    $ad = do_shortcode('[adrotate group="' . (int) BAHIA_HEADER_AD_GROUP . '"]');
+    $grupo = function_exists('bahia_pub_grupo_topo')
+        ? bahia_pub_grupo_topo()
+        : BAHIA_HEADER_AD_GROUP;
+
+    $ad = do_shortcode('[adrotate group="' . (int) $grupo . '"]');
 
     // Sem criativo elegível o AdRotate devolve só um comentário HTML. Não envolver em
     // div nenhuma nesse caso, senão sobra uma caixa vazia empurrando o layout.
@@ -40,7 +54,9 @@ function bahia_header_ad_shortcode() {
         return '';
     }
 
-    return '<div class="bahia-header-ad">' . $ad . '</div>';
+    // data-grupo deixa auditável, no HTML servido, qual inventário foi entregue em cada
+    // contexto — é o que se confere quando o comercial questiona a entrega.
+    return '<div class="bahia-header-ad" data-grupo="' . (int) $grupo . '">' . $ad . '</div>';
 }
 add_shortcode('bahia_header_ad', 'bahia_header_ad_shortcode');
 

@@ -45,7 +45,9 @@ function bahia_esporte_tabela_link_css() {
          . '.bahia-esp-tab-link{display:block;text-align:center;margin-top:2px;padding:11px 12px;'
          . 'background:#13182B;color:#fff !important;font-weight:700;font-size:12px;'
          . 'text-transform:uppercase;letter-spacing:.5px;text-decoration:none}'
-         . '.bahia-esp-tab-link:hover{background:#4371B6}'
+         // #15559E = azul institucional (BAHIA_AZUL). Era #4371B6, um segundo azul
+         // que não bate com o do menu nem com o dos botões.
+         . '.bahia-esp-tab-link:hover{background:#15559E}'
          . '</style>';
 }
 

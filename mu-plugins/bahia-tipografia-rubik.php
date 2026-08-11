@@ -99,3 +99,33 @@ function bahia_rubik_fora_do_google_fonts($src, $handle) {
     return $src;
 }
 add_filter('style_loader_src', 'bahia_rubik_fora_do_google_fonts', 10, 2);
+
+/**
+ * Campo de busca do cabeçalho — Open Sans.
+ *
+ * Este é o único elemento que a remoção do Rubik deixou pior do que achou. Os demais caem
+ * numa regra do TEMA (títulos -> Roboto, menu/autor/data -> Open Sans); o input da busca
+ * NÃO É ESTILIZADO por regra nenhuma do Newspaper, então, sem o !important do demo, ele
+ * herda de `body` e cai no Verdana da pilha do sistema — medido em hml.bahia.ba.
+ *
+ * Por isso não é mudança tipográfica de identidade: é dar estilo a um input que nunca teve.
+ * O Open Sans é o par do tagDiv para textos de apoio (--td_default_google_font_1), que é
+ * exatamente a categoria deste campo, e já vem carregado — não acrescenta requisição.
+ *
+ * `.tdb-head-search-form-input` cobre as duas instâncias, a do cabeçalho normal e a da
+ * cópia sticky. Escopo por classe estrutural, nunca por .tdi_NN.
+ */
+function bahia_rubik_fonte_da_busca() {
+    if (is_admin()) {
+        return;
+    }
+    $css = ".tdb-head-search-form-input,\n"
+         . ".tdb-search-form-input{\n"
+         . "    font-family:'Open Sans','Open Sans Regular',sans-serif;\n"
+         . "}\n";
+
+    wp_register_style('bahia-fonte-busca', false, array(), '1.0.0');
+    wp_enqueue_style('bahia-fonte-busca');
+    wp_add_inline_style('bahia-fonte-busca', $css);
+}
+add_action('wp_enqueue_scripts', 'bahia_rubik_fonte_da_busca', 30);

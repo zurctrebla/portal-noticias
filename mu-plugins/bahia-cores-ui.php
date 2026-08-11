@@ -123,6 +123,46 @@ add_action('wp_enqueue_scripts', function () {
 /* NÃO se mexe no título do card no hover: ali vale a cor da EDITORIA (item 3 da
    rodada 6). O verde do demo naquele seletor já perde por !important/especificidade
    e nunca chega à tela — sobrescrevê-lo com azul desfaria a rodada 6. */
+
+/* ------------------------------------------------------------------
+   MENU — o verde-água do demo nos itens de SUBMENU (autorizado na rodada 8).
+
+   São quatro regras do demo, duas por bloco de menu (tdi_62 no cabeçalho normal e
+   tdi_81 na cópia sticky): uma pinta o texto, outra o ícone SVG da seta. Todas
+   exigem `.tdb-menu ul .tdb-normal-menu…`, ou seja, item dentro de um <ul> de
+   SUBMENU. O menu de editorias é raso hoje, então NENHUMA delas chega à tela —
+   isto é CSS morto.
+
+   Trocar mesmo assim é o ponto: no dia em que alguém criar um dropdown no menu, o
+   verde-água do demo apareceria sozinho, sem aviso e sem ninguém associar a causa.
+
+   Escopo estrutural, sem os ids .tdi_NN, que o TagDiv renumera a cada edição do
+   template — por isso as duas cópias do menu ficam cobertas pela mesma regra. O
+   !important é necessário: sem o .tdi_NN a especificidade cai de (0,5,1) para
+   (0,4,1) e a regra do demo venceria.
+   ------------------------------------------------------------------ */
+.tdb-menu ul .tdb-normal-menu.current-menu-item>a,
+.tdb-menu ul .tdb-normal-menu.current-menu-ancestor>a,
+.tdb-menu ul .tdb-normal-menu.current-category-ancestor>a,
+.tdb-menu ul .tdb-normal-menu.tdb-hover>a,
+.tdb-menu ul .tdb-normal-menu:hover>a,
+.tdb-menu-items-dropdown .td-pulldown-filter-list li:hover>a{
+    color:{$azul} !important;
+}
+.tdb-menu ul .tdb-normal-menu.current-menu-item>a .tdb-sub-menu-icon-svg svg,
+.tdb-menu ul .tdb-normal-menu.current-menu-item>a .tdb-sub-menu-icon-svg svg *,
+.tdb-menu ul .tdb-normal-menu.current-menu-ancestor>a .tdb-sub-menu-icon-svg svg,
+.tdb-menu ul .tdb-normal-menu.current-menu-ancestor>a .tdb-sub-menu-icon-svg svg *,
+.tdb-menu ul .tdb-normal-menu.current-category-ancestor>a .tdb-sub-menu-icon-svg svg,
+.tdb-menu ul .tdb-normal-menu.current-category-ancestor>a .tdb-sub-menu-icon-svg svg *,
+.tdb-menu ul .tdb-normal-menu.tdb-hover>a .tdb-sub-menu-icon-svg svg,
+.tdb-menu ul .tdb-normal-menu.tdb-hover>a .tdb-sub-menu-icon-svg svg *,
+.tdb-menu ul .tdb-normal-menu:hover>a .tdb-sub-menu-icon-svg svg,
+.tdb-menu ul .tdb-normal-menu:hover>a .tdb-sub-menu-icon-svg svg *,
+.tdb-menu-items-dropdown .td-pulldown-filter-list li:hover>a .tdb-sub-menu-icon-svg svg,
+.tdb-menu-items-dropdown .td-pulldown-filter-list li:hover>a .tdb-sub-menu-icon-svg svg *{
+    fill:{$azul} !important;
+}
 CSS;
 
     wp_register_style('bahia-cores-ui', false, array(), '1.0.0');

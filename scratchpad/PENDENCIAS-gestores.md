@@ -180,6 +180,47 @@ oferece hoje.
 
 ---
 
+## 6. Anúncio novo só aparece 3 horas depois de cadastrado
+
+### O que é
+
+Ao cadastrar um anúncio no AdRotate com a data de início marcada para **agora**, ele fica
+**3 horas sem aparecer no site** — mesmo constando como "ativo" no painel, mesmo com o
+agendamento aparentemente correto. Não há mensagem de erro. Passadas as 3 horas, ele começa
+a ser exibido normalmente, sozinho.
+
+A causa é um defeito no plugin AdRotate: ele **anota** a hora de início no fuso de Londres e
+**confere** no fuso da Bahia, que está 3 horas atrás. A diferença sempre atrasa a estreia,
+nunca adianta.
+
+### O que fazer enquanto isso não é corrigido
+
+**Ao cadastrar um anúncio, deixe a data de início em branco, ou coloque uma data anterior à
+de hoje.** Nos dois casos o anúncio entra no ar imediatamente.
+
+A data de **término** pode ser preenchida normalmente — o mesmo deslocamento de 3 horas
+existe nela, mas 3 horas a mais no fim de uma campanha de semanas não tem efeito prático.
+
+Se um anúncio precisa estrear numa hora exata (uma estreia de filme, um evento), cadastre-o
+com início em branco algumas horas antes e **ative-o na hora certa**, em vez de confiar no
+agendamento.
+
+### Por que importa
+
+É perda de exibição paga que ninguém percebe: o anúncio consta como ativo no painel, e a
+única forma de notar é abrir o site e reparar que ele não está lá. Numa campanha curta, de
+um ou dois dias, 3 horas são uma fatia relevante do que foi contratado.
+
+### O que é preciso decidir
+
+**Nada agora, se a orientação acima for seguida.** A correção definitiva é possível, mas
+exige alterar um arquivo que hoje **quebra o processo de publicação em produção** — é uma
+frente de trabalho própria, com teste, não um ajuste de minutos. Se a equipe preferir a
+correção definitiva a conviver com a orientação, é uma decisão a tomar, e o caminho técnico
+já está registrado no documento de handover.
+
+---
+
 ## Resumo
 
 | # | Pendência | Tipo de decisão | Urgência |
@@ -189,3 +230,4 @@ oferece hoje.
 | 3 | Contagem de exibição de anúncios | **Operacional** — ligar nos ativos, virar rotina | **Alta** (comprovação ao anunciante) |
 | 4 | Logotipo branco vetorial | Solicitar arquivo ao designer | Baixa (acabamento) |
 | 5 | Limite de 70/160 caracteres | Nenhuma — só conferir após atualizar o tema | Informativa |
+| 6 | Anúncio novo demora 3h para aparecer | **Operacional** — deixar a data de início em branco | Média (perda de exibição paga) |
