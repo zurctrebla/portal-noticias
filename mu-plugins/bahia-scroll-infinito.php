@@ -149,14 +149,48 @@ function bahia_si_pagenum_template() {
 /**
  * O contexto atual tem paginação de verdade?
  *
- * /ultimas-noticias/ é uma PÁGINA cujo feed vem de um bloco TagDiv: /page/2/ responde
- * 200 mas devolve exatamente o mesmo conteúdo da página 1 (verificado). Apontar um href
- * rastreável para lá criaria conteúdo duplicado — pior que não ter href. Nesse caso o
- * botão segue com href="#" e só o AJAX funciona.
+ * Na rodada 3 /ultimas-noticias/ ficava de fora: /page/2/ respondia 200 devolvendo o
+ * conteúdo da página 1, e um href rastreável para lá só geraria conteúdo duplicado.
+ * A causa era o bloco TagDiv do conteúdo da página, que monta a query a partir de
+ * $atts['page'] e nunca olha para o query var `paged` — corrigido em
+ * bahia_si_injeta_pagina_no_bloco(). Com a paginação funcionando, o archive volta a
+ * merecer href rastreável como os demais.
  */
 function bahia_si_paged_ok() {
-    return !is_page('ultimas-noticias');
+    return true;
 }
+
+/**
+ * Faz o bloco do conteúdo de /ultimas-noticias/ respeitar a página da URL.
+ *
+ * A página é um único shortcode [td_flex_block_1 ...]. O td_block lê a página em
+ * $atts['page'] (td_block.php:331); em /ultimas-noticias/page/2/ o WordPress preenche
+ * o query var `paged`, mas ninguém repassa um para o outro — daí as duas páginas
+ * saírem idênticas. Aqui o `page` entra nos atts antes do do_shortcode (que roda em
+ * the_content na prioridade 11).
+ *
+ * O "load more" do próprio TagDiv nunca esteve quebrado: o handler de clique faz
+ * td_current_page++ e pede a página seguinte, sem repetir itens (verificado no
+ * tagdiv_theme.min.js). O que faltava era ele começar a contar da página certa —
+ * ajustado no JS, em bahia_si_home_js().
+ */
+function bahia_si_injeta_pagina_no_bloco($content) {
+    if (!in_the_loop() || !is_main_query() || !is_page('ultimas-noticias')) {
+        return $content;
+    }
+    $paged = max(1, (int) get_query_var('paged'));
+    if ($paged < 2 || strpos($content, '[td_flex_block_1') === false) {
+        return $content;
+    }
+    // Só a primeira ocorrência: é o bloco do feed principal.
+    return preg_replace(
+        '/\[td_flex_block_1\b/',
+        '[td_flex_block_1 page="' . $paged . '"',
+        $content,
+        1
+    );
+}
+add_filter('the_content', 'bahia_si_injeta_pagina_no_bloco', 9);
 
 /**
  * Enfileira o JS/CSS e injeta os dados da página apenas nos archives alvo.
@@ -198,7 +232,7 @@ function bahia_si_enqueue() {
         $per_page = (int) get_option('posts_per_page', 10);
     }
     $total_posts = (int) $wp_query->found_posts;
-    $exclude_ids = wp_list_pluck($wp_query->posts, 'ID');
+    $max_pages   = (int) $wp_query->max_num_pages;
 
     // taxonomia atual (se for archive de taxonomia da editoria)
     $taxonomy = '';
@@ -234,7 +268,7 @@ function bahia_si_enqueue() {
         'termId'       => $term_id,
         'perPage'      => $per_page,
         'totalPosts'   => $total_posts,
-        'excludeIds'   => array_map('intval', $exclude_ids),
+        'maxPages'     => $max_pages,
         'mobileQuery'  => '(max-width: 767px)',
         'scrollOffset' => 600, // px do fim para disparar o carregamento no mobile
         // href real do botão: molde da URL paginada + página em que estamos.
@@ -278,16 +312,17 @@ function bahia_si_inline_js() {
     var D = window.bahiaScrollInfinito;
     if (!D) { return; }
 
+    // parseInt em tudo: wp_localize_script serializa como string, e sem isso
+    // "3" + 1 concatenaria em "31".
     var state = {
         loading: false,
-        hasMore: true,
-        loadedIds: new Set(),
-        totalPosts: D.totalPosts || 0,
-        // Página que o href do botão já representa (avança a cada carga).
-        // parseInt: wp_localize_script serializa tudo como string, e sem isso
-        // "3" + 1 concatenaria em "31".
-        page: parseInt(D.currentPage, 10) || 1
+        // Última página JÁ carregada na tela. Começa na página da URL — é isso que
+        // faz o botão continuar de /politica/page/3/ para a 4, em vez de recomeçar
+        // do topo como acontecia com a estratégia de exclude_ids.
+        page: parseInt(D.currentPage, 10) || 1,
+        maxPages: parseInt(D.maxPages, 10) || 0
     };
+    state.hasMore = state.maxPages === 0 || state.page < state.maxPages;
 
     // URL da página N do archive, a partir do molde vindo do PHP. Sem molde
     // (contexto sem paginação real) devolve "#", preservando o href antigo.
@@ -295,11 +330,6 @@ function bahia_si_inline_js() {
         if (!D.pagedTemplate) { return '#'; }
         return D.pagedTemplate.replace('%d', n);
     }
-
-    (D.excludeIds || []).forEach(function (id) {
-        id = parseInt(id, 10);
-        if (id > 0) { state.loadedIds.add(id); }
-    });
 
     var isMobile = function () {
         return window.matchMedia && window.matchMedia(D.mobileQuery).matches;
@@ -345,9 +375,6 @@ function bahia_si_inline_js() {
     }
 
     function updateHasMore() {
-        if (state.totalPosts > 0) {
-            state.hasMore = state.loadedIds.size < state.totalPosts;
-        }
         if (!state.hasMore) {
             $btn.hide();
             $nomore.fadeIn(300);
@@ -356,6 +383,7 @@ function bahia_si_inline_js() {
 
     function loadMore() {
         if (state.loading || !state.hasMore) { return; }
+        var pedida = state.page + 1;
         state.loading = true;
         // is-loading tranca o clique via pointer-events (o <a> não aceita :disabled).
         $btn.addClass('is-loading').attr('aria-disabled', 'true');
@@ -373,7 +401,7 @@ function bahia_si_inline_js() {
                 taxonomy: D.taxonomy || '',
                 term_id: D.termId || 0,
                 posts_per_page: D.perPage,
-                exclude_ids: Array.from(state.loadedIds).join(',')
+                paged: pedida
             },
             success: function (res) {
                 if (!res || !res.success || !res.data || !res.data.html || res.data.count === 0) {
@@ -382,17 +410,13 @@ function bahia_si_inline_js() {
                     return;
                 }
                 var data = res.data;
-                (data.ids || []).forEach(function (id) {
-                    id = parseInt(id, 10);
-                    if (id > 0) { state.loadedIds.add(id); }
-                });
                 $(data.html).insertBefore($controls);
-                if (typeof data.total_posts !== 'undefined') {
-                    state.totalPosts = parseInt(data.total_posts, 10) || state.totalPosts;
+                // A página pedida agora está na tela; o href avança para a seguinte.
+                state.page = pedida;
+                if (data.max_pages) {
+                    state.maxPages = parseInt(data.max_pages, 10) || state.maxPages;
                 }
-                state.hasMore = !!data.has_more && state.loadedIds.size < state.totalPosts;
-                // O href passa a apontar para a página seguinte à que acabou de entrar.
-                state.page += 1;
+                state.hasMore = state.page < state.maxPages;
                 $btn.attr('href', pageUrl(state.page + 1));
                 updateHasMore();
 
@@ -432,9 +456,8 @@ function bahia_si_inline_js() {
     $(function () {
         if (!build()) { return; }
 
-        // Estado inicial (ex.: já carregou tudo).
-        if (state.totalPosts > 0 && state.loadedIds.size >= state.totalPosts) {
-            state.hasMore = false;
+        // Estado inicial: já estamos na última página do arquivo.
+        if (!state.hasMore) {
             $btn.hide();
             $nomore.show();
             return;
@@ -595,8 +618,20 @@ function bahia_si_home_js() {
         return function () { clearTimeout(t); t = setTimeout(fn, w); };
     }
 
+    // Alinha o contador interno do bloco TagDiv com a página que está na tela.
+    // O bloco nasce sempre em td_current_page=1; entrando direto em .../page/3/ o
+    // primeiro clique no "load more" pediria a página 2 e a lista voltaria ao começo.
+    function syncBlockPage() {
+        if (page < 2 || !window.tdBlocks) { return; }
+        var btn = document.querySelector(SEL_MAIN);
+        if (!btn) { return; }
+        var obj = tdBlocks.tdGetBlockObjById(jQuery(btn).data('td_block_id'));
+        if (obj) { obj.td_current_page = page; }
+    }
+
     $(function () {
         resolveMain();
+        syncBlockPage();
         relabel();
         // Cada carga do loop principal avança o href para a página seguinte. O TagDiv
         // re-renderiza o botão logo depois, e o MutationObserver reaplica o href novo.
@@ -616,8 +651,13 @@ JS;
 }
 
 /**
- * Handler AJAX: devolve os próximos cards (formato Newspaper) a partir de exclude_ids.
+ * Handler AJAX: devolve os cards (formato Newspaper) de UMA página do arquivo.
  * Do mais recente para o mais antigo (post_date DESC), mesma fonte dos CPTs.
+ *
+ * Pagina por `paged`, não mais por exclude_ids. Com exclude_ids o handler só sabia
+ * "o que já foi visto nesta aba", então entrar direto em /politica/page/3/ e clicar
+ * no botão trazia de volta a página 1 — a lista recomeçava do topo. Com `paged` a
+ * posição vem da URL e a continuação é sempre a página seguinte à exibida.
  */
 function bahia_si_ajax_handler() {
     if (!check_ajax_referer('bahia_scroll_infinito', 'nonce', false)) {
@@ -628,7 +668,7 @@ function bahia_si_ajax_handler() {
 
     $post_type      = isset($_POST['post_type']) ? sanitize_key($_POST['post_type']) : '';
     $posts_per_page = isset($_POST['posts_per_page']) ? absint($_POST['posts_per_page']) : 10;
-    $exclude_str    = isset($_POST['exclude_ids']) ? sanitize_text_field(wp_unslash($_POST['exclude_ids'])) : '';
+    $paged          = isset($_POST['paged']) ? absint($_POST['paged']) : 2;
     $taxonomy       = isset($_POST['taxonomy']) ? sanitize_key($_POST['taxonomy']) : '';
     $term_id        = isset($_POST['term_id']) ? absint($_POST['term_id']) : 0;
 
@@ -637,16 +677,13 @@ function bahia_si_ajax_handler() {
     }
 
     $posts_per_page = max(1, min($posts_per_page, 20));
-
-    $exclude_ids = array();
-    if ($exclude_str !== '') {
-        $exclude_ids = array_filter(array_map('absint', explode(',', $exclude_str)));
-    }
+    $paged          = max(2, $paged); // a página 1 já veio renderizada pelo template
 
     $args = array(
         'post_type'              => $post_type,
         'post_status'            => 'publish',
         'posts_per_page'         => $posts_per_page,
+        'paged'                  => $paged,
         'orderby'                => 'date',
         'order'                  => 'DESC',
         'ignore_sticky_posts'    => true,
@@ -654,9 +691,6 @@ function bahia_si_ajax_handler() {
         'update_post_meta_cache' => true,
         'update_post_term_cache' => true,
     );
-    if (!empty($exclude_ids)) {
-        $args['post__not_in'] = $exclude_ids;
-    }
 
     // Taxonomia da editoria ({slug}_cat / {slug}_tag).
     $allowed_tax = array($post_type . '_cat', $post_type . '_tag');
@@ -676,8 +710,10 @@ function bahia_si_ajax_handler() {
         'html'        => '',
         'ids'         => array(),
         'count'       => 0,
-        'has_more'    => false,
-        'total_posts' => (int) $query->found_posts + count($exclude_ids),
+        'paged'       => $paged,
+        'max_pages'   => (int) $query->max_num_pages,
+        'has_more'    => $paged < (int) $query->max_num_pages,
+        'total_posts' => (int) $query->found_posts,
     );
 
     if ($query->have_posts()) {
@@ -701,9 +737,6 @@ function bahia_si_ajax_handler() {
             echo '</div>'; // fecha linha ímpar
         }
         $response['html'] = ob_get_clean();
-
-        $total_loaded = count($exclude_ids) + $response['count'];
-        $response['has_more'] = $total_loaded < $response['total_posts'];
     }
 
     wp_reset_postdata();

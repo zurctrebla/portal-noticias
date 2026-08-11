@@ -150,6 +150,13 @@ function bahia_exclusivo_injetar($html) {
             );
 
             $selos = '<span class="bahia-selos">';
+            // No archive /exclusivo/ os dois selos diziam a mesma palavra, lado a lado
+            // ("EXCLUSIVO" preto de editoria + "EXCLUSIVO" vermelho), porque existe um
+            // CPT chamado `exclusivo`. Nesse caso fica só o vermelho, que é o de peso
+            // editorial. As demais editorias seguem com os dois selos.
+            if ($post_type === 'exclusivo') {
+                $label = '';
+            }
             if ($label !== '') {
                 // Prefixo "ed-" de propósito: existe um CPT chamado `exclusivo`, e sem
                 // ele a regra da editoria colidiria com .bahia-selo-exclusivo, pintando
