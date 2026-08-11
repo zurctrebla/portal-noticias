@@ -112,12 +112,7 @@ function bahia_si_render_card() {
                 <span class="td-post-date">
                     <time class="entry-date updated td-module-date" datetime="<?php echo esc_html(date(DATE_W3C, get_the_time('U'))); ?>"><?php the_time(get_option('date_format')); ?></time>
                 </span>
-
-                <div class="td-module-comments">
-                    <a href="<?php comments_link(); ?>">
-                        <?php comments_number('0', '1', '%'); ?>
-                    </a>
-                </div>
+                <?php /* sem contador de comentários: comentários estão desligados no site (ver bahia-td-opcoes) */ ?>
             </div>
         </div>
     </div>

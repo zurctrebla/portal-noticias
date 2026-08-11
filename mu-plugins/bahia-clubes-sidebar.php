@@ -23,7 +23,8 @@ function bahia_clubes_sidebar_css() {
     $done = true;
     return <<<CSS
 <style>
-.bahia-cl-sidebar{--bahia:#0a58ca;--vitoria:#c8102e;margin:0 0 26px}
+/* 48px = ritmo vertical padrão dos blocos da home (valor predominante medido) */
+.bahia-cl-sidebar{--bahia:#0a58ca;--vitoria:#c8102e;margin:0 0 48px}
 .bahia-cl-sidebar .bahia-cl-box{width:100%;min-width:0;border:1px solid #e5e5e5;border-radius:4px;overflow:hidden;background:#fff;margin-bottom:16px}
 .bahia-cl-sidebar .bahia-cl-box:last-child{margin-bottom:0}
 .bahia-cl-sidebar .bahia-cl-head{color:#fff;font-weight:700;font-size:14px;letter-spacing:.03em;text-transform:uppercase;padding:9px 14px}

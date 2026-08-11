@@ -168,8 +168,16 @@ function resolve_ids($limit) {
     return array_map('intval', $q->posts);
 }
 
-/** Renderiza a lista "+ Mais Lidas". */
-function render($limit = 7) {
+/**
+ * Renderiza a lista "+ Mais Lidas".
+ *
+ * @param int  $limit     quantos itens.
+ * @param bool $show_head desenha o cabeçalho próprio ("+ Mais Lidas"). Fica false
+ *                        quando o título já vem de um bloco de título do tagDiv —
+ *                        é o caso da sidebar da home, onde o padrão visual é o
+ *                        título com a linha colorida ao lado, igual às outras seções.
+ */
+function render($limit = 7, $show_head = true) {
     $ids = resolve_ids($limit);
     if (empty($ids)) {
         return '';
@@ -191,7 +199,8 @@ function render($limit = 7) {
     static $css = false;
     if (!$css) { $css = true; ?>
 <style>
-.bahia-ml{margin:0 0 26px;font-family:inherit}
+/* 48px = ritmo vertical padrão dos blocos da home (valor predominante medido) */
+.bahia-ml{margin:0 0 48px;font-family:inherit}
 .bahia-ml-head{background:#13182B;color:#fff;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.5px;padding:10px 12px}
 .bahia-ml-list{list-style:none;margin:0;padding:0;background:#fff}
 .bahia-ml-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #eef0f3}
@@ -204,7 +213,7 @@ function render($limit = 7) {
 </style>
 <?php } ?>
 <div class="bahia-ml">
-  <div class="bahia-ml-head">+ Mais Lidas</div>
+  <?php if ($show_head) : ?><div class="bahia-ml-head">+ Mais Lidas</div><?php endif; ?>
   <ol class="bahia-ml-list">
     <?php $i = 0; while ($q->have_posts()) : $q->the_post(); $i++;
         $thumb = get_the_post_thumbnail_url(get_the_ID(), 'thumbnail'); ?>
@@ -222,6 +231,6 @@ function render($limit = 7) {
 }
 
 add_shortcode('bahia_mais_lidas', function ($atts) {
-    $atts = shortcode_atts(array('limit' => 7), $atts, 'bahia_mais_lidas');
-    return render(max(1, (int) $atts['limit']));
+    $atts = shortcode_atts(array('limit' => 7, 'show_head' => 'yes'), $atts, 'bahia_mais_lidas');
+    return render(max(1, (int) $atts['limit']), $atts['show_head'] !== 'no');
 });

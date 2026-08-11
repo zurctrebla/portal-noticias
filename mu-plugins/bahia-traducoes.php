@@ -132,6 +132,37 @@ function bahia_traducoes_gettext($translation, $text, $domain) {
 add_filter('gettext', 'bahia_traducoes_gettext', 20, 3);
 
 /**
+ * Strings que passam pelo __td() do tagDiv, e NÃO pelo gettext.
+ *
+ * O td-composer tem um mecanismo de tradução próprio: __td() consulta os globais
+ * $td_translation_map_user / $td_translation_map (td_translate.php:51) e nunca chama
+ * __(). Por isso o filtro gettext acima não alcança essas strings — foi o que deixou
+ * o title/aria-label "Search" nos botões de busca mesmo com 'Search' => 'Buscar' no
+ * mapa. O mapa de usuário é lido de td_options::get_array('td_translation_map_user'),
+ * ou seja, de dentro do option de tema — então dá para injetar pelo mesmo filtro.
+ *
+ * Vale para texto visível e para atributos (title, aria-label), que é onde isso
+ * ainda aparecia.
+ */
+function bahia_traducoes_td_map() {
+    return array(
+        'Search' => 'Buscar',
+    );
+}
+
+add_filter('option_' . (defined('BAHIA_TD_OPTION_NAME') ? BAHIA_TD_OPTION_NAME : 'td_011'), function ($options) {
+    if (!is_array($options)) {
+        return $options;
+    }
+    $atual = isset($options['td_translation_map_user']) && is_array($options['td_translation_map_user'])
+        ? $options['td_translation_map_user']
+        : array();
+    // o que já estiver configurado no painel tem precedência
+    $options['td_translation_map_user'] = $atual + bahia_traducoes_td_map();
+    return $options;
+});
+
+/**
  * Mesmo para strings com contexto (_x / _ex).
  */
 function bahia_traducoes_gettext_ctx($translation, $text, $context, $domain) {

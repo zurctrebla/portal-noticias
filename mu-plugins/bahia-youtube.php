@@ -112,7 +112,8 @@ function bahia_yt_shortcode( $atts ) {
 		</div>
 	</div>
 	<style>
-	#<?php echo $uid; ?>.bahia-yt{background:#111417;color:#fff}
+	<?php /* 48px = ritmo vertical padrão dos blocos da home (ver bahia-clubes-sidebar e bahia-mais-lidas) */ ?>
+	#<?php echo $uid; ?>.bahia-yt{background:#111417;color:#fff;margin-bottom:48px}
 	#<?php echo $uid; ?> .bahia-yt-title{margin:0;padding:11px 14px;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;background:<?php echo $accent; ?>}
 	#<?php echo $uid; ?> .bahia-yt-flex{display:flex;align-items:stretch}
 	#<?php echo $uid; ?> .bahia-yt-player{flex:0 0 66.666%;max-width:66.666%}
