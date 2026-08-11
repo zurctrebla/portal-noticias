@@ -173,31 +173,66 @@ function bahia_hover_ed_css() {
           . "body .td_module_wrap:hover .td-module-title a{color:" . bahia_hover_ed_cor_legivel($def) . ";}\n";
 
     // --- item 5: texto sobre imagem ---------------------------------------
-    // `bahia-sobre-img-N` é posto no bloco em tempo de saída, só onde o demo tornou a
+    // Os marcadores são postos no bloco em tempo de saída, só onde o demo tornou a
     // meta-info absoluta (ver bahia_hover_ed_marcar_blocos). Sem marcador, nada acontece.
+    //
+    // Há DOIS escopos, porque o demo escreve a regra de duas formas diferentes:
+    //
+    //   .bahia-sobre-img + .bahia-sobre-img-mod
+    //       o CSS mira UM tipo de módulo dentro de UM bloco
+    //       (`.tdi_118 .td_module_flex_1 .td-module-meta-info{position:absolute}`).
+    //       Só aqueles cards são sobre imagem; os demais do bloco, não.
+    //
+    //   .bahia-sobre-img-all
+    //       o CSS mira uma classe ESTRUTURAL do tema, valendo para o bloco inteiro
+    //       (`.td-big-grid-flex .td-module-meta-info{position:absolute}`). Todos os
+    //       cards do bloco são sobre imagem, e não há classe de módulo no seletor
+    //       para pendurar o `-mod`.
+    //
+    // Os dois escopos chegam a (0,6,2) — um degrau acima do item 3, que é (0,5,2).
+    $mod = 'body .bahia-sobre-img.bahia-sobre-img.bahia-sobre-img.bahia-sobre-img .bahia-sobre-img-mod';
+    $all = 'body .bahia-sobre-img-all.bahia-sobre-img-all.bahia-sobre-img-all'
+         . '.bahia-sobre-img-all.bahia-sobre-img-all';
+
+    $branco = array();
+    foreach (array($mod, $all) as $escopo) {
+        foreach (array('.td-module-title a', '.entry-title a') as $alvo) {
+            $branco[] = "{$escopo} {$alvo}";
+            $branco[] = "{$escopo}:hover {$alvo}";
+        }
+    }
+    $branco = implode(",\n", $branco);
+
+    // Escopo curto (sem repetição) para o que não disputa com o item 3.
+    $mc = '.bahia-sobre-img .bahia-sobre-img-mod';
+    $ac = '.bahia-sobre-img-all';
+
     $css .= <<<CSS
 
 /* --- item 5: blocos com texto SOBRE a imagem --- */
-/* Título branco sempre, inclusive no hover — precisa vencer a regra do item 3, que é
-   (0,5,2); com body + 4x a classe do marcador chegamos a (0,6,2). */
-body .bahia-sobre-img.bahia-sobre-img.bahia-sobre-img.bahia-sobre-img .bahia-sobre-img-mod .td-module-title a,
-body .bahia-sobre-img.bahia-sobre-img.bahia-sobre-img.bahia-sobre-img .bahia-sobre-img-mod:hover .td-module-title a,
-body .bahia-sobre-img.bahia-sobre-img.bahia-sobre-img.bahia-sobre-img .bahia-sobre-img-mod .entry-title a,
-body .bahia-sobre-img.bahia-sobre-img.bahia-sobre-img.bahia-sobre-img .bahia-sobre-img-mod:hover .entry-title a{
+/* Título branco SEMPRE, inclusive no hover: sobre foto, a cor da editoria do item 3
+   deixaria o texto ilegível (era o efeito relatado nos 5 primeiros cards da home, em
+   Salvador e em Justiça). O overlay colorido da foto segue valendo — só o texto trava. */
+{$branco}{
     color:#fff !important;
 }
-/* Autor e data também ficam sobre a foto no mesmo bloco. */
-.bahia-sobre-img .bahia-sobre-img-mod .td-post-author-name a,
-.bahia-sobre-img .bahia-sobre-img-mod .td-post-author-name span,
-.bahia-sobre-img .bahia-sobre-img-mod .td-post-date,
-.bahia-sobre-img .bahia-sobre-img-mod .entry-date{
+/* Autor e data também ficam sobre a foto nesses blocos. */
+{$mc} .td-post-author-name a,
+{$mc} .td-post-author-name span,
+{$mc} .td-post-date,
+{$mc} .entry-date,
+{$ac} .td-post-author-name a,
+{$ac} .td-post-author-name span,
+{$ac} .td-post-date,
+{$ac} .entry-date{
     color:#fff !important;
 }
-/* Véu de leitura. O bloco Justiça já vinha com rgba(0,0,0,0.32) e lê bem; o de Salvador
-   não tinha nenhum — é a causa da ilegibilidade. Aqui o véu é gradiente (mais escuro
-   embaixo, onde o texto fica) para não achatar a foto inteira. */
-.bahia-sobre-img .bahia-sobre-img-mod .td-module-thumb a:after,
-.bahia-sobre-img .bahia-sobre-img-mod .td-image-wrap:before{
+/* Véu de leitura — só no escopo `-mod`. Os blocos `-all` (grid grande) já trazem véu
+   próprio do demo em `.td-image-wrap:before` e um segundo por cima escureceria demais.
+   Usa `:before`, e NÃO `.td-module-thumb a:after`: naquele markup o <a> É a
+   `.td-image-wrap`, e ocupar o `::after` dela apagava o badge de editoria, que se
+   apoia em `.td-cpt-{slug} .td-image-wrap::after` (bahia-editoria-tags.php). */
+{$mc} .td-image-wrap:before{
     content:'';
     position:absolute;
     top:0;
@@ -209,9 +244,11 @@ body .bahia-sobre-img.bahia-sobre-img.bahia-sobre-img.bahia-sobre-img .bahia-sob
     background:linear-gradient(to top,rgba(0,0,0,.78) 0%,rgba(0,0,0,.55) 30%,rgba(0,0,0,.12) 62%,rgba(0,0,0,0) 100%);
 }
 /* O texto tem de ficar ACIMA do véu. */
-.bahia-sobre-img .bahia-sobre-img-mod .td-module-meta-info{position:absolute;z-index:2;}
+{$mc} .td-module-meta-info{position:absolute;z-index:2;}
 /* Sombra discreta: segura a leitura sobre céu claro mesmo com o véu. */
-.bahia-sobre-img .bahia-sobre-img-mod .td-module-title a{text-shadow:0 1px 3px rgba(0,0,0,.65);}
+{$mc} .td-module-title a,
+{$ac} .td-module-title a,
+{$ac} .entry-title a{text-shadow:0 1px 3px rgba(0,0,0,.65);}
 CSS;
 
     return $css;
@@ -252,17 +289,59 @@ add_action('wp_enqueue_scripts', 'bahia_hover_ed_enqueue', 40);
  * Acrescenta `bahia-sobre-img` ao contêiner do bloco e `bahia-sobre-img-mod` a cada card
  * do tipo de módulo afetado.
  */
+/**
+ * Classes ESTRUTURAIS que põem a meta-info sobre a imagem para o bloco inteiro.
+ *
+ * Complementa a varredura por `.tdi_NN`: o demo também escreve a regra sem amarrar a
+ * bloco nenhum, com uma classe do tema —
+ *
+ *     .td-big-grid-flex .td-module-meta-info{position:absolute; ...}
+ *
+ * É daí que vêm os 5 primeiros cards da home e o bloco Justiça. O critério é o mesmo
+ * fato observável (`position:absolute` na meta-info); muda só a forma do seletor.
+ *
+ * O seletor tem de ser EXATAMENTE `.classe .td-module-meta-info`. Sem essa exigência,
+ * `.tdi_118 .td_module_flex_1 .td-module-meta-info` casaria com `td_module_flex_1`, que
+ * aparece em sete blocos da home — seis deles com o texto sobre fundo branco, que
+ * ficariam com título branco invisível. É a armadilha registrada no cabeçalho.
+ */
+function bahia_hover_ed_classes_sobre_img($html) {
+    $classes = array();
+    if (!preg_match_all('#<style[^>]*>(.*?)</style>#is', $html, $blocos)) {
+        return $classes;
+    }
+    foreach ($blocos[1] as $css) {
+        if (!preg_match_all('/([^{}]+)\{([^{}]*)\}/', $css, $regras, PREG_SET_ORDER)) {
+            continue;
+        }
+        foreach ($regras as $regra) {
+            if (!preg_match('/position\s*:\s*absolute/i', $regra[2])) {
+                continue;
+            }
+            foreach (explode(',', $regra[1]) as $sel) {
+                if (!preg_match('/^\s*\.([a-z][a-z0-9_-]*)\s+\.td-module-meta-info\s*$/i', $sel, $m)) {
+                    continue;
+                }
+                $classe = $m[1];
+                if (stripos($classe, 'tdi_') === 0)        continue; // por bloco: a varredura 1 cuida
+                if (stripos($classe, 'td_module_') === 0)  continue; // módulo, não contêiner
+                if (stripos($classe, 'bahia-') === 0)      continue; // nossos próprios marcadores
+                $classes[$classe] = true;
+            }
+        }
+    }
+    return array_keys($classes);
+}
+
 function bahia_hover_ed_marcar_blocos($html) {
     // 1. Quais pares (bloco, módulo) têm meta-info absoluta.
-    if (!preg_match_all(
+    $alvos = array(); // tdi => array de classes de módulo
+    if (preg_match_all(
             '/\.tdi_(\d+)\s+\.(td_module_[a-z0-9_]+)\s+\.td-module-meta-info\s*\{[^}]*position\s*:\s*absolute/i',
             $html, $m, PREG_SET_ORDER)) {
-        return $html;
-    }
-
-    $alvos = array(); // tdi => array de classes de módulo
-    foreach ($m as $achado) {
-        $alvos[$achado[1]][$achado[2]] = true;
+        foreach ($m as $achado) {
+            $alvos[$achado[1]][$achado[2]] = true;
+        }
     }
 
     foreach ($alvos as $tdi => $modulos) {
@@ -300,6 +379,26 @@ function bahia_hover_ed_marcar_blocos($html) {
             );
         }
         $html = substr_replace($html, $trecho, $depois, $fim - $depois);
+    }
+
+    // 4. Blocos inteiros sobre imagem, marcados por classe estrutural do tema.
+    //
+    //    Aqui não há classe de módulo no seletor, então o bloco recebe
+    //    `bahia-sobre-img-all` e o CSS vale para todos os cards dentro dele — que é o
+    //    caso: a regra é do bloco inteiro, não de um tipo de card.
+    foreach (bahia_hover_ed_classes_sobre_img($html) as $classe) {
+        // `td_block_wrap` e a classe podem vir em qualquer ordem no atributo (em
+        // `.td-big-grid-flex` a estrutural vem ANTES), daí os dois lookaheads. O
+        // terceiro evita marcar de novo um bloco que a varredura 1 já pegou.
+        $re = '/<div\b[^>]*\bclass="'
+            . '(?=[^"]*\btd_block_wrap\b)'
+            . '(?=[^"]*\b' . preg_quote($classe, '/') . '\b)'
+            . '(?![^"]*\bbahia-sobre-img\b)'
+            . '[^"]*"/i';
+        $html = preg_replace_callback($re, function ($mm) {
+            $pos = strpos($mm[0], 'class="') + strlen('class="');
+            return substr_replace($mm[0], 'bahia-sobre-img bahia-sobre-img-all ', $pos, 0);
+        }, $html);
     }
 
     return $html;

@@ -83,6 +83,46 @@ add_action('wp_enqueue_scripts', function () {
     background-color:#000 !important;
     color:#fff !important;
 }
+
+/* ------------------------------------------------------------------
+   BUSCA — o verde-água do demo (#008d7f) passa ao azul do site.
+   Cobre os dois lugares em que a busca aparece:
+     .tdb-head-search-*  -> lupa do cabeçalho (e a cópia sticky)
+     .tdb-search-*       -> formulário da página de resultados
+   Escopo por classe estrutural, nunca por .tdi_NN — o TagDiv renumera.
+   O MENU fica de fora de propósito: aguarda autorização.
+   ------------------------------------------------------------------ */
+.tdb-head-search-form-btn:hover,
+.tdb-search-form-btn:hover{
+    background-color:{$azul} !important;
+}
+/* "Ver todos os resultados" sob o campo do cabeçalho. */
+.tdb-head-search-form .result-msg a:hover,
+.tdb-aj-search .result-msg a:hover{
+    color:{$azul} !important;
+}
+/* Item destacado pelas SETAS DO TECLADO no dropdown da busca. Não é hover, então o
+   item 3 (cor da editoria no hover) não o cobre e o verde ainda aparecia. */
+.tdb-aj-search .tdb-aj-cur-element .entry-title a{
+    color:{$azul} !important;
+}
+/* Paginação da página de resultados: página atual e hover. */
+.search-results .page-nav .current,
+.search-results .page-nav a:hover,
+.search-results .td-load-more-wrap a:hover,
+.search-results .td-next-prev-wrap a:hover{
+    background-color:{$azul} !important;
+    border-color:{$azul} !important;
+    color:#fff !important;
+}
+/* Nome do autor no hover, na listagem de resultados. */
+.search-results .td-post-author-name:hover a{
+    color:{$azul} !important;
+}
+
+/* NÃO se mexe no título do card no hover: ali vale a cor da EDITORIA (item 3 da
+   rodada 6). O verde do demo naquele seletor já perde por !important/especificidade
+   e nunca chega à tela — sobrescrevê-lo com azul desfaria a rodada 6. */
 CSS;
 
     wp_register_style('bahia-cores-ui', false, array(), '1.0.0');

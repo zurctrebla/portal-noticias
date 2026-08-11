@@ -78,9 +78,25 @@ function bahia_editoria_tags_css() {
     // (width/height:100%) com maior especificidade — reusar aquele ::after fazia o
     // badge cobrir a imagem inteira. `.td-image-wrap::after` está livre em todos os
     // tipos de card (hero flex, feed, "Mais Populares").
+    //
+    // A CLASSE VAI REPETIDA 3x, e é isso que faz o badge aparecer no bloco de Salvador.
+    // Era o defeito da seção 10.3 do HANDOVER, e a hipótese registrada lá
+    // (empilhamento/overflow) estava errada: o demo escreve, para aquele bloco,
+    //
+    //     .tdi_NN .td_module_flex_1 .td-module-thumb a:after{content:'';...}
+    //
+    // e naquele markup o <a> É a `.td-image-wrap` — ou seja, o demo ocupa exatamente o
+    // MESMO pseudo-elemento do badge, com especificidade (0,3,2) contra os (0,2,1) da
+    // forma simples. Um pseudo-elemento só comporta um conteúdo: ou o véu do demo, ou o
+    // badge. Repetida 3x a regra vai a (0,4,1) e o badge ganha; a leitura sobre a foto
+    // continua garantida porque bahia-hover-editoria.php desenha o véu em `:before`.
+    //
+    // Sem `!important` de propósito: o que se quer é vencer UMA regra do demo, não travar
+    // o badge contra ajustes futuros.
     $base_selectors = array();
     foreach (array_keys($labels) as $slug) {
-        $base_selectors[] = '.td-cpt-' . $slug . ' .td-image-wrap::after';
+        $c = '.td-cpt-' . $slug;
+        $base_selectors[] = "{$c}{$c}{$c} .td-image-wrap::after";
     }
     $base = implode(",\n", $base_selectors);
 
@@ -129,7 +145,10 @@ CSS;
         if (isset($colors[$slug])) {
             list($bg, $txt) = $colors[$slug];
         }
-        $css .= ".td-cpt-{$slug} .td-image-wrap::after{content:'{$label_css}';background:{$bg};color:{$txt};}\n";
+        // Mesma repetição 3x da regra base, para que rótulo e cores entrem no mesmo
+        // patamar de especificidade — senão a base venceria a cor por vir depois.
+        $c = ".td-cpt-{$slug}";
+        $css .= "{$c}{$c}{$c} .td-image-wrap::after{content:'{$label_css}';background:{$bg};color:{$txt};}\n";
     }
 
     return $css;
