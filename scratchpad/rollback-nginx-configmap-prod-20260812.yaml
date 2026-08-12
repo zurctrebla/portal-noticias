@@ -1,0 +1,138 @@
+# Ponto de rollback do ConfigMap do nginx, capturado em 12/08/2026 ANTES de a chave do
+# FastCGI cache passar a distinguir dispositivo (ver secao 8 de MIGRACAO-homolog-para-prod.md).
+#
+# Conteudo: kubernetes/nginx/configmap.yaml do infra-bahiaba no commit 8763dd9, quando o
+# arquivo ainda era UNICO para os dois clusters. Equivale a:
+#   git show 8763dd9:kubernetes/nginx/configmap.yaml
+#
+# Aplicar REVERTE a correcao no cluster em que for aplicado -- o objeto tem o mesmo nome e
+# namespace nos dois. O apply sozinho nao basta: o volume atualiza mas o nginx so le a
+# config nova depois de recarregar.
+#
+#   kubectl --context=<cluster> -n bahia-wordpress apply -f rollback-nginx-configmap-prod-20260812.yaml
+#   kubectl --context=<cluster> -n bahia-wordpress exec <pod> -c nginx -- nginx -s reload
+#
+# Desde 1affeac os manifestos vivem em kubernetes/{homolog,prod}/nginx/configmap.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: bahia-wordpress
+data:
+  default.conf: |
+    # Cache FastCGI
+    fastcgi_cache_path /tmp/nginx-cache levels=1:2 keys_zone=wordpress:100m inactive=60m max_size=1g;
+    fastcgi_cache_key "$scheme$request_method$host$request_uri";
+    fastcgi_cache_use_stale error timeout invalid_header http_500;
+
+    # Rate limiting usando IP real (X-Forwarded-For via ALB)
+    map $http_x_forwarded_for $real_ip {
+        ~^(\d+\.\d+\.\d+\.\d+) $1;
+        default $remote_addr;
+    }
+    limit_req_zone $real_ip zone=login:10m rate=20r/m;
+    limit_req_zone $real_ip zone=xmlrpc:10m rate=5r/m;
+
+    # Bloqueio de bots por User-Agent
+    map $http_user_agent $bad_bot {
+        default 0;
+        ~*AhrefsBot 1;
+        ~*SemrushBot 1;
+        ~*MJ12bot 1;
+        ~*DotBot 1;
+        ~*BLEXBot 1;
+        ~*DataForSeoBot 1;
+        ~*PetalBot 1;
+        ~*serpstatbot 1;
+        ~*SEOkicks 1;
+        ~*linkdexbot 1;
+        ~*Barkrowler 1;
+        ~*ZoominfoBot 1;
+        ~*Bytespider 1;
+    }
+
+    server {
+        listen 80;
+        server_name _;
+        root /var/www/html;
+        index index.php;
+
+        client_max_body_size 128M;
+
+        # Bloquear bots agressivos
+        if ($bad_bot = 1) {
+            return 403;
+        }
+
+        # FastCGI Cache — bypass para admin/login/usuários logados
+        set $skip_cache 0;
+
+        if ($request_method = POST) { set $skip_cache 1; }
+        if ($query_string != "") { set $skip_cache 1; }
+        if ($request_uri ~* "/wp-admin/|/wp-login.php|/xmlrpc.php|/feed/") { set $skip_cache 1; }
+        if ($http_cookie ~* "comment_author|wordpress_logged_in|wp-postpass") { set $skip_cache 1; }
+
+        location / {
+            try_files $uri $uri/ /index.php?$args;
+        }
+
+        # Bloquear xmlrpc.php com rate limit
+        location = /xmlrpc.php {
+            limit_req zone=xmlrpc burst=2 nodelay;
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_index index.php;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            include fastcgi_params;
+        }
+
+        # Rate limit no wp-login
+        location = /wp-login.php {
+            limit_req zone=login burst=5 nodelay;
+            # $args e a query string crua, sem decodificar: a versao url-encoded
+            # do mesmo payload (wp-admin%2Fnetwork) escapava da regra anterior,
+            # que so olhava a barra literal. O nginx nao tem urldecode nativo para
+            # variavel, entao a regex cobre as duas formas -- e tambem o ponto
+            # codificado (%2e) no dominio e o duplo encode (%252f).
+            # O ~* ja resolve maiuscula/minuscula (%2F e %2f).
+            # Nao pega login legitimo: o redirect_to do formulario aponta para
+            # wp-admin/ sem "network".
+            if ($args ~* "redirect_to.*(aws(\.|%2e)bahia(\.|%2e)ba|wp-admin(/|%2f|%252f)network)") {
+                return 403;
+            }
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_index index.php;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            include fastcgi_params;
+        }
+
+        location ~ \.php$ {
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_index index.php;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            include fastcgi_params;
+            fastcgi_read_timeout 300;
+            fastcgi_buffer_size 16k;
+            fastcgi_buffers 4 16k;
+
+            # FastCGI Cache
+            fastcgi_cache wordpress;
+            fastcgi_cache_valid 200 10m;
+            fastcgi_cache_bypass $skip_cache;
+            fastcgi_no_cache $skip_cache;
+
+            # Ignorar Set-Cookie do plugin GDPR para não impedir cache
+            fastcgi_ignore_headers Set-Cookie;
+
+            add_header X-FastCGI-Cache $upstream_cache_status;
+        }
+
+        location ~* \.(jpg|jpeg|png|gif|ico|css|js|woff|woff2|ttf|svg)$ {
+            expires 7d;
+            add_header Cache-Control "public, no-transform";
+        }
+
+        location = /favicon.ico { log_not_found off; access_log off; }
+        location = /robots.txt  { log_not_found off; access_log off; }
+
+        location ~ /\. { deny all; }
+    }
