@@ -16,6 +16,12 @@ código novo apontando para dados velhos: rodapé em inglês, blocos da home for
 templates do demo Magazine PRO no lugar dos ajustados, e o 404 voltando a mandar o visitante
 para `demo.tagdiv.com`.
 
+Em 12/08/2026 apareceu uma **terceira camada**: a **infraestrutura** (`infra-bahiaba`), que
+mudou de forma relevante para esta migração — a chave do cache do nginx passou a distinguir
+dispositivo, e os manifestos foram separados por ambiente. **Ler a seção 8 antes de executar
+qualquer coisa**: ela muda caminhos de arquivo citados em outros documentos e contém uma
+verificação que só faz sentido no momento da virada do tema.
+
 Este documento lista o que precisa ser transportado, em que ordem, e como voltar atrás.
 
 ---
@@ -442,8 +448,134 @@ da seção 5 não mudam nada para o visitante, a indisponibilidade real fica res
 
 ---
 
-## 8. Resumo de uma linha
+## 8. Infraestrutura: cache por dispositivo e ambientes separados
+
+**Escrito em 12/08/2026.** Nada aqui estava no documento original, e dois itens mudam o que
+você faz na virada.
+
+### 8.1 Os caminhos dos manifestos mudaram
+
+O `kubernetes/` do `infra-bahiaba` virou uma árvore por ambiente (commit `1affeac`):
+
+```
+kubernetes/homolog/{namespace.yaml,nginx/,wordpress/,ingress/}
+kubernetes/prod/{namespace.yaml,nginx/,wordpress/,ingress/,cluster-autoscaler/}
+```
+
+O sufixo `-prod` **saiu dos nomes**: é `kubernetes/prod/wordpress/deployment.yaml`, não
+`deployment-prod.yaml`. Qualquer caminho `kubernetes/nginx/...` citado em documento antigo
+está desatualizado.
+
+Consequência prática: mexer em `kubernetes/prod/**` roda **só** o pipeline de produção;
+mexer em `terraform/**` ou `.github/workflows/**` ainda roda **os dois**, porque ali o
+acoplamento é real (mesmo módulo Terraform, mesmo arquivo de workflow).
+
+### 8.2 A chave do cache distingue dispositivo — e tem que continuar distinguindo
+
+Até 12/08 a chave era só `$scheme$request_method$host$request_uri`. Como o tema decide o HTML
+no servidor, a mesma entrada guardava uma variante só e **37% dos acessos desktop recebiam o
+HTML de celular**. A chave agora é:
+
+```nginx
+fastcgi_cache_key "$scheme$request_method$host$request_uri|d=$bahia_mobile$bahia_ipad";
+```
+
+> **Não remova essa dimensão achando que o Newspaper é responsivo e não precisa.** Ele
+> também varia no servidor. Medido em homolog em 12/08, com o cache furado e variando só o
+> User-Agent, a diferença sistemática entre desktop e celular (descontado o ruído de anúncio
+> rotativo) é o widget "voltar ao topo": `<div class="td-scroll-up">` e o `tdToTop.js`, que
+> só saem no desktop. Vem de `plugins/td-composer/legacy/Newspaper/header.php:20-24`.
+
+A consequência de errar é menor do que hoje — um widget, não o layout inteiro — mas é a
+mesma classe de bug.
+
+### 8.3 O detalhe que só aparece na virada: a versão da Mobile-Detect troca
+
+`header.php:20` do td-composer faz `if (class_exists('Mobile_Detect'))` e chama
+`$mobile_detect->isMobile()`. **É a mesma biblioteca que o nginx espelha** — mas existem duas
+cópias no repositório, e a que vale é a que for carregada:
+
+| Quem carrega | Arquivo | Versão | Regras |
+|---|---|---|---|
+| tema legado (produção hoje) | `themes/bahia_refactor/Mobile-Detect/Mobile_Detect.php` | **2.8.41** | 183 |
+| td-composer (depois da virada) | `plugins/td-composer/includes/Mobile_Detect.php` | **2.8.34** | 179 |
+
+O regex do nginx foi gerado a partir da **2.8.41**. Quando o `bahia_refactor` sair de cena, a
+classe passa a vir da **2.8.34**, que difere em 4 regras ausentes (`Pixel`, `Xiaomi`,
+`XiaomiTablet`, `SailfishOS`) e em 14 com o mesmo nome e regex diferente — entre elas
+`Chrome`, `Safari`, `Firefox` e `Edge`.
+
+**Impacto medido, não estimado:** contra 33.660 requisições reais de produção (1.721
+User-Agents distintos), o regex do nginx diverge da 2.8.34 em **1 requisição**. O caso é:
+
+```
+Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/145 Version/11.1.1 Safari/605.1.15
+```
+
+um UA que diz macOS e CriOS ao mesmo tempo. A regra `Chrome` da 2.8.34 é `CriOS` puro; a da
+2.8.41 é `CriOS.*Mobile`. Aceitável — mas se quiser zero, regenere o regex a partir da cópia
+do plugin (procedimento em 8.4) na janela da migração.
+
+### 8.4 Como regenerar o regex, se precisar
+
+O regex é um **subconjunto** das regras da própria biblioteca. É o subconjunto que dá a
+garantia: o nginx nunca classifica como mobile algo que o PHP considera desktop. **Nunca
+invente tokens fora da lib** (`mobile`, `tablet`) — aí aparece falso positivo e o bug volta
+invertido.
+
+1. `Mobile_Detect::getMobileDetectionRules()` = phoneDevices + tabletDevices +
+   operatingSystems + browsers. É exatamente o que `isMobile()` consulta.
+2. Junte as regras num alternado. **Não use o conjunto completo**: são 26 KB, e custam
+   4,3 ms por requisição sem PCRE JIT (o nginx da imagem não declara `--with-pcre-jit`). O
+   recorte de 30 regras em uso custa 3 µs.
+3. Valide contra um corpus real antes de confiar:
+   `kubectl logs <pod> -c nginx --tail=50000` (vai para stdout; um `--tail` muito grande
+   volta vazio). O User-Agent é o **penúltimo** campo entre aspas.
+4. Só publique com **zero divergência** no corpus.
+
+### 8.5 Acrescentar às verificações
+
+**Antes** (seção 4): anotar o comportamento atual, para comparar depois.
+
+```bash
+for ua in "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36" \
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"; do
+  curl -sI https://bahia.ba/ -H "User-Agent: $ua" | grep -i 'x-bahia-device\|x-fastcgi-cache'
+done
+```
+
+`X-Bahia-Device` é **00** desktop, **10** celular, **11** iPad.
+
+**Depois** (seção 6.1), acrescentar à tabela:
+
+| Verificação | O que tem que estar certo |
+|---|---|
+| Mesma URL, dois User-Agents | `X-Bahia-Device` muda de `00` para `10`; o HTML de desktop tem `td-scroll-up` e o de celular não |
+| 20 acessos seguidos com UA de desktop | **todos** com `00` — se aparecer `10` no meio, a chave regrediu |
+| Sitemap e `/feed/` | continuam em `BYPASS` (não têm `Cache-Control` nosso) |
+
+> Ao conferir no navegador, lembre que agora existe `Cache-Control: public, max-age=60,
+> must-revalidate` nas respostas cacheáveis. Uma página pode ficar até 60 s no cliente antes
+> de revalidar — não confunda isso com cache do servidor.
+
+### 8.6 Duas coisas que a virada vai esbarrar
+
+- **Cache frio.** Todo `rollout restart` zera o cache: `/tmp/nginx-cache` é `emptyDir`. Já
+  existe `fastcgi_cache_lock` e `use_stale updating` para segurar o estouro no PHP, mas a
+  primeira janela depois da virada tem menos acerto de cache. O rollout é gradual
+  (`maxSurge: 1 / maxUnavailable: 0`), então há sempre um pod quente durante parte dele.
+- **Deployment `nginx` órfão.** O de réplica única não atende tráfego nenhum: o Service
+  `nginx` seleciona `app: wordpress`, então quem serve é o sidecar dos pods do WordPress.
+  Ele é aplicado e reiniciado a cada deploy à toa, reservando 256Mi/250m. Bom momento para
+  aposentar, se for aposentar.
+
+---
+
+## 9. Resumo de uma linha
 
 Migre por **script idempotente que resolve por slug**, deixe **`td_011` por último** para que
 a virada seja atômica, e confirme depois que **404 responde em ~2 s** e que
-**`/author/<slug>/` lista matérias** — são os dois indicadores que denunciam problema.
+**`/author/<slug>/` lista matérias** — são os dois indicadores que denunciam problema. Do lado
+da infraestrutura, os manifestos agora vivem em `kubernetes/prod/**` (seção 8.1) e a chave do
+cache distingue dispositivo: confira `X-Bahia-Device` em 20 acessos de desktop seguidos antes
+de dar a virada por encerrada (seção 8.5).
