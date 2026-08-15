@@ -41,9 +41,30 @@ function bahia_ft_table() {
     return $wpdb->prefix . 'bahia_search_idx';
 }
 
-/** Post types indexados/buscáveis: editorias (CPTs) + post padrão. */
+/**
+ * Post types indexados/buscáveis.
+ *
+ * Os dois ambientes registram as editorias de formas diferentes, e este é o único
+ * ponto do arquivo que dependia disso:
+ *
+ *  - homolog (tema Newspaper): as editorias vêm do mu-plugin bahia-editorias-cpt.php,
+ *    que expõe bahia_editorias_map();
+ *  - produção (tema bahia_refactor): as editorias são CPTs registrados pelo PRÓPRIO
+ *    TEMA, e bahia_editorias_map() não existe. Cair no array vazio indexaria só
+ *    'post' — que em produção tem 1 matéria, contra 257.877 nos CPTs. A busca
+ *    voltaria vazia.
+ *
+ * Por isso o fallback pergunta ao WordPress quais tipos são públicos e buscáveis,
+ * em vez de assumir uma lista. Confere com o que a busca nativa cobriria.
+ */
 function bahia_ft_types() {
-    $types = function_exists('bahia_editorias_map') ? array_keys(bahia_editorias_map()) : array();
+    if (function_exists('bahia_editorias_map')) {
+        $types = array_keys(bahia_editorias_map());
+    } else {
+        $types = get_post_types(array('public' => true, 'exclude_from_search' => false), 'names');
+        unset($types['attachment']);
+        $types = array_values($types);
+    }
     $types[] = 'post';
     return array_values(array_unique($types));
 }
@@ -132,6 +153,34 @@ function bahia_ft_applies($wp_query) {
     if (empty($wp_query->query_vars['s'])) {
         return false;
     }
+
+    // O PAINEL FICA DE FORA.
+    //
+    // A tabela-sombra guarda apenas post_status = 'publish'. Sem esta guarda, a
+    // busca de /wp-admin/edit.php passava a ser respondida pela sombra e o
+    // reporter NAO encontrava o proprio rascunho, pendente ou agendado — sem
+    // erro nenhum, o que e pior. Conferido em producao: buscando "Chapecoense"
+    // com post_status=any, o post agendado cujo titulo comeca com essa palavra
+    // ficava de fora dos 50 resultados.
+    //
+    // O !wp_doing_ajax() e proposital: is_admin() tambem e verdadeiro em
+    // admin-ajax.php, que e por onde o front-end carrega mais conteudo. Sem essa
+    // parte, a busca do site perderia o FULLTEXT nessas chamadas.
+    if (is_admin() && !wp_doing_ajax()) {
+        return false;
+    }
+
+    // Cinto e suspensorio: qualquer consulta que peca status diferente de
+    // 'publish' (o painel pede 'any') seria respondida errado pela sombra.
+    $status = isset($wp_query->query_vars['post_status']) ? $wp_query->query_vars['post_status'] : '';
+    if (!empty($status)) {
+        foreach ((array) $status as $st) {
+            if ($st !== 'publish') {
+                return false;
+            }
+        }
+    }
+
     if (!bahia_ft_ready() && !bahia_ft_index_ready()) {
         return false;
     }
