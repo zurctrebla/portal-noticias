@@ -68,5 +68,17 @@ function bahia_td_opcoes_forcar($options) {
     $options['tds_p_show_comments'] = 'hide';
     $options['tds_p_show_views']    = 'hide';
 
+    // Rodada 10, item 3 — fora a textura de mosaico das faixas laterais.
+    //
+    // O mosaico é `background-image` do <body>, e vinha de tds_site_background_image
+    // (um bg.png no CloudFront). Some aqui, em runtime, e não por escrita no banco:
+    // assim a mudança viaja junto com o código para produção e o td_011 do banco não
+    // precisa entrar no inventário de migração por causa disto.
+    //
+    // O site continua em td-boxed-layout — o que muda é só a cor por baixo da caixa.
+    // A barra de menu passa a ir até as bordas por CSS, em bahia-cabecalho-r10.php.
+    $options['tds_site_background_image'] = '';
+    $options['tds_site_background_color'] = '#ffffff';
+
     return $options;
 }

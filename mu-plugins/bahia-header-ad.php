@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Bahia.ba - Marca + publicidade no header
- * Description: Shortcode [bahia_header_ad] para o banner 728x90 do header (AdRotate) e o
+ * Description: Shortcode [bahia_header_ad] para o banner do header (AdRotate) e o
  *              CSS da linha logo + publicidade do tdb_template 547414.
  * Version: 1.0.0
  * Author: Bahia.ba
@@ -62,23 +62,26 @@ add_shortcode('bahia_header_ad', 'bahia_header_ad_shortcode');
 
 function bahia_header_ad_css() {
     return <<<CSS
-/* Linha marca + publicidade do header
-   Conta: row de 1068px (o site e td-boxed-layout, o max-width de 1240 do desenho
-   original nunca chegava a valer) - 40 de padding = 1028 uteis.
-   256 (logo) + 24 (gap) + 728 (banner) = 1008, folga de 20px.
+/* Linha de publicidade do header — SO o banner, centralizado (rodada 10).
+   Ate a rodada 9 esta row tinha logo a esquerda e banner a direita. A logo saiu
+   daqui: passou para a faixa centralizada abaixo do menu (bahia-cabecalho-r10.php).
 
-   --bahia-logo-w e a fonte unica da largura: vale para a imagem e para a coluna que a
-   contem. Sem largura na coluna o flex a encolhe ate o conteudo, e o max-width:100%
-   herdado de `img` arrasta a imagem junto. */
+   Conta atualizada: row de 1068px (o site e td-boxed-layout, o max-width de 1240 do
+   desenho original nunca chegava a valer) - 40 de padding = 1028 uteis, agora
+   inteiros para o banner. Antes eram 256 (logo) + 24 (gap) + 728 = 1008.
+
+   Consequencia para o comercial: com 1028 uteis, um criativo de 970x90 passa a caber
+   NATIVO — ver PUBLICIDADE-slots.md 3.1, que registrava que os grupos 1 e 12 estao
+   declarados como 970x90 mas so recebem pecas de 728x90. O teto abaixo subiu de 728
+   para 970 para nao continuar sendo ele o limitador. Nada estica: um 728 continua
+   sendo servido a 728, porque a imagem respeita a largura natural. */
 .bahia-header-brand {
-    --bahia-logo-w: 256px;
     max-width: 100%;
     margin: 0 auto;
     min-height: 130px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 24px;
+    justify-content: center;
     background: #fff;
 }
 /* .wpb_row junto no seletor porque o padding lateral do .td-pb-row vence um seletor de
@@ -86,36 +89,29 @@ function bahia_header_ad_css() {
 .bahia-header-brand.wpb_row {
     padding: 20px;
 }
-.bahia-header-brand .tdb-logo-a img {
-    width: var(--bahia-logo-w);
-    height: auto;
-    display: block;
-    /* impede o max-width:100% do tema de encolher junto com a coluna */
-    max-width: none;
-}
 .bahia-header-ad {
-    flex: 0 0 728px;
-    max-width: 728px;
+    flex: 0 1 auto;
+    max-width: 970px;
     min-width: 0;
-    text-align: right;
+    text-align: center;
 }
 .bahia-header-ad img {
     display: block;
     max-width: 100%;
     height: auto;
     margin-left: auto;
+    margin-right: auto;
 }
 
 /* O TagDiv injeta um <style> como primeiro filho da row. Sem escode-lo ele conta como
-   item de flex e consome um gap inteiro antes do logo -- e e por isso que os seletores
-   abaixo sao :first-of-type/:last-of-type e nao :first-child, que nunca casaria com a
-   coluna do logo. */
+   item de flex e desloca a centralizacao do banner. (Ate a rodada 9 ele consumia um
+   gap inteiro antes da logo; o gap saiu, mas o <style> continua sendo um item de flex
+   e por isso a regra permanece.) */
 .bahia-header-brand > style {
     display: none;
 }
 /* O .td-pb-row usa ::before/::after como clearfix. Em container flex eles viram itens
-   de flex de largura zero, e o de antes consome um gap inteiro -- era o que empurrava a
-   linha 24px para a direita e fazia o banner estourar a borda do conteudo. */
+   de flex de largura zero e desequilibram o `justify-content: center`. */
 .bahia-header-brand.wpb_row::before,
 .bahia-header-brand.wpb_row::after {
     display: none;
@@ -123,32 +119,24 @@ function bahia_header_ad_css() {
 /* As colunas sao do grid do TagDiv e vem com padding lateral proprio. A largura em
    porcentagem foi removida do tdc_css delas no proprio template, senao brigaria com o
    !important gerado pelo TagDiv. */
+/* Agora ha UMA coluna so, a do anuncio. As regras de duas colunas
+   (:first-of-type com a largura da logo, :last-of-type com margin-left:auto
+   empurrando para a direita) sairam junto com a logo — se tivessem ficado, a de
+   margin-left:auto continuaria jogando o banner para a direita. */
 .bahia-header-brand > .vc_column {
     width: auto;
     padding-left: 0;
     padding-right: 0;
-}
-.bahia-header-brand > .vc_column:first-of-type {
-    flex: 0 0 var(--bahia-logo-w);
-}
-.bahia-header-brand > .vc_column:last-of-type {
-    flex: 0 0 auto;
-    margin-left: auto;
-}
-/* o bloco de logo centraliza por padrao (align_horiz do shortcode) */
-.bahia-header-brand .tdb_header_logo .tdb-block-inner {
-    justify-content: flex-start;
+    flex: 0 1 auto;
+    margin: 0 auto;
 }
 
 @media (max-width: 1080px) {
-    .bahia-header-brand { --bahia-logo-w: 220px; flex-direction: column; gap: 16px; min-height: 0; }
+    /* Com uma coluna so nao ha mais o que empilhar; resta reduzir o respiro
+       vertical, que era o outro efeito deste bloco. */
+    .bahia-header-brand { min-height: 0; }
     .bahia-header-brand.wpb_row { padding: 16px; }
-    .bahia-header-ad { flex: 0 0 auto; text-align: center; }
-    .bahia-header-brand .tdb-logo-a img { margin: 0 auto; }
-    .bahia-header-ad img { margin-left: auto; margin-right: auto; }
-    /* empilhado, a coluna do logo deixa de ser faixa fixa na horizontal */
-    .bahia-header-brand > .vc_column:first-of-type { flex: 0 0 auto; }
-    .bahia-header-brand > .vc_column:last-of-type { margin-left: 0; }
+    .bahia-header-ad { flex: 0 1 auto; text-align: center; }
 }
 /* Nao ha bloco para 767px: abaixo desse ponto o tema esconde .td-header-desktop-wrap
    inteiro e renderiza o header mobile, que e outra chave do template (tdc_header_mobile).
