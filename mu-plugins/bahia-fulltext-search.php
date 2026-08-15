@@ -153,6 +153,34 @@ function bahia_ft_applies($wp_query) {
     if (empty($wp_query->query_vars['s'])) {
         return false;
     }
+
+    // O PAINEL FICA DE FORA.
+    //
+    // A tabela-sombra guarda apenas post_status = 'publish'. Sem esta guarda, a
+    // busca de /wp-admin/edit.php passava a ser respondida pela sombra e o
+    // reporter NAO encontrava o proprio rascunho, pendente ou agendado — sem
+    // erro nenhum, o que e pior. Conferido em producao: buscando "Chapecoense"
+    // com post_status=any, o post agendado cujo titulo comeca com essa palavra
+    // ficava de fora dos 50 resultados.
+    //
+    // O !wp_doing_ajax() e proposital: is_admin() tambem e verdadeiro em
+    // admin-ajax.php, que e por onde o front-end carrega mais conteudo. Sem essa
+    // parte, a busca do site perderia o FULLTEXT nessas chamadas.
+    if (is_admin() && !wp_doing_ajax()) {
+        return false;
+    }
+
+    // Cinto e suspensorio: qualquer consulta que peca status diferente de
+    // 'publish' (o painel pede 'any') seria respondida errado pela sombra.
+    $status = isset($wp_query->query_vars['post_status']) ? $wp_query->query_vars['post_status'] : '';
+    if (!empty($status)) {
+        foreach ((array) $status as $st) {
+            if ($st !== 'publish') {
+                return false;
+            }
+        }
+    }
+
     if (!bahia_ft_ready() && !bahia_ft_index_ready()) {
         return false;
     }
