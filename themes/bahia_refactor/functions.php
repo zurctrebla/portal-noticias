@@ -1198,7 +1198,15 @@ function tags()
 	        .    $term->name
 	        . "</a>\n";
 	        */
-                    $out[] = "<a href='/?s={$term->slug}'>{$term->name}</a>\n";
+                    // rel="nofollow": estas tags apontam para a BUSCA, nao para o
+                    // arquivo da taxonomia (o get_term_link acima esta comentado porque
+                    // /tag/<slug>/ responde 404 — 18 taxonomias disputam o mesmo slug de
+                    // reescrita). Sem o nofollow, cada materia publicada vira um convite
+                    // para o rastreador varrer a busca: em 14/08/2026 isso derrubou o
+                    // site, porque cada /?s= custava 20-40s de LIKE sem FULLTEXT.
+                    // Quando as URLs de taxonomia forem consertadas, o certo e voltar
+                    // ao get_term_link e remover isto.
+                    $out[] = "<a rel='nofollow' href='/?s={$term->slug}'>{$term->name}</a>\n";
                 }
             }
         } // substr
