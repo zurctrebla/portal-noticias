@@ -1,7 +1,24 @@
 <?php
 get_header();
 
-if (!isset($_POST["b"])) {
+// O termo pode chegar por dois caminhos:
+//   POST 'b' -> o formulario desta pagina e o do cabecalho;
+//   GET  's' -> o botao "Buscar" do site, cujo JS navega por GET em vez de
+//               enviar o formulario (assets/js/base.js:260), alem de links
+//               compartilhados e dos links de tag das materias.
+// Ate 15/08/2026 so o POST era aceito, entao o botao do site caia no ramo de
+// baixo e redirecionava para a home: a busca simplesmente nao devolvia nada.
+// Pior, o WordPress ja tinha rodado a consulta cara do ?s= antes de o template
+// descartar tudo — era custo de banco sem nenhum resultado entregue.
+$bahia_termo = null;
+if (isset($_POST['b'])) {
+    $bahia_termo = stripslashes($_POST['b']);
+} elseif (isset($_GET['s'])) {
+    $bahia_termo = stripslashes($_GET['s']);
+}
+$bahia_termo = is_string($bahia_termo) ? trim($bahia_termo) : '';
+
+if ($bahia_termo === '') {
 ?>
     <script type="text/javascript">
         window.location.href = "<?php bloginfo('url'); ?>";
@@ -9,7 +26,7 @@ if (!isset($_POST["b"])) {
 <?php
 } else {
 
-    $searched = stripslashes($_POST['b']);
+    $searched = $bahia_termo;
     $ipad = strpos(getUserAgent(), "iPad");
     $news_ids = array();
 
@@ -39,7 +56,7 @@ if (!isset($_POST["b"])) {
                 <div class="grid-base-int">
 
                     <form id="busca" method="post" action="/?s=">
-                        <input type="text" value="<?= $searched; ?>" name="b" />
+                        <input type="text" value="<?= esc_attr($searched); ?>" name="b" />
                         <input type="submit" value="" />
 
                         <div class="feedback-resultado-busca">
@@ -47,9 +64,9 @@ if (!isset($_POST["b"])) {
 
                             if ($searched) {
                                 if ($qtdResultados <= 1)
-                                    echo "Foi encontrado um conteúdo com o termo <strong>“{$searched}”</strong>";
+                                    echo "Foi encontrado um conteúdo com o termo <strong>“" . esc_html($searched) . "”</strong>";
                                 else
-                                    echo "Foram encontrados alguns conteúdos com o termo <strong>“{$searched}”</strong>";
+                                    echo "Foram encontrados alguns conteúdos com o termo <strong>“" . esc_html($searched) . "”</strong>";
                             }
                             ?>
                         </div>
