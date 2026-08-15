@@ -22,6 +22,11 @@ FROM wordpress:6.8-php8.2-fpm
 # PHP config customizado
 COPY php/php.ini /usr/local/etc/php/conf.d/custom.ini
 
+# Pool do PHP-FPM. Nome com zzz- de proposito: os pools carregam por glob em
+# ordem alfabetica e este precisa vir DEPOIS do www.conf da imagem oficial,
+# senao o pm.max_children = 5 padrao continua valendo.
+COPY php/zzz-bahia-pool.conf /usr/local/etc/php-fpm.d/zzz-bahia-pool.conf
+
 # Copiar wp-content completo
 COPY --chown=www-data:www-data . /var/www/html/wp-content/
 
