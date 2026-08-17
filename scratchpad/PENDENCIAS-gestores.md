@@ -221,6 +221,71 @@ já está registrado no documento de handover.
 
 ---
 
+## 7. Treze matérias com a descrição do Google cortada no meio — corrigir NA PRODUÇÃO
+
+### O que é
+
+A "descrição" é a frase que aparece embaixo do título nos resultados do Google e no cartão
+que o WhatsApp monta quando alguém compartilha o link. Em quase todo o site ela passa a ser
+o **subtítulo** escrito pelo repórter, automaticamente, sem ninguém precisar fazer nada.
+
+A exceção são as matérias em que alguém preencheu à mão o campo de descrição do Yoast:
+nelas o texto escrito à mão continua mandando, como deve ser. São 968 matérias, e 955
+delas têm texto bom.
+
+**Treze estão cortadas no meio de uma frase.** Terminam em "da", "sua", "que", "sido" —
+palavras que não encerram frase. É resíduo de um preenchimento automático antigo, não
+texto de jornalista. Todas as treze têm subtítulo preenchido, pronto para assumir.
+
+Exemplo, a matéria 545982:
+
+> **Hoje:** "Eduardo Bolsonaro recebeu um green card concedido pelo governo dos Estados
+> Unidos, documento que permite **sua**"
+>
+> **Subtítulo disponível:** "A concessão do cartão de residência ocorre em meio ao aumento
+> das tensões diplomáticas entre Brasil e Estados Unidos"
+
+### A ação, e por que é na produção
+
+**Estas treze matérias vivem no banco de produção e não vêm de homolog.** Corrigir em
+homolog não resolve nada: o conteúdo caminha no sentido contrário, de produção para
+homolog. A correção tem de ser feita no painel de **bahia.ba**.
+
+O que fazer, em cada uma das treze: abrir a matéria no painel de produção, ir ao bloco do
+Yoast SEO, **apagar o conteúdo do campo de descrição** e salvar. Nada além disso. Deixando
+o campo vazio, o subtítulo assume sozinho assim que a nova versão do site entrar no ar.
+
+Não é preciso escrever descrição nova. Não é preciso mexer no texto da matéria.
+
+### As treze
+
+| # | ID | Editoria | Data | Título |
+|---|---|---|---|---|
+| 1 | 545948 | Política | 20/07/2026 | Otto Alencar prevê crescimento do PSD e descarta apoio a Caiado |
+| 2 | 545973 | Política | 20/07/2026 | Após saída do PV, Ludmilla Fiscina oficializa disputa pelo PSD |
+| 3 | 545982 | Política | 20/07/2026 | Eduardo Bolsonaro recebe green card e garante residência nos EUA |
+| 4 | 546158 | Política | 21/07/2026 | Lula diz que Brasil 'não se entrega' antes de tarifa dos EUA |
+| 5 | 546171 | Mundo | 21/07/2026 | França se torna primeiro país da UE a proibir redes sociais para crianças |
+| 6 | 546560 | Política | 23/07/2026 | Leandro de Jesus critica Jerônimo após anuário da violência na Bahia |
+| 7 | 546570 | Mundo | 23/07/2026 | EUA preparam anúncio sobre novas tarifas nesta quinta (23) |
+| 8 | 546638 | Política | 23/07/2026 | Michelle perdoa Flávio Bolsonaro e propõe diálogo após crise |
+| 9 | 546767 | Política | 24/07/2026 | Delliana Ricelli quer renovar perfil do Senado |
+| 10 | 546815 | Política | 24/07/2026 | Bolsonaro recorre contra proibição de visitas durante prisão domiciliar |
+| 11 | 546845 | Bahia | 25/07/2026 | Homem flagrado se masturbando em academia de condomínio é preso |
+| 12 | 546860 | Mundo | 25/07/2026 | Governo Trump planeja enviar missão ao Brasil para questionar eleições |
+| 13 | 547274 | Política | 28/07/2026 | Condenado, Binho Galinha tenta reeleição pelo Avante |
+
+Para abrir direto: `https://bahia.ba/wp-admin/post.php?post=ID&action=edit`, trocando `ID`
+pelo número da tabela.
+
+### Urgência
+
+Baixa. São treze matérias de julho de 2026, já fora do fluxo de leitura. A correção pode
+ser feita a qualquer momento, inclusive depois da virada — o efeito aparece assim que o
+campo ficar vazio. Está aqui para não se perder.
+
+---
+
 ## Resumo
 
 | # | Pendência | Tipo de decisão | Urgência |
@@ -231,6 +296,7 @@ já está registrado no documento de handover.
 | 4 | Logotipo branco vetorial | Solicitar arquivo ao designer | Baixa (acabamento) |
 | 5 | Limite de 70/160 caracteres | Nenhuma — só conferir após atualizar o tema | Informativa |
 | 6 | Anúncio novo demora 3h para aparecer | **Operacional** — deixar a data de início em branco | Média (perda de exibição paga) |
+| 7 | 13 descrições cortadas no meio | **Operacional, na PRODUÇÃO** — apagar o campo de descrição do Yoast nas 13 | Baixa |
 
 ---
 
