@@ -38,11 +38,45 @@ function bahia_home_destaques_all_post_types() {
 }
 
 /**
- * IDs escolhidos manualmente: hero (options_slider_m1) + laterais
- * (options_semi_destaques_m1), deduplicados, apenas publicados, no máximo 4
- * (POST_LIMIT do td_block_big_grid_flex_5).
+ * Qual bloco de destaque a home usa hoje, e quantos posts ele aceita.
+ *
+ * NÃO fixar o nome do bloco. A versão anterior procurava `td_block_big_grid_flex_5`
+ * porque era o bloco da home de então; a home foi reconstruída, passou a usar
+ * `td_block_big_grid_flex_2`, e o filtro deixou de casar — **em silêncio**. O resultado
+ * foi o hero voltar ao automático por data: matéria publicada ia direto para o destaque
+ * principal, passando por cima da escolha do editor.
+ *
+ * Por isso a busca agora é pelo PRIMEIRO `td_block_big_grid_flex_<n>` do conteúdo, seja
+ * qual for o número, e o limite sai do POST_LIMIT da própria classe do bloco.
+ *
+ * @return array|null  [nome, limite] ou null se a home não tiver bloco de destaque.
  */
-function bahia_home_destaques_ids() {
+function bahia_home_destaques_bloco($content) {
+    if (!preg_match('/\[(td_block_big_grid_flex_\d+)\b/', $content, $m)) {
+        return null;
+    }
+
+    $classe = $m[1];
+    $limite = 5;
+
+    // O POST_LIMIT é a fonte da verdade: flex_2 aceita 5, flex_5 aceitava 4.
+    if (class_exists($classe) && defined($classe . '::POST_LIMIT')) {
+        $limite = (int) constant($classe . '::POST_LIMIT');
+    }
+
+    return array($classe, max(1, $limite));
+}
+
+/**
+ * IDs escolhidos manualmente: hero (options_slider_m1) + laterais
+ * (options_semi_destaques_m1), deduplicados, apenas publicados.
+ *
+ * São 1 + 4 = 5 na Options page, que é exatamente o POST_LIMIT do bloco em uso —
+ * a seleção do editor preenche o destaque inteiro, sem sobra nem falta.
+ *
+ * @param int $limite Quantos o bloco aceita.
+ */
+function bahia_home_destaques_ids($limite = 5) {
     $ids = array();
 
     $hero = get_option('options_slider_m1');
@@ -58,10 +92,10 @@ function bahia_home_destaques_ids() {
     // dedup preservando ordem + remove zeros
     $ids = array_values(array_unique(array_filter($ids)));
 
-    // só publicados, no máximo 4
+    // só publicados, até o limite do bloco
     $out = array();
     foreach ($ids as $id) {
-        if (count($out) >= 4) {
+        if (count($out) >= $limite) {
             break;
         }
         if (get_post_status($id) === 'publish') {
@@ -85,11 +119,16 @@ function bahia_home_destaques_content($content) {
     if (!is_front_page() && !is_home()) {
         return $content;
     }
-    if (strpos($content, 'td_block_big_grid_flex_5') === false) {
-        return $content;
-    }
 
-    $ids = bahia_home_destaques_ids();
+    $bloco = bahia_home_destaques_bloco($content);
+    if ($bloco === null) {
+        // Antes isto era um `return` mudo, e foi assim que a quebra passou despercebida.
+        // O comentário só sai no caso anômalo, e aparece em "ver código-fonte".
+        return $content . "\n<!-- bahia-home-destaques: nenhum td_block_big_grid_flex_* na home; destaque manual NAO aplicado -->\n";
+    }
+    list($classe, $limite) = $bloco;
+
+    $ids = bahia_home_destaques_ids($limite);
     if (empty($ids)) {
         return $content; // sem seleção manual -> mantém comportamento automático
     }
@@ -99,7 +138,7 @@ function bahia_home_destaques_content($content) {
     $post_types = bahia_home_destaques_all_post_types();
 
     $content = preg_replace_callback(
-        '/\[td_block_big_grid_flex_5\b[^\]]*\]/',
+        '/\[' . preg_quote($classe, '/') . '\b[^\]]*\]/',
         function ($m) use ($post_ids, $post_types) {
             $sc = $m[0];
 
