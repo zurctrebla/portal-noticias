@@ -9,7 +9,7 @@
  *                3. Fundo branco no lugar da textura de mosaico e barra de menu
  *                   estendida até as bordas da tela.
  *
- *              As faixas da logo são rows do template 547414 marcadas por el_class
+ *              As faixas da logo são rows do template 9000124 marcadas por el_class
  *              (.bahia-logo-faixa e .bahia-logo-sticky). A âncora é a CLASSE, nunca o
  *              id .tdi_NN: o tagDiv renumera esses ids a cada salvamento de template e
  *              qualquer CSS preso a eles quebra em silêncio.

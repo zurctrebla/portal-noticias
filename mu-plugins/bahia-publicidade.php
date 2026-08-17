@@ -73,7 +73,7 @@ function bahia_pub_contexto_municipios() {
 /**
  * Grupo do leaderboard do topo, conforme o contexto — o que o legado fazia no header.php.
  *
- * `is_front_page()` e não `is_home()`: aqui a home é uma PÁGINA estática (547432), então
+ * `is_front_page()` e não `is_home()`: aqui a home é uma PÁGINA estática (9000142), então
  * `is_home()` é falso nela. No legado a home era o índice de posts e `is_home()` servia.
  */
 function bahia_pub_grupo_topo() {

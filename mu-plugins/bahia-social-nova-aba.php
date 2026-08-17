@@ -17,12 +17,12 @@
  * Ou seja: não é uma regressão dos dois, são dois defeitos diferentes. O rodapé foi
  * corrigido de fato (o `target` está lá) mas nunca ganhou o `rel`. O cabeçalho não foi
  * corrigido no template que renderiza — é o padrão que o AUDITORIA-templates.md descreve:
- * o header VIVO é o tdb_template 547414, e os "Default PRO" (entre eles o header 547301)
- * são código morto. Uma correção feita no 547301 não aparece em lugar nenhum. Mesma
+ * o header VIVO é o tdb_template 9000124, e os "Default PRO" (entre eles o header 9000011)
+ * são código morto. Uma correção feita no 9000011 não aparece em lugar nenhum. Mesma
  * armadilha do Pinterest.
  *
  * A opção "abrir em nova aba" do bloco social do tagDiv é um atributo salvo DENTRO do
- * tdb_template, no banco. Corrigir por lá significaria (a) editar o 547414 pelo painel,
+ * tdb_template, no banco. Corrigir por lá significaria (a) editar o 9000124 pelo painel,
  * o que faz o tagDiv RENUMERAR os `.tdi_NN` e pode derrubar CSS ancorado neles, e
  * (b) somar mais uma alteração de banco ao inventário de migração para produção. Uma
  * reescrita no HTML de saída viaja no git, vale para cabeçalho e rodapé de uma vez, e

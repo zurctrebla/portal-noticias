@@ -1,15 +1,15 @@
 <?php
 /**
  * Plugin Name: Bahia.ba - Logo branca do rodapé por filtro CSS
- * Description: O rodapé passa a usar a logo COLORIDA (anexo 547365, 1151x229) renderizada
+ * Description: O rodapé passa a usar a logo COLORIDA (anexo 9000075, 1151x229) renderizada
  *              em branco chapado por `filter: brightness(0) invert(1)`, no lugar da versão
- *              branca derivada por luminância (anexo 547458, 741x166).
+ *              branca derivada por luminância (anexo 9000168, 741x166).
  *
  * ---------------------------------------------------------------------------
  * POR QUE
  *
- * A 547458 tem exatamente a largura em que é exibida — 741px para 741px de caixa. Zero
- * folga: em tela retina (2x) o navegador amplia e a marca perde nitidez. A 547365 tem
+ * A 9000168 tem exatamente a largura em que é exibida — 741px para 741px de caixa. Zero
+ * folga: em tela retina (2x) o navegador amplia e a marca perde nitidez. A 9000075 tem
  * 1151px, 55% a mais, e cobre o 2x com sobra. E não exige asset novo: as duas imagens
  * enviadas para esta rodada não serviam (ambas eram canvas 1080x1350 de post de rede
  * social, com placa retangular opaca atrás da marca — uma delas, inclusive, uma placa
@@ -23,8 +23,8 @@
  * As duas imagens têm o MESMO wordmark, em proporções praticamente iguais — o que muda é
  * a moldura:
  *
- *     547458   canvas 741x166   wordmark 717x142   margem de 12px embutida nos 4 lados
- *     547365   canvas 1151x229  wordmark 1151x229  sem margem, sangra até a borda
+ *     9000168   canvas 741x166   wordmark 717x142   margem de 12px embutida nos 4 lados
+ *     9000075   canvas 1151x229  wordmark 1151x229  sem margem, sangra até a borda
  *
  * Razão do wordmark: 5,049 contra 5,026 — 0,5%, imperceptível.
  *
@@ -46,17 +46,17 @@
  * ---------------------------------------------------------------------------
  * RISCO ACEITO, REGISTRADO EM CÓDIGO
  *
- * O rodapé passa a depender da logo colorida. Se alguém trocar o anexo 547365 — que é a
+ * O rodapé passa a depender da logo colorida. Se alguém trocar o anexo 9000075 — que é a
  * logo do CABEÇALHO —, o rodapé muda junto. O risco foi avaliado e aceito: é pequeno e
  * fica visível na hora, porque as duas aparecem na mesma página.
  *
- * Se a 547365 sumir, este filtro não faz nada e o rodapé continua com a 547458. Não há
+ * Se a 9000075 sumir, este filtro não faz nada e o rodapé continua com a 9000168. Não há
  * estado quebrado possível.
  *
  * ---------------------------------------------------------------------------
  * POR QUE NO HTML DE SAÍDA E NÃO NO BANCO
  *
- * A logo do rodapé é um atributo salvo dentro do tdb_template 547416. Editá-lo pelo painel
+ * A logo do rodapé é um atributo salvo dentro do tdb_template 9000126. Editá-lo pelo painel
  * faz o tagDiv RENUMERAR os `.tdi_NN` (a rodada 5 já pagou esse preço) e somaria mais uma
  * alteração ao inventário de migração para produção. Assim a mudança viaja no git.
  *
@@ -69,13 +69,19 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/** Logo branca derivada por luminância, hoje no rodapé — o que sai. */
+/**
+ * Logo branca derivada por luminância, hoje no rodapé — o que sai.
+ * ID renumerado em 16/08/2026, de 547458. Ver scratchpad/RENUMERACAO-homolog.md.
+ */
 if (!defined('BAHIA_LOGO_RODAPE_ATUAL')) {
-    define('BAHIA_LOGO_RODAPE_ATUAL', 547458);
+    define('BAHIA_LOGO_RODAPE_ATUAL', 9000168);
 }
-/** Logo colorida oficial — o que entra, invertida por CSS. */
+/**
+ * Logo colorida oficial — o que entra, invertida por CSS.
+ * ID renumerado em 16/08/2026, de 547365.
+ */
 if (!defined('BAHIA_LOGO_RODAPE_NOVA')) {
-    define('BAHIA_LOGO_RODAPE_NOVA', 547365);
+    define('BAHIA_LOGO_RODAPE_NOVA', 9000075);
 }
 /**
  * Proporção que a marca ocupava dentro da caixa com a imagem antiga: 717/741.
@@ -88,7 +94,7 @@ if (!defined('BAHIA_LOGO_RODAPE_ESCALA')) {
 /**
  * Troca a origem da imagem e marca a tag para o filtro CSS.
  *
- * Localiza a logo pela URL do anexo 547458 — e não por posição no documento nem por um
+ * Localiza a logo pela URL do anexo 9000168 — e não por posição no documento nem por um
  * `.tdi_NN`. É o critério mais estável disponível: se um dia o rodapé deixar de usar essa
  * imagem, o filtro simplesmente para de casar, em vez de mexer na tag errada.
  *

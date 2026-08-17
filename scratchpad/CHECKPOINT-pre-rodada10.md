@@ -5,6 +5,13 @@
 mudança não for aprovada, este documento devolve o site exatamente ao estado validado ao
 fim da rodada 9.
 
+> **Renumeração de IDs — 16/08/2026.** Os registros nascidos em homolog (templates, páginas,
+> anexos e itens de menu) foram movidos para a faixa **9.000.001+** pela fórmula
+> `novo = 9.000.000 + (antigo − 547.290)`, para não colidirem com os IDs que produção passou a
+> usar desde o retrato de 28/07. **Os IDs neste documento já estão atualizados.** O mapa
+> completo antigo→novo está na tabela `wp_bahia_renum_map` (117 linhas), que **não deve ser
+> apagada**. Plano e registro da operação em `RENUMERACAO-homolog.md`.
+
 > **Leia a seção 1 antes de executar qualquer coisa.** São três peças e **nenhuma sozinha
 > restaura o site**. Restaurar só o código deixa o banco com o layout novo; restaurar só o
 > banco deixa o código novo no ar.
@@ -74,8 +81,8 @@ com `md5` e `meta_id` de cada linha, e serve para conferência ou restauração 
 **O que está dentro:**
 
 - **6 posts**, com `post_content` **e todas as 48 linhas de `postmeta`**:
-  - `547432` home · `547414` cabeçalho · `547416` rodapé
-  - `547422` autor · `547428` busca · `547430` 404
+  - `9000142` home · `9000124` cabeçalho · `9000126` rodapé
+  - `9000132` autor · `9000138` busca · `9000140` 404
   - (são exatamente os **5 templates vivos** da `AUDITORIA-templates.md` + a home)
 - **78 chaves de `wp_options`** + `td_011` à parte: `td_011_settings`, `td_011_generated_css`,
   `wpseo_titles`, `wpseo`, `wpseo_social`, `theme_mods_Newspaper`, `sidebars_widgets`,
@@ -84,7 +91,7 @@ com `md5` e `meta_id` de cada linha, e serve para conferência ou restauração 
 - **Informativo** (não entra no SQL): os 3 menus com seus itens, e as tabelas do AdRotate
   (`adrotate` 153, `groups` 18, `linkmeta` 711, `schedule` 1359).
 
-**O cabeçalho `547414` é `base64(JSON)`** com seis zonas — inclusive a **mobile**, que era o
+**O cabeçalho `9000124` é `base64(JSON)`** com seis zonas — inclusive a **mobile**, que era o
 ponto de atenção do briefing. Restaurar o `post_content` restaura as seis de uma vez:
 
 | zona | bytes |
@@ -102,12 +109,12 @@ Depois de restaurar, **estes valores têm que bater**:
 
 | objeto | md5 | bytes |
 |--------|-----|-------|
-| post 547432 (home) | `7b93a5105a221fabbacbd333cffd9ff5` | 31.765 |
-| post 547414 (cabeçalho) | `a8a73d321a2040e365975f417d23130a` | 34.096 |
-| post 547416 (rodapé) | `1b2a8aeb6b5f4534cbb67f99a03863c9` | 4.694 |
-| post 547422 (autor) | `240e75d570486ad548d8c2b2b58f10cb` | 4.522 |
-| post 547428 (busca) | `11a3c14175f898edf822207ff4cd42d0` | 4.018 |
-| post 547430 (404) | `f2b22a0118a6d8c113c74a444522e734` | 5.112 |
+| post 9000142 (home) | `7b93a5105a221fabbacbd333cffd9ff5` | 31.765 |
+| post 9000124 (cabeçalho) | `a8a73d321a2040e365975f417d23130a` | 34.096 |
+| post 9000126 (rodapé) | `1b2a8aeb6b5f4534cbb67f99a03863c9` | 4.694 |
+| post 9000132 (autor) | `240e75d570486ad548d8c2b2b58f10cb` | 4.522 |
+| post 9000138 (busca) | `11a3c14175f898edf822207ff4cd42d0` | 4.018 |
+| post 9000140 (404) | `f2b22a0118a6d8c113c74a444522e734` | 5.112 |
 | `td_011` | `90b6230e27bdb43ab9d29c66d0fee553` | 24.169 |
 | `wpseo_titles` | `a123b50b01ef92060348774ea1d8169c` | 54.706 |
 | `td_011_settings` | `434a2cb5f76db80ac98384bd42186d8c` | 118.562 |
@@ -206,8 +213,8 @@ kubectl exec -n bahia-wordpress $POD -c nginx -- sh -lc 'rm -rf /tmp/nginx-cache
 ```bash
 kubectl exec -n bahia-wordpress $POD -c wordpress -- php -r '
 require_once "/var/www/html/wp-load.php"; global $wpdb;
-$IDS="547432,547414,547416,547422,547428,547430";
-foreach ([547432,547414,547416,547422,547428,547430] as $id)
+$IDS="9000142,9000124,9000126,9000132,9000138,9000140";
+foreach ([9000142,9000124,9000126,9000132,9000138,9000140] as $id)
   printf("%d %s\n",$id,$wpdb->get_var($wpdb->prepare("SELECT MD5(post_content) FROM {$wpdb->posts} WHERE ID=%d",$id)));
 printf("td_011 %s\n",$wpdb->get_var("SELECT MD5(option_value) FROM {$wpdb->options} WHERE option_name=\"td_011\""));
 printf("postmeta %s (48)  duplicadas %s (0)\n",
@@ -243,7 +250,7 @@ valores deste checkpoint foram conferidos um a um: todos são UTF-8 válido, nen
 caractere de 4 bytes, e todos voltam byte a byte pelo mesmo caminho SQL.
 
 **3. `FROM_BASE64('')` devolve `NULL`, não string vazia.**
-Por isso valor vazio é escrito como `''` literal. E `header_mobile_menu_id` do 547414 é
+Por isso valor vazio é escrito como `''` literal. E `header_mobile_menu_id` do 9000124 é
 **`NULL` de verdade** (não vazio) — a distinção está preservada no `.json` (`eh_null`) e no
 `.sql`.
 

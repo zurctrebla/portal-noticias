@@ -204,7 +204,7 @@ function bahia_si_enqueue() {
         return;
     }
 
-    // Busca (?s=...): resultados são um bloco TagDiv tdb_loop (template 547291), agora
+    // Busca (?s=...): resultados são um bloco TagDiv tdb_loop (template 9000001), agora
     // com ajax_pagination=load_more. Mesmo tratamento da home (load more nativo), só
     // com selector e rótulo próprios. Reaproveita a query de busca do TagDiv (FULLTEXT).
     if (is_search()) {
@@ -483,7 +483,7 @@ JS;
  *  LOAD MORE nativo do TagDiv (bloco tdb_loop) — usado na HOME e na BUSCA.
  *  A paginação numérica do bloco foi trocada por ajax_pagination=load_more
  *    - Home  (page 547281):      feed principal .tdb_loop_2  -> "Ver mais notícias"
- *    - Busca (template 547291):  resultados     .tdb_loop    -> "Ver mais resultados"
+ *    - Busca (template 9000001):  resultados     .tdb_loop    -> "Ver mais resultados"
  *  Aqui só reestilizamos o botão (visual = botão do archive) e, no mobile,
  *  escondemos o botão e disparamos o clique automaticamente ao chegar perto do
  *  fim (scroll infinito). O carregamento (query + cards + imagens) é 100% do

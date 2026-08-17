@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Bahia.ba - Marca + publicidade no header
  * Description: Shortcode [bahia_header_ad] para o banner do header (AdRotate) e o
- *              CSS da linha logo + publicidade do tdb_template 547414.
+ *              CSS da linha logo + publicidade do tdb_template 9000124.
  * Version: 1.0.0
  * Author: Bahia.ba
  */

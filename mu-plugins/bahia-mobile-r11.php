@@ -40,7 +40,7 @@ function bahia_mobile_r11_css() {
    O azul não está no wrapper: está num filho .td-element-style, o mesmo
    mecanismo do desktop. É ele que muda de cor.
 
-   A LOGO NÃO É TOCADA: segue o anexo 547365, colorida, sem filtro. Sobre
+   A LOGO NÃO É TOCADA: segue o anexo 9000075, colorida, sem filtro. Sobre
    branco a leitura melhora — era azul sobre azul.
 
    OS ÍCONES PRECISAM MUDAR JUNTO: hambúrguer e lupa são brancos (fill

@@ -12,8 +12,8 @@
  *              f_date_font_transform dos blocos.
  *
  *              POR QUE CSS E NÃO EDITAR OS ATRIBUTOS NO BANCO. As regras nascem em 7
- *              lugares (Home #547432 e os templates 547418, 547420, 547422, 547424,
- *              547426, 547428) e são emitidas com seletores .tdi_NN, que o tagDiv
+ *              lugares (Home #9000142 e os templates 9000128, 9000130, 9000132, 9000134,
+ *              9000136, 9000138) e são emitidas com seletores .tdi_NN, que o tagDiv
  *              RENUMERA a cada edição de template. Corrigir no banco significaria (a)
  *              carregar mais sete alterações para a migração de produção e (b) deixar o
  *              defeito voltar no próximo salvamento de um bloco. Uma regra de CSS viaja

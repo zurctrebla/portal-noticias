@@ -4,6 +4,13 @@
 **Ambiente de trabalho:** hml.bahia.ba — mas **as posições foram conferidas em produção**
 (`bahia.ba`), lendo o HTML servido, não só o código.
 
+> **Renumeração de IDs — 16/08/2026.** Os registros nascidos em homolog (templates, páginas,
+> anexos e itens de menu) foram movidos para a faixa **9.000.001+** pela fórmula
+> `novo = 9.000.000 + (antigo − 547.290)`, para não colidirem com os IDs que produção passou a
+> usar desde o retrato de 28/07. **Os IDs neste documento já estão atualizados.** O mapa
+> completo antigo→novo está na tabela `wp_bahia_renum_map` (117 linhas), que **não deve ser
+> apagada**. Plano e registro da operação em `RENUMERACAO-homolog.md`.
+
 ---
 
 ## 0. Resumo em uma tela
@@ -179,8 +186,8 @@ antigo havia conteúdo entre os dois. Não é defeito — é consequência de a 
 No tema antigo, a página de resultados de busca (`search-web.php`) e a de autor
 (`sidebar-levi.php:118` e `:184`) usavam a mesma coluna lateral, com os grupos 8 e 9.
 
-No tema novo essas três páginas são renderizadas por modelos do Cloud Library (547428,
-547422 e 547430) que **não têm coluna lateral nenhuma** — não é que o anúncio não foi
+No tema novo essas três páginas são renderizadas por modelos do Cloud Library (9000138,
+9000132 e 9000140) que **não têm coluna lateral nenhuma** — não é que o anúncio não foi
 colocado, é que não existe onde colocar.
 
 **Não foi improvisada uma posição.** Criar uma coluna lateral nesses três modelos é mudança
@@ -245,7 +252,7 @@ Dois detalhes que valem para quem for mexer depois:
   âncora. O post individual e as páginas passam por `get_sidebar()` → `tdc_sidebar`; o
   archive de editoria chama `dynamic_sidebar('td-default')` direto, no PHP do tema. Há uma
   trava que impede render duplo caso um dia os dois se cruzem.
-- **`is_front_page()`, não `is_home()`.** Aqui a home é uma página estática (547432), então
+- **`is_front_page()`, não `is_home()`.** Aqui a home é uma página estática (9000142), então
   `is_home()` é falso nela — o teste do tema antigo não funcionaria copiado ao pé da letra.
 
 ---

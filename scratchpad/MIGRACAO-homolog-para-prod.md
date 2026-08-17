@@ -4,6 +4,13 @@
 **Origem:** hml.bahia.ba (cluster `bahia-eks-homolog`, RDS de homolog)
 **Destino:** bahia.ba (cluster de produção, **RDS separado**)
 
+> **Renumeração de IDs — 16/08/2026.** Os registros nascidos em homolog (templates, páginas,
+> anexos e itens de menu) foram movidos para a faixa **9.000.001+** pela fórmula
+> `novo = 9.000.000 + (antigo − 547.290)`, para não colidirem com os IDs que produção passou a
+> usar desde o retrato de 28/07. **Os IDs neste documento já estão atualizados.** O mapa
+> completo antigo→novo está na tabela `wp_bahia_renum_map` (117 linhas), que **não deve ser
+> apagada**. Plano e registro da operação em `RENUMERACAO-homolog.md`.
+
 ## Por que este documento existe
 
 Quatro rodadas de ajuste (2 a 5) mexeram em duas camadas diferentes:
@@ -39,21 +46,21 @@ registrada na seção 5.
 
 | ID | Título | Renderiza? | Modificado |
 |----|--------|-----------|-----------|
-| **547414** | Header Template - Magazine PRO | **Sim** — cabeçalho de todo o site | 10/08 17:06 |
-| **547416** | Footer - Magazine PRO | **Sim** — rodapé de todo o site | 10/08 16:07 |
-| **547430** | 404 Template - Magazine PRO | **Sim** — página de erro | 11/08 10:10 |
-| **547422** | Author Template - Magazine PRO | **Sim** — /author/&lt;slug&gt;/ | 05/08 16:01 |
-| 547428 | Search Template - Magazine PRO | Sim — /?s= | 05/08 16:01 |
-| 547418 | Category Template - Magazine PRO | Não (archives usam PHP do tema) | 05/08 16:01 |
-| 547420 | Single Post Template - Magazine PRO | Não (single usa PHP do plugin) | 05/08 16:01 |
-| 547424 | Tag Template - Magazine PRO | Não (URLs de tag dão 404 — ver 6.3) | 05/08 16:01 |
-| 547426 | Date Template - Magazine PRO | Não (URLs de data dão 404) | 05/08 16:01 |
-| 547291 | Search Template - Default PRO | **Código morto** | 05/08 11:20 |
-| 547297 | Single Post Template - Default PRO | **Código morto** | 05/08 11:20 |
-| 547299 | Footer Template - Default PRO | **Código morto** | 05/08 11:20 |
-| 547301 | Header Template - Default PRO | **Código morto** | 05/08 11:20 |
+| **9000124** | Header Template - Magazine PRO | **Sim** — cabeçalho de todo o site | 10/08 17:06 |
+| **9000126** | Footer - Magazine PRO | **Sim** — rodapé de todo o site | 10/08 16:07 |
+| **9000140** | 404 Template - Magazine PRO | **Sim** — página de erro | 11/08 10:10 |
+| **9000132** | Author Template - Magazine PRO | **Sim** — /author/&lt;slug&gt;/ | 05/08 16:01 |
+| 9000138 | Search Template - Magazine PRO | Sim — /?s= | 05/08 16:01 |
+| 9000128 | Category Template - Magazine PRO | Não (archives usam PHP do tema) | 05/08 16:01 |
+| 9000130 | Single Post Template - Magazine PRO | Não (single usa PHP do plugin) | 05/08 16:01 |
+| 9000134 | Tag Template - Magazine PRO | Não (URLs de tag dão 404 — ver 6.3) | 05/08 16:01 |
+| 9000136 | Date Template - Magazine PRO | Não (URLs de data dão 404) | 05/08 16:01 |
+| 9000001 | Search Template - Default PRO | **Código morto** | 05/08 11:20 |
+| 9000007 | Single Post Template - Default PRO | **Código morto** | 05/08 11:20 |
+| 9000009 | Footer Template - Default PRO | **Código morto** | 05/08 11:20 |
+| 9000011 | Header Template - Default PRO | **Código morto** | 05/08 11:20 |
 
-O header **547414** tem `postmeta` que precisa acompanhar o post:
+O header **9000124** tem `postmeta` que precisa acompanhar o post:
 `tdb_template_type`, `tdc_header_template_id`, `tdc_google_fonts_settings`, `tdc_icon_fonts`,
 `header_mobile_menu_id` (hoje **vazio**). O conteúdo tem 34.096 bytes.
 
@@ -61,8 +68,8 @@ O header **547414** tem `postmeta` que precisa acompanhar o post:
 
 | ID | O que é | Observação |
 |----|---------|-----------|
-| **547432** | Home | É a *front page* (`page_on_front = 547432`, `show_on_front = page`). Todo o layout da home é o `post_content` desta página. |
-| **547369** | Quem Somos | `/quem-somos/`. Contém a equipe, com fotos por ID de anexo. |
+| **9000142** | Home | É a *front page* (`page_on_front = 9000142`, `show_on_front = page`). Todo o layout da home é o `post_content` desta página. |
+| **9000079** | Quem Somos | `/quem-somos/`. Contém a equipe, com fotos por ID de anexo. |
 | **477** | Últimas Notícias | `/ultimas-noticias/`. Um único shortcode `[td_flex_block_1 ...]` com `installed_post_types`. |
 
 ### 1.3 Opções (`wp_options`)
@@ -71,7 +78,7 @@ O header **547414** tem `postmeta` que precisa acompanhar o post:
 |-------|---------------|--------|
 | **`td_011`** | Opções do tema Newspaper. **Crítica** — ver 1.3.1 | Sim, mas por chave, nunca inteira |
 | **`wpseo_titles`** | Títulos e meta descrições do Yoast por tipo de conteúdo | Sim |
-| `page_on_front`, `show_on_front` | Apontam a home para 547432 | Sim (ajustar ao ID de destino) |
+| `page_on_front`, `show_on_front` | Apontam a home para 9000142 | Sim (ajustar ao ID de destino) |
 | `bahia_editorias_cpt_flushed` | Controle de flush do mu-plugin | **Não** — deixar o destino gerar |
 | `bahia_logo_snapshot` | URLs do logo usadas pelo mu-plugin | Conferir; URLs de CDN são iguais nos dois ambientes |
 | `bahia_*_backup_*` | Backups das rodadas | **Não migrar** |
@@ -85,15 +92,15 @@ licença, versão de tema e caches de atualização.
 
 ```
 tds_data_time_format   = l, j \d\e F \d\e Y     <- data em português
-tdb_header_template    = tdb_template_547414
-tdb_footer_template    = tdb_template_547416
-tdb_404_template       = tdb_template_547430
-tdb_author_template    = tdb_template_547422
-tdb_search_template    = tdb_template_547428
-tdb_category_template  = tdb_template_547418     (aponta para template que não renderiza)
-td_default_site_post_template = tdb_template_547420  (idem)
-tdb_tag_template       = tdb_template_547424     (idem)
-tdb_date_template      = tdb_template_547426     (idem)
+tdb_header_template    = tdb_template_9000124
+tdb_footer_template    = tdb_template_9000126
+tdb_404_template       = tdb_template_9000140
+tdb_author_template    = tdb_template_9000132
+tdb_search_template    = tdb_template_9000138
+tdb_category_template  = tdb_template_9000128     (aponta para template que não renderiza)
+td_default_site_post_template = tdb_template_9000130  (idem)
+tdb_tag_template       = tdb_template_9000134     (idem)
+tdb_date_template      = tdb_template_9000136     (idem)
 tds_footer_page        = 861
 tds_logo_alt           = bahia.ba
 tds_logo_title         = bahia.ba
@@ -115,9 +122,9 @@ no carregamento. Isso viaja no git e **não** deve ser replicado no banco.
 
 | ID | Arquivo | Onde é usado |
 |----|---------|--------------|
-| 547455 | `lizandra-capistrano.png` | Quem Somos (547369) |
-| 547456 | `tauany-alves.png` | Quem Somos (547369) |
-| 547458 | `logo-bahia-ba-branco-transparente.png` | Rodapé (547416) |
+| 9000165 | `lizandra-capistrano.png` | Quem Somos (9000079) |
+| 9000166 | `tauany-alves.png` | Quem Somos (9000079) |
+| 9000168 | `logo-bahia-ba-branco-transparente.png` | Rodapé (9000126) |
 
 Os arquivos já estão no S3/CloudFront (`d1x4bjge7r9nas.cloudfront.net`), que é **compartilhado**
 entre os ambientes. O que falta em produção é o **registro** do anexo (linha em `wp_posts` +
@@ -150,24 +157,24 @@ Migram os termos, os itens (`nav_menu_item`) e o `theme_mods[nav_menu_locations]
 ### 1.7 Título da home (rodada 8) — 3 linhas de banco
 
 O `<title>` e o `og:title` da home saíam como **"Home - bahia.ba"**: o Yoast usa o título do
-post quando a home é uma página estática, e a página 547432 se chama literalmente "Home". Era
+post quando a home é uma página estática, e a página 9000142 se chama literalmente "Home". Era
 o único texto em inglês do site, na tag mais visível no Google.
 
 Passou a **"bahia.ba - A notícia que conecta você à Bahia"**, escrito com as variáveis do
 próprio Yoast, para continuar em sincronia com `blogname` e `blogdescription`:
 
 ```sql
--- 1) as duas metas da página da home (ajustar 547432 para o ID de destino)
+-- 1) as duas metas da página da home (ajustar 9000142 para o ID de destino)
 INSERT INTO wp_postmeta (post_id, meta_key, meta_value) VALUES
-  (547432, '_yoast_wpseo_title',           '%%sitename%% %%sep%% %%sitedesc%%'),
-  (547432, '_yoast_wpseo_opengraph-title', '%%sitename%% %%sep%% %%sitedesc%%');
+  (9000142, '_yoast_wpseo_title',           '%%sitename%% %%sep%% %%sitedesc%%'),
+  (9000142, '_yoast_wpseo_opengraph-title', '%%sitename%% %%sep%% %%sitedesc%%');
 
 -- 2) o Yoast serve o título a partir do CACHE dele, não do postmeta.
 --    Sem este UPDATE a mudança não aparece.
 UPDATE wp_yoast_indexable
    SET title = '%%sitename%% %%sep%% %%sitedesc%%',
        open_graph_title = '%%sitename%% %%sep%% %%sitedesc%%'
- WHERE object_id = 547432 AND object_type = 'post';
+ WHERE object_id = 9000142 AND object_type = 'post';
 ```
 
 **A armadilha aqui é a tabela `wp_yoast_indexable`.** Com apenas o `INSERT` no `wp_postmeta`,
@@ -182,11 +189,11 @@ curl -s https://SEU-HOST/ | grep -o '<title>[^<]*</title>'
 
 ```sql
 DELETE FROM wp_postmeta
- WHERE post_id = 547432
+ WHERE post_id = 9000142
    AND meta_key IN ('_yoast_wpseo_title','_yoast_wpseo_opengraph-title');
 
 UPDATE wp_yoast_indexable SET title = NULL, open_graph_title = NULL
- WHERE object_id = 547432 AND object_type = 'post';
+ WHERE object_id = 9000142 AND object_type = 'post';
 ```
 
 Confere que `blogname` = `bahia.ba` e `blogdescription` = `A notícia que conecta você à Bahia`
@@ -202,18 +209,18 @@ outra coisa. Um ID errado não gera erro: gera uma foto trocada ou um bloco vazi
 
 | ID em homolog | O que é | Onde é referenciado | Como resolver no destino |
 |---------------|---------|---------------------|--------------------------|
-| 547414 | Header | `td_011[tdb_header_template]` | Importar o post, anotar o **novo** ID, reescrever a chave |
-| 547416 | Rodapé | `td_011[tdb_footer_template]` | Idem |
-| 547430 | 404 | `td_011[tdb_404_template]` | Idem |
-| 547422 | Autor | `td_011[tdb_author_template]` | Idem |
-| 547428 | Busca | `td_011[tdb_search_template]` | Idem |
-| 547418 / 547420 / 547424 / 547426 | Templates que não renderizam | chaves `td_011` correspondentes | Idem, ou decidir não migrar (seção 5) |
-| 547432 | Home | `page_on_front` | Importar, anotar novo ID, atualizar `page_on_front` |
-| 547369 | Quem Somos | Menus 78521/78522 | Importar, corrigir o item de menu |
+| 9000124 | Header | `td_011[tdb_header_template]` | Importar o post, anotar o **novo** ID, reescrever a chave |
+| 9000126 | Rodapé | `td_011[tdb_footer_template]` | Idem |
+| 9000140 | 404 | `td_011[tdb_404_template]` | Idem |
+| 9000132 | Autor | `td_011[tdb_author_template]` | Idem |
+| 9000138 | Busca | `td_011[tdb_search_template]` | Idem |
+| 9000128 / 9000130 / 9000134 / 9000136 | Templates que não renderizam | chaves `td_011` correspondentes | Idem, ou decidir não migrar (seção 5) |
+| 9000142 | Home | `page_on_front` | Importar, anotar novo ID, atualizar `page_on_front` |
+| 9000079 | Quem Somos | Menus 78521/78522 | Importar, corrigir o item de menu |
 | 477 | Últimas Notícias | Menu 78521; `mu-plugins/bahia-scroll-infinito.php` usa **`is_page('ultimas-noticias')`** | **Nada a fazer** — o código usa o *slug*, não o ID |
 | 861 | `td_011[tds_footer_page]` | Opção do tema | **Verificar antes**: confirmar o que é esse ID em produção |
-| 547455 / 547456 | Fotos da equipe | `post_content` de 547369 | Importar anexo, substituir o ID no conteúdo |
-| 547458 | Logo branca do rodapé | `post_content` de 547416 | Importar anexo, substituir o ID no conteúdo |
+| 9000165 / 9000166 | Fotos da equipe | `post_content` de 9000079 | Importar anexo, substituir o ID no conteúdo |
+| 9000168 | Logo branca do rodapé | `post_content` de 9000126 | Importar anexo, substituir o ID no conteúdo |
 | 78521 / 78522 / 78523 | Menus | `theme_mods[nav_menu_locations]` | Recriar/importar, religar os locais |
 | 1777 / 1782 | EC Bahia / EC Vitória | `mu-plugins/bahia-futebol-display.php` | **Verificar**: são IDs de time da API, não do WordPress — conferir se o mu-plugin os trata como constantes |
 
@@ -280,12 +287,12 @@ divergir do esperado, parar e reavaliar.
    ```sql
    SELECT ID, post_type, post_title, post_status FROM wp_posts WHERE ID=861;
    ```
-4. **Os IDs 547414/547416/547430/547422/547428/547432/547369/547455/547456/547458 já existem
+4. **Os IDs 9000124/9000126/9000140/9000132/9000138/9000142/9000079/9000165/9000166/9000168 já existem
    em produção?** Se existirem, são outra coisa — confirma que a resolução por slug é
    obrigatória.
    ```sql
    SELECT ID, post_type, post_title FROM wp_posts
-    WHERE ID IN (477,861,547369,547414,547416,547418,547420,547422,547424,547426,547428,547430,547432,547455,547456,547458);
+    WHERE ID IN (477,861,9000079,9000124,9000126,9000128,9000130,9000132,9000134,9000136,9000138,9000140,9000142,9000165,9000166,9000168);
    ```
 5. **Valor atual de `td_011` em produção** — salvar em uma opção de backup antes de tocar:
    ```sql
@@ -323,10 +330,10 @@ Cada etapa é reversível sozinha. Não avançar sem conferir a anterior.
 | 0 | Snapshot do RDS de produção | — |
 | 1 | Colocar o site em manutenção (ou usar a janela de DNS da seção 7) | Remover a manutenção |
 | 2 | Salvar `td_011` e `wpseo_titles` atuais em opções de backup (`prod_td011_backup_<data>`) | — |
-| 3 | Importar os **3 anexos** (547455, 547456, 547458). Anotar os novos IDs | Excluir os anexos criados |
-| 4 | Importar os **templates que renderizam**: 547414, 547416, 547430, 547422, 547428. Anotar novos IDs | Excluir os posts criados; `td_011` ainda não aponta para eles |
-| 5 | Substituir, no conteúdo de 547416, o ID 547458 pelo novo (decodificando base64 se necessário) | Restaurar o `post_content` do backup da etapa 4 |
-| 6 | Importar **Home** e **Quem Somos**; trocar 547455/547456 pelos novos IDs no conteúdo de Quem Somos | Excluir os posts criados |
+| 3 | Importar os **3 anexos** (9000165, 9000166, 9000168). Anotar os novos IDs | Excluir os anexos criados |
+| 4 | Importar os **templates que renderizam**: 9000124, 9000126, 9000140, 9000132, 9000138. Anotar novos IDs | Excluir os posts criados; `td_011` ainda não aponta para eles |
+| 5 | Substituir, no conteúdo de 9000126, o ID 9000168 pelo novo (decodificando base64 se necessário) | Restaurar o `post_content` do backup da etapa 4 |
+| 6 | Importar **Home** e **Quem Somos**; trocar 9000165/9000166 pelos novos IDs no conteúdo de Quem Somos | Excluir os posts criados |
 | 7 | Importar/ajustar os **menus** e religar `nav_menu_locations` | Restaurar `theme_mods` |
 | 8 | **Só agora** reescrever as chaves de `td_011` (seção 1.3.1) com os novos IDs | Restaurar a opção do backup da etapa 2 |
 | 9 | Apontar `page_on_front` para o novo ID da Home | Restaurar o valor anterior |

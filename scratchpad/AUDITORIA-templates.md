@@ -5,6 +5,13 @@
 um cabeçalho HTTP, requisição por requisição. Não é dedução a partir do nome do template:
 é o arquivo que o WordPress de fato incluiu.
 
+> **Renumeração de IDs — 16/08/2026.** Os registros nascidos em homolog (templates, páginas,
+> anexos e itens de menu) foram movidos para a faixa **9.000.001+** pela fórmula
+> `novo = 9.000.000 + (antigo − 547.290)`, para não colidirem com os IDs que produção passou a
+> usar desde o retrato de 28/07. **Os IDs neste documento já estão atualizados.** O mapa
+> completo antigo→novo está na tabela `wp_bahia_renum_map` (117 linhas), que **não deve ser
+> apagada**. Plano e registro da operação em `RENUMERACAO-homolog.md`.
+
 ## Por que esta auditoria existe
 
 Três briefings seguidos apontaram "template que não renderiza", e uma dessas vezes custou
@@ -25,15 +32,15 @@ editar qualquer coisa, consulte a tabela abaixo.
 
 | Contexto | URL testada | Arquivo que renderizou | Fonte |
 |----------|-------------|------------------------|-------|
-| **Home** | `/` | `plugins/td-composer/legacy/Newspaper/page.php` | PHP do plugin — o layout vem do `post_content` da página **547432** |
+| **Home** | `/` | `plugins/td-composer/legacy/Newspaper/page.php` | PHP do plugin — o layout vem do `post_content` da página **9000142** |
 | **Archive de editoria** | `/politica/` | `themes/Newspaper/archive.php` | **PHP do TEMA** (usa `loop-archive.php`) |
 | **Post individual** | `/politica/<slug>/` | `plugins/td-composer/legacy/Newspaper/single.php` | PHP do plugin |
 | **Página comum** | `/quem-somos/`, `/ultimas-noticias/` | `plugins/td-composer/legacy/Newspaper/page.php` | PHP do plugin |
-| **Autor** | `/author/neison-cerqueira/` | `plugins/td-cloud-library/wp_templates/tdb_view_author.php` | **tdb_template 547422** |
-| **Busca** | `/?s=bahia` | `plugins/td-cloud-library/wp_templates/tdb_view_search.php` | **tdb_template 547428** |
-| **404** | `/nao-existe-abc/` | `plugins/td-cloud-library/wp_templates/tdb_view_404.php` | **tdb_template 547430** |
-| **Cabeçalho** | (todas) | bloco do Cloud Library | **tdb_template 547414** |
-| **Rodapé** | (todas) | bloco do Cloud Library | **tdb_template 547416** |
+| **Autor** | `/author/neison-cerqueira/` | `plugins/td-cloud-library/wp_templates/tdb_view_author.php` | **tdb_template 9000132** |
+| **Busca** | `/?s=bahia` | `plugins/td-cloud-library/wp_templates/tdb_view_search.php` | **tdb_template 9000138** |
+| **404** | `/nao-existe-abc/` | `plugins/td-cloud-library/wp_templates/tdb_view_404.php` | **tdb_template 9000140** |
+| **Cabeçalho** | (todas) | bloco do Cloud Library | **tdb_template 9000124** |
+| **Rodapé** | (todas) | bloco do Cloud Library | **tdb_template 9000126** |
 | **Taxonomia (categoria)** | `/categoria/dia-a-dia/` | `tdb_view_404.php` — **é 404** | ver 3.1 |
 | **Taxonomia (tag)** | `/tag/pmdb/` | `tdb_view_404.php` — **é 404** | ver 3.1 |
 | **Arquivo por data** | `/2026/07/` | `tdb_view_404.php` — **é 404** | ver 3.2 |
@@ -51,27 +58,27 @@ Treze templates publicados. **Cinco renderizam. Oito são código morto.**
 
 | ID | Título | Apontado por | Renderiza? | Veredito |
 |----|--------|--------------|-----------|----------|
-| 547414 | Header Template - Magazine PRO | `td_011[tdb_header_template]` | **Sim** | **VIVO** |
-| 547416 | Footer - Magazine PRO | `td_011[tdb_footer_template]` | **Sim** | **VIVO** |
-| 547422 | Author Template - Magazine PRO | `td_011[tdb_author_template]` | **Sim** | **VIVO** |
-| 547428 | Search Template - Magazine PRO | `td_011[tdb_search_template]` | **Sim** | **VIVO** |
-| 547430 | 404 Template - Magazine PRO | `td_011[tdb_404_template]` | **Sim** | **VIVO** |
-| 547418 | Category Template - Magazine PRO | `td_011[tdb_category_template]` | Não | **MORTO** — archive vem do tema |
-| 547420 | Single Post Template - Magazine PRO | `td_011[td_default_site_post_template]` | Não | **MORTO** — single vem do plugin |
-| 547424 | Tag Template - Magazine PRO | `td_011[tdb_tag_template]` | Não | **MORTO** — URL de tag é 404 |
-| 547426 | Date Template - Magazine PRO | `td_011[tdb_date_template]` | Não | **MORTO** — URL de data é 404 |
-| 547291 | Search Template - Default PRO | ninguém | Não | **MORTO** — sobra do demo Default PRO |
-| 547297 | Single Post Template - Default PRO | ninguém | Não | **MORTO** — idem |
-| 547299 | Footer Template - Default PRO | ninguém | Não | **MORTO** — confirmado em rodada anterior |
-| 547301 | Header Template - Default PRO | ninguém | Não | **MORTO** — confirmado em rodada anterior |
+| 9000124 | Header Template - Magazine PRO | `td_011[tdb_header_template]` | **Sim** | **VIVO** |
+| 9000126 | Footer - Magazine PRO | `td_011[tdb_footer_template]` | **Sim** | **VIVO** |
+| 9000132 | Author Template - Magazine PRO | `td_011[tdb_author_template]` | **Sim** | **VIVO** |
+| 9000138 | Search Template - Magazine PRO | `td_011[tdb_search_template]` | **Sim** | **VIVO** |
+| 9000140 | 404 Template - Magazine PRO | `td_011[tdb_404_template]` | **Sim** | **VIVO** |
+| 9000128 | Category Template - Magazine PRO | `td_011[tdb_category_template]` | Não | **MORTO** — archive vem do tema |
+| 9000130 | Single Post Template - Magazine PRO | `td_011[td_default_site_post_template]` | Não | **MORTO** — single vem do plugin |
+| 9000134 | Tag Template - Magazine PRO | `td_011[tdb_tag_template]` | Não | **MORTO** — URL de tag é 404 |
+| 9000136 | Date Template - Magazine PRO | `td_011[tdb_date_template]` | Não | **MORTO** — URL de data é 404 |
+| 9000001 | Search Template - Default PRO | ninguém | Não | **MORTO** — sobra do demo Default PRO |
+| 9000007 | Single Post Template - Default PRO | ninguém | Não | **MORTO** — idem |
+| 9000009 | Footer Template - Default PRO | ninguém | Não | **MORTO** — confirmado em rodada anterior |
+| 9000011 | Header Template - Default PRO | ninguém | Não | **MORTO** — confirmado em rodada anterior |
 
-Os quatro "Default PRO" (547291/547297/547299/547301) são resto da troca de demo feita na
+Os quatro "Default PRO" (9000001/9000007/9000009/9000011) são resto da troca de demo feita na
 rodada 3, quando o site passou para o Magazine PRO. Não são referenciados por nenhuma opção.
 
-Os quatro "Magazine PRO" mortos (547418/547420/547424/547426) **estão apontados nas opções** —
+Os quatro "Magazine PRO" mortos (9000128/9000130/9000134/9000136) **estão apontados nas opções** —
 é isso que os faz parecer vivos no painel. Eles perdem para o `template_include` de
-prioridade 99 (547418, 547420) ou nunca são alcançados porque a URL não resolve
-(547424, 547426).
+prioridade 99 (9000128, 9000130) ou nunca são alcançados porque a URL não resolve
+(9000134, 9000136).
 
 ---
 
@@ -113,7 +120,7 @@ Search Console antes.
 ### 3.2 Arquivo por data não existe
 
 `/2026/07/` é 404. Os CPTs de editoria são registrados sem suporte a arquivo por data, e o
-`post` nativo praticamente não tem conteúdo. O template 547426 nunca é alcançado.
+`post` nativo praticamente não tem conteúdo. O template 9000136 nunca é alcançado.
 
 ---
 
@@ -123,23 +130,23 @@ Sugestão para uma janela futura, com backup antes. Nada aqui foi aplicado.
 
 **Fase 1 — remover o que não é referenciado por ninguém (risco baixo):**
 
-- 547291 — Search Template - Default PRO
-- 547297 — Single Post Template - Default PRO
-- 547299 — Footer Template - Default PRO
-- 547301 — Header Template - Default PRO
+- 9000001 — Search Template - Default PRO
+- 9000007 — Single Post Template - Default PRO
+- 9000009 — Footer Template - Default PRO
+- 9000011 — Header Template - Default PRO
 
 Antes de excluir, confirmar que continuam sem referência:
 
 ```sql
 SELECT option_name FROM wp_options
- WHERE option_value LIKE '%547291%' OR option_value LIKE '%547297%'
-    OR option_value LIKE '%547299%' OR option_value LIKE '%547301%';
+ WHERE option_value LIKE '%9000001%' OR option_value LIKE '%9000007%'
+    OR option_value LIKE '%9000009%' OR option_value LIKE '%9000011%';
 ```
 
 Sugestão: mover para a lixeira (`post_status = 'trash'`) em vez de excluir, e só apagar de
 vez depois de o site rodar alguns dias.
 
-**Fase 2 — decidir sobre os quatro apontados mas mortos** (547418, 547420, 547424, 547426):
+**Fase 2 — decidir sobre os quatro apontados mas mortos** (9000128, 9000130, 9000134, 9000136):
 
 Estes **não devem ser simplesmente excluídos**, porque as opções de `td_011` apontam para
 eles. Duas escolhas coerentes:
@@ -149,7 +156,7 @@ eles. Duas escolhas coerentes:
   `tdb_tag_template` e `tdb_date_template`, deixando-as vazias.
 
 A segunda é mais limpa, mas só faz sentido depois de decidido o item 3.1 — se as URLs de
-taxonomia forem consertadas, **547418 e 547424 podem voltar a ser necessários**.
+taxonomia forem consertadas, **9000128 e 9000134 podem voltar a ser necessários**.
 
 **Não migrar os mortos para produção** economiza trabalho na janela. Ver
 `MIGRACAO-homolog-para-prod.md`, seção 1.1.
