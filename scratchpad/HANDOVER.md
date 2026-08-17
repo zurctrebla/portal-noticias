@@ -3,6 +3,13 @@
 **Escrito em:** 11/08/2026, ao fim da rodada 5
 **Para:** quem for mexer neste site depois, incluindo eu mesmo daqui a três meses
 
+> **Renumeração de IDs — 16/08/2026.** Os registros nascidos em homolog (templates, páginas,
+> anexos e itens de menu) foram movidos para a faixa **9.000.001+** pela fórmula
+> `novo = 9.000.000 + (antigo − 547.290)`, para não colidirem com os IDs que produção passou a
+> usar desde o retrato de 28/07. **Os IDs neste documento já estão atualizados.** O mapa
+> completo antigo→novo está na tabela `wp_bahia_renum_map` (117 linhas), que **não deve ser
+> apagada**. Plano e registro da operação em `RENUMERACAO-homolog.md`.
+
 Isto reúne o que foi aprendido nas rodadas 2 a 5 e **não está escrito em nenhum outro lugar** —
 nem no código, nem no histórico do git. Documentos irmãos:
 
@@ -216,16 +223,16 @@ Todos em `wp_options` do banco de **homolog**, todos com `autoload = off`. Guard
 | `bahia_predemo_backup_20260805-092906` | Antes da troca para o demo Magazine PRO | 122.951 |
 | `bahia_predemo_backup_20260805-092804` | idem, primeira parte | 74.785 |
 | `bahia_predemo_backup_latest` | Ponteiro para a chave acima | 36 |
-| `bahia_header_547414_backup` | Header, antes da rodada 3 | 36.948 |
-| `bahia_header547414_backup_20260810-195048` | Header, rodada 3 | 34.608 |
-| `bahia_header547414_mobile_backup_20260810-200627` | Header, parte mobile | 2.611 |
-| `bahia_home_547432_backup_20260810-191418` | Home, último da rodada 3 | 32.530 |
-| `bahia_home_547432_backup_20260810-191206` | Home, rodada 3 | 32.531 |
-| `bahia_home_547432_backup_20260810-191025` | Home, rodada 3 | 33.478 |
-| `bahia_home547432_backup_20260810-141305` | Home, rodada 3 (início) | 33.456 |
+| `bahia_header_9000124_backup` | Header, antes da rodada 3 | 36.948 |
+| `bahia_header9000124_backup_20260810-195048` | Header, rodada 3 | 34.608 |
+| `bahia_header9000124_mobile_backup_20260810-200627` | Header, parte mobile | 2.611 |
+| `bahia_home_9000142_backup_20260810-191418` | Home, último da rodada 3 | 32.530 |
+| `bahia_home_9000142_backup_20260810-191206` | Home, rodada 3 | 32.531 |
+| `bahia_home_9000142_backup_20260810-191025` | Home, rodada 3 | 33.478 |
+| `bahia_home9000142_backup_20260810-141305` | Home, rodada 3 (início) | 33.456 |
 | `bahia_home_content_backup_r3` | Home, conteúdo rodada 3 | 31.401 |
-| `bahia_footer_547416_backup_20260810-190732` | Rodapé, rodada 3 | 6.178 |
-| `bahia_footer_547416_backup` | Rodapé, rodada 3 | 5.986 |
+| `bahia_footer_9000126_backup_20260810-190732` | Rodapé, rodada 3 | 6.178 |
+| `bahia_footer_9000126_backup` | Rodapé, rodada 3 | 5.986 |
 | `bahia_wpseo_titles_backup_r3` | `wpseo_titles` antes da rodada 3 | 53.865 |
 | `bahia_wpseo_titles_backup_20260730-134337` | `wpseo_titles` antes da rodada 2 | 52.529 |
 | `bahia_quemsomos_backup_20260803-143248` | Quem Somos | 12.043 |
@@ -245,7 +252,7 @@ Outros de rodadas anteriores, menores: `bahia_blocktitles_backup_*` (7 chaves),
 
 ```php
 $anterior = get_option('bahia_404_backup_20260811_124335');
-wp_update_post(array('ID' => 547430, 'post_content' => $anterior));
+wp_update_post(array('ID' => 9000140, 'post_content' => $anterior));
 ```
 
 **Nenhum destes deve ser migrado para produção.** São histórico de homologação. Vale uma
@@ -517,3 +524,215 @@ inventário de home era servido em internas e em municípios.
 O tema legado nunca fez isso. `themes/bahia_refactor/header.php:200-207` escolhe o grupo
 pelo contexto, e é essa lógica que o `bahia-publicidade.php` reproduz. Detalhes e a tabela
 dos 7 grupos com inventário ativo estão em `PUBLICIDADE-slots.md`.
+
+## 11.5 Duas armadilhas de manutenção de banco, aprendidas na renumeração
+
+Valem para **qualquer** operação futura de banco neste site, não só para a renumeração.
+
+### 11.5.1 O `.maintenance` derruba também o script de manutenção
+
+Criar `.maintenance` põe o site fora do ar — e junto com ele **qualquer script que carregue o
+WordPress**, inclusive o que vai fazer a manutenção. `wp-load.php` chama `wp_maintenance()`,
+que encerra a execução com a tela de "Briefly unavailable".
+
+A porta prevista pelo core é `wp_installing()`: o `wp_maintenance()` se abstém quando ela é
+verdadeira. Então, no topo do script, **antes** do `wp-load.php`:
+
+```php
+define('WP_INSTALLING', true);
+require '/var/www/html/wp-load.php';
+```
+
+O site segue fora do ar para o visitante e o script roda. Sem isso, a escolha vira falsa:
+ou o site fica no ar durante a operação, ou a operação não roda.
+
+Detalhe medido: com o `.maintenance` no lugar, o site continuou respondendo **200** por causa
+do `fastcgi_cache` do sidecar. Não é problema — nenhum PHP executa, logo não há escrita —, mas
+não confunda "responde 200" com "não está em manutenção".
+
+### 11.5.2 `wp_update_post()` sem usuário logado passa o conteúdo pelo kses
+
+Num script de CLI não há usuário autenticado, então `current_user_can('unfiltered_html')` é
+falso e o `wp_update_post()` **filtra o HTML** que está gravando. Para um `post_content` de
+`tdb_templates`, cheio de shortcode e atributo, isso corrompe o template — silenciosamente,
+porque a função não devolve erro.
+
+E há um segundo efeito: cada `wp_update_post()` gera uma **revisão nova**, que nasce com um ID
+do `AUTO_INCREMENT` — exatamente o que uma operação de renumeração está tentando controlar.
+
+Para edição cirúrgica de conteúdo, use:
+
+```php
+$wpdb->update($wpdb->posts, array('post_content' => $novo), array('ID' => $id));
+clean_post_cache($id);
+```
+
+E **releia do banco para conferir**, que é a garantia que se perde ao não usar a API. Na
+renumeração, cada template foi relido e teve as ocorrências recontadas depois de gravar.
+
+Se precisar mesmo dos hooks de salvamento do tagDiv, a alternativa é
+`wp_set_current_user()` com um administrador antes do `wp_update_post()` — mas aí voltam as
+revisões.
+
+---
+
+## 12. Correção de premissa: o limite de 160 nunca atuou sobre o subtítulo
+
+Ficou registrado desde a rodada 2 que o `bahia-limites-texto.php` impõe "70 no título e 160
+no subtítulo/resumo". A primeira metade está certa. A segunda descreve outro texto.
+
+**O que os 160 realmente cortam:** o resumo do card de listagem. O plugin preenche
+`post_excerpt` no objeto que o módulo do tagDiv vai renderizar
+(`bahia-limites-texto.php:156`, filtro `td_wp_booster_module_constructor`), tomando como
+origem `post_excerpt` quando existe e `post_content` quando não existe.
+
+**`post_excerpt` não existe em lugar nenhum do acervo:** 0 preenchidos em 271.714 posts
+publicados, em todos os tipos. Ou seja, o corte de 160 cai **sempre** no ramo do
+`post_content` — o primeiro parágrafo do corpo da matéria, texto que ninguém escreveu para
+ser resumo.
+
+**O subtítulo é outra coisa:** é o campo ACF `subtitulo`, escrito pela redação, presente em
+271.679 de 273.656 registros, com média de 101 caracteres. Ele nunca passou pelo
+`bahia-limites-texto.php`.
+
+A prova é o post #547268:
+
+| | Texto |
+|---|---|
+| ACF `subtitulo` | "Governador diz que declaração sobre 'alforria' revela os valores do candidato do PSD ao Planalto e ataca aliança com ACM Neto." |
+| Resumo do card na home | "O governador da Bahia, Jerônimo Rodrigues (PT), reagiu nesta terça-feira (28) à declaração do ex-governador de Goiás e pré-candidato à Presidência da…" |
+
+São textos diferentes, de origens diferentes. O número 160 provavelmente veio por analogia
+ao `resumo(170, $subtitulo)` do tema antigo (`bahia_refactor/functions.php:956`), que
+cortava o subtítulo mesmo — mas o que foi implementado no Newspaper corta outra coisa.
+
+**Nada disso foi alterado.** O corte do resumo do card continua exatamente como está: é o
+comportamento validado em desktop e mobile ao longo de onze rodadas. O registro existe para
+que a próxima pessoa não procure no `bahia-limites-texto.php` um controle de subtítulo que
+nunca esteve lá.
+
+Para a exibição do subtítulo, que é assunto separado, ver a seção 13.
+
+## 13. O subtítulo da matéria sumiu na migração para o Newspaper
+
+A redação escreve o campo ACF `subtitulo` em toda matéria. O tema antigo o exibia como
+`<h2>` logo abaixo do `<h1>` (`bahia_refactor/single_web.php:47` e `single_mobile.php:37`) e
+também nos cards de listagem, cortado em 170 com `[...]`
+(`bahia_refactor/functions.php:956`, `sidebar-*.php`). No Newspaper ele **não aparecia em
+lugar nenhum** — nem no single, nem no archive, nem na home.
+
+Não era falta de lugar onde exibir. O `loop-single.php` do td-composer (linhas 20-22) já
+imprime um `<p class="td-post-sub-title">` quando
+`td_post_theme_settings['td_subtitle']` tem valor, e o pacote mobile do plugin faz o mesmo
+(`td-composer/mobile/single.php:42-44`). O slot estava vazio porque lê o campo próprio do
+tagDiv, e esse campo tem **0 registros** no banco — a redação sempre escreveu no ACF.
+
+**Conserto (`bahia-subtitulo.php`):** um filtro em `get_post_metadata` preenche
+`td_post_theme_settings['td_subtitle']` a partir do ACF `subtitulo`. Usa o slot nativo, com
+a marcação e o CSS do próprio tema, sem editar `plugins/` nem o tema.
+
+Três detalhes que o filtro tem de respeitar, e respeita:
+
+1. **Reentrância.** Ler `td_post_theme_settings` de dentro do filtro de
+   `get_post_metadata` chama o filtro de novo. Uma flag estática corta o ciclo.
+2. **Devolver `array($settings)`, não `$settings`.** Com `$single = true` o core devolve
+   `$check[0]`; entregar o array direto devolveria o primeiro elemento dele.
+3. **Só o post da própria página.** Cards de sidebar e de relacionados leem a mesma chave.
+   A guarda é `is_singular()` + `$post_id === get_queried_object_id()`, e é ela que garante
+   que nenhuma listagem foi tocada.
+
+O `bahia-subtitulo.php` cobre hoje três consumidores do mesmo campo: o single (seção 13), a
+description das meta tags (seção 14) e o resumo dos cards (seção 15).
+
+## 14. A meta description sumia em 99,6% do acervo
+
+O achado mais sério da migração, e o mais silencioso: não quebra nada visível no site.
+
+O tema antigo alimentava `description`, `og:description` e `twitter:description` com o
+subtítulo (`bahia_refactor/header.php:24-37`). No Newspaper quem responde é o Yoast, e o
+estado medido em homolog era:
+
+- os templates `metadesc-*` do Yoast estão **todos vazios**, para todos os tipos;
+- só **968** posts de 271.679 têm description escrita à mão (0,36%);
+- logo, em 99,6% do acervo a tag `<meta name="description">` **não era emitida**, e o
+  `og:description` virava o primeiro parágrafo do corpo, cortado no meio e começando com
+  um espaço-duro solto — que é o texto que o WhatsApp mostra no card do link.
+
+Medido em três posts, homolog contra produção:
+
+| | Produção | Homolog (antes) |
+|---|---|---|
+| `description` | subtítulo do repórter | **ausente** |
+| `og:description` | subtítulo do repórter | corpo cortado, com `\xa0` no início |
+
+**Conserto:** os filtros `wpseo_metadesc`, `wpseo_opengraph_desc` e
+`wpseo_twitter_description` recebem o subtítulo como **fallback**, nunca como
+sobrescrita. A ordem de precedência é: description escrita à mão no Yoast → subtítulo →
+o que o Yoast já fazia. Os 967 posts com texto próprio (verificado: 99,9% não são o começo
+literal do corpo, ou seja, foram mesmo escritos) continuam intactos.
+
+Dois detalhes que importam:
+
+1. **Devolver texto cru, sem escape.** O Yoast passa o valor por `strip_all_tags()` e
+   escapa com `esc_attr()` na saída (`Abstract_Indexable_Tag_Presenter::present()`).
+   Pré-escapar produziria `&amp;quot;` na tag. É o oposto do que o single exige, onde o
+   template imprime sem escapar e o escape tem de vir pronto.
+2. **O Yoast não trunca.** Verificado com um subtítulo de 163 caracteres: sai inteiro nas
+   três tags, idêntico ao da produção. Os presenters aplicam replace-vars, o filtro,
+   `strip_all_tags` e `trim` — não há limite de comprimento. Os 156 caracteres do Yoast
+   são recomendação da pré-visualização, não corte.
+
+Efeito colateral bem-vindo: o `twitter:description`, que não era emitido, passou a sair.
+
+**Qualidade das 968 descriptions preservadas**, para uma decisão futura: 365 (37,7%)
+terminam com pontuação final, 590 (61,0%) são frases inteiras sem ponto, e apenas **13
+(1,3%) estão cortadas no meio** — terminam em "da", "sua", "o", palavras que não encerram
+frase. Os 13 têm subtítulo preenchido disponível para substituí-las. Nada foi alterado;
+fica registrado caso se queira tratar esse resíduo. Cuidado com o critério ingênuo "não
+termina com ponto": ele acusa 603, e a maioria são frases completas sem ponto final.
+
+## 15. O subtítulo nos cards, e por que só a home mudou
+
+A produção usa o subtítulo em **todas** as listagens, com regras diferentes por caminho:
+
+| Caminho | Corte | Se o subtítulo estiver vazio |
+|---|---|---|
+| `showLinePostWeb` (desktop) | `resumo2(200)` | imprime `<p>` vazio |
+| `showLinePostMobile` | `resumo(170)` | cai em `get_the_excerpt()` |
+| `sidebar-*.php` | `resumo(170)` | cai em `get_the_excerpt()` |
+
+Os dois cortam em **bytes** — `resumo()` usa `strlen()`, não `mb_strlen`. Com a razão
+medida de 1,033 byte por caractere no acervo, 170 bytes ≈ 165 caracteres.
+
+No Newspaper o subtítulo entra pelo `td_wp_booster_module_constructor` com prioridade 20,
+depois do corte de 160 do `bahia-limites-texto.php` (prioridade 10). Quando há subtítulo,
+ele substitui; quando não há, o que o outro filtro escreveu a partir do `post_content`
+fica — o card nunca sai vazio, ao contrário do desktop da produção.
+
+**Só a home mudou. É divergência consciente da produção, não esquecimento.** As outras
+listagens deste build não têm slot de resumo nenhum: o archive de editoria e a busca usam
+`td_module_1`, que renderiza imagem, título, autor e data, sem `.td-excerpt` no DOM.
+Medido: 0 elementos em `/politica/` e em `/?s=salvador`.
+
+A produção mostra subtítulo nessas listagens; o Newspaper não mostra resumo nenhum nelas.
+Acrescentar um não seria restaurar o subtítulo — seria inventar um elemento que o layout
+validado em onze rodadas não tem, mudando archive e busca por efeito colateral de uma
+decisão sobre o subtítulo. Fica como está, e a diferença em relação à produção é
+deliberada. Se um dia se quiser resumo em archive e busca, é decisão de layout com
+validação própria, não continuação desta.
+
+**Os dois filtros não se atrapalham,** e isso foi verificado nos dois sentidos:
+
+- post *sem* subtítulo — `og:description` continua com os mesmos 198 caracteres gerados
+  pelo Yoast, byte a byte, depois do filtro de cards entrar;
+- post *com* subtítulo de 163 caracteres — o card mostra o corte de 160 e a description
+  mostra os 163 inteiros, no mesmo request.
+
+O que garante isso é a guarda herdada do `bahia-limites-texto.php`: no single, o post
+consultado nunca tem o `post_excerpt` tocado, então o Yoast lê o post intacto quando
+precisa gerar a description sozinho.
+
+Geometria da home, antes e depois: mesmos 9 cards com resumo, mesmos 8 blocos, todos com
+`margin-bottom: 48px` — inalterado. As alturas de três cards caíram (415→395, 412→391,
+374→353) porque a chamada é mais curta que o parágrafo truncado; a página inteira ficou
+42px mais baixa. É o efeito pretendido, não regressão.
