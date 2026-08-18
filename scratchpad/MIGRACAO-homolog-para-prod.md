@@ -300,19 +300,58 @@ funciona por duas que não funcionam.**
 - Os `<link rel="alternate">` **voltam ao `<head>`**, anunciando esses endereços para quem
   ainda não os conhecia.
 
-**O que fazer, e é decisão sua antes de executar.** O código precisa sair do tema e virar
-mu-plugin, como já se fez com as editorias — o tema para de rodar, e com ele vai tudo isto.
-São três partes independentes, e cada uma pode ser mantida ou descartada:
+#### PORTADO em 18/08/2026 — `mu-plugins/bahia-feeds.php`
 
-| parte | manter? | se mantiver |
-|-------|---------|-------------|
-| desligar os feeds padrão | **sim, recomendado** | portar `turn_off_feed` + os 7 `add_action`. Sem isso, os endereços voltam e travam. |
-| remover os `<link>` do `<head>` | acompanha a anterior | portar os dois `remove_action` |
-| o feed `feedbahiaba` | **depende de quem consome** | portar o `add_feed` **e** o template `rss-feedbahiaba.php`, que hoje é `get_template_part` do tema antigo |
+As três partes saíram do tema e viraram mu-plugin, inclusive o template `rss-feedbahiaba.php`,
+que era `get_template_part` e por isso morreria junto. **Não há nada a executar na virada por
+causa disto** — o código viaja na imagem. O que sobrou é conferência (6.1) e uma decisão.
 
-Enquanto isso não for decidido, **a virada leva junto uma regressão conhecida** — que é
-exatamente o tipo de coisa que a reversão de 18/08 provou que a checagem de tema não pega
-(ver `INCIDENTE-virada-abortada-20260818.md`, seção 7).
+Resultado medido em homolog, antes e depois:
+
+| endereço | antes | depois |
+|----------|-------|--------|
+| `/feed/` , `/politica/feed/` , `/comments/feed/` | sem resposta em 45 s | **500 em 0,55 s** |
+| `/feed/feedbahiaba/` | 404 | **200 em 0,69 s**, 5 itens, XML válido |
+
+O porte não foi cópia. Quatro coisas mudaram, e cada uma por medição — o histórico completo
+está nos comentários do arquivo, aqui fica o resumo:
+
+1. **A recusa passou de `do_feed_*` para `parse_request`.** `do_feed()` roda no
+   `template-loader.php`, depois de a consulta principal já ter sido executada: a recusa saía,
+   mas o banco já tinha trabalhado. Portado tal e qual, os feeds desligados continuaram
+   estourando 50 s em homolog. Como o motivo do porte era o custo com robô, recusar depois de
+   pagar a conta não resolvia nada.
+2. **`WP::send_headers()` chamava `get_lastpostmodified('GMT')`** (`class-wp.php:491-500`) em
+   toda requisição de feed, para o `Last-Modified`. Custo: 0,67 s em produção, **59 s em
+   homolog**. Curto-circuitado por `pre_get_lastpostmodified`, só nesta requisição, com
+   transient de 5 min.
+3. **A consulta do curto-circuito teve de ser refeita.** `MAX(post_modified_gmt)` levava
+   **28,83 s**: o índice do WordPress é `(post_type, post_status, post_date)`, ordenado por
+   post_*date*. Trocada por `ORDER BY post_date DESC LIMIT 1`, que casa com o índice.
+4. **A consulta principal é moldada em `pre_get_posts`**, em vez de o template fazer um
+   `query_posts()` próprio — eram duas consultas por requisição, e a principal (`post_type =
+   'post'`, com `SQL_CALC_FOUND_ROWS`) era perda pura.
+
+Duas diferenças de comportamento, deliberadas e registradas:
+
+- **A lista de post types do feed** passou de `global $POST_TYPES` (a lista à mão do tema, 23
+  únicos em 24 entradas) para `bahia_editorias_map()` (25). O feed **ganha** `dende_poder` e
+  `mais_gente`.
+- **`lastBuildDate`** passa a descrever este canal, e não um máximo global sobre todos os tipos
+  públicos do site — incluindo `attachment` e `tdb_templates`, que o feed não publica.
+
+Convivência com o tema antigo está resolvida: o mu-plugin registra o feed em `init` prioridade
+99 e limpa o `do_feed_feedbahiaba` antes, senão os dois callbacks ficariam pendurados e o XML
+sairia **duplicado** em produção enquanto o `bahia_refactor` estiver no ar.
+
+**A decisão que sobra para você:** os feeds desligados respondem **500**, que é o que o tema
+sempre fez e o que o porte reproduz. 500 diz ao robô "deu erro, tente de novo" — e ele tenta,
+para sempre. Um **410** diria "isto acabou", e os endereços sairiam dos índices. É uma linha
+em `bahia_feeds_desligado()`.
+
+**E a pergunta que continua aberta:** quem consome o `feedbahiaba`? Ele serve conteúdo hoje em
+produção e não está documentado em lugar nenhum. Vale procurar por `feedbahiaba` no log de
+acesso do nginx antes de qualquer decisão sobre ele.
 
 ### 1.10 A varredura do tema antigo — o inventário completo do que morre junto
 
@@ -333,10 +372,10 @@ portados no `bahia-editorias-cpt.php` (commit `104be34f`).
 |---------------|------------------------|---------------------|----------|
 | `author_base` das URLs de autor | `colunistas` | `author` | 🔴 **quebra links publicados** |
 | popup de anúncio (`adrotate_group(18)` no `wp_footer`) | presente | ausente | 🔴 **receita** |
-| filtro OneSignal (push extra p/ Android e iOS) | pendurado | ausente | 🔴 **push do app para de sair** |
-| feeds (seção 1.9) | desligados + `feedbahiaba` | padrão sem resposta, `feedbahiaba` 404 | 🔴 ver 1.9 |
-| `xmlrpc_enabled => false` | sim | não | 🟠 segurança |
-| `X-Pingback` removido do cabeçalho | sim | não | 🟠 acompanha o anterior |
+| filtro OneSignal (push extra p/ Android e iOS) | pendurado | pendurado, com trava de ambiente | 🟢 **portado** — `bahia-onesignal-app-push.php` (⁵) |
+| feeds (seção 1.9) | desligados + `feedbahiaba` | idem, via mu-plugin | 🟢 **portado** — `bahia-feeds.php` |
+| `xmlrpc_enabled => false` | sim | sim, via mu-plugin | 🟢 **portado** — `bahia-xmlrpc.php` |
+| `X-Pingback` removido do cabeçalho | sim | sim, via mu-plugin | 🟢 **portado** — `bahia-xmlrpc.php` |
 | 6 tamanhos de imagem (`destaque_*`, `news_home`, `user_avatar`) | registrados | **ausentes** | 🟠 uploads novos |
 | `posts_groupby` zerado globalmente | **sim** (¹) | não | 🟠 armadilha de medição |
 | `target="_blank"` nos links do corpo | sim | não | 🟡 comportamento visível |
@@ -370,6 +409,17 @@ são lidos por nada no tema novo, e expor tela cuja edição não tem efeito é 
 escondia "Posts" com `remove_menu_page('edit.php')` (`functions.php:47`). Portanto o filtro
 que entrou em 18/08 **não mudou nada no painel de produção** — só garantiu que a omissão
 sobreviva à virada. Em produção, a única mudança real de menu foi `mais_gente` (seção 6.4).
+
+⁵ **O porte do OneSignal leva uma trava que o tema nunca precisou.** Medido em 18/08:
+homologação usa **o mesmo `app_id` e a mesma chave REST** da produção (`db07f370…2325`) — não
+é app de teste, é o app real, com os assinantes reais. O tema só rodava em produção, então a
+guarda era implícita; o mu-plugin roda em todo lugar, e sem ela um push disparado de
+homologação chegaria ao celular do leitor. A trava também preserva o estado de hoje em
+homolog, onde o push do app não sai. Foram corrigidos, de passagem, dois defeitos do original,
+ambos no tratamento de erro: uma chamada a `$response->get_error_code()` num ramo em que
+`$response` podia não ser `WP_Error` (fatal dentro do `save_post`, derrubando a publicação da
+matéria), e um `return;` que devolvia null no lugar de `$fields` — fazendo com que a falha do
+push do app levasse junto o push do navegador.
 
 **Um detalhe de desempenho que a varredura achou de brinde:** o `add_action('init', ...)` de
 `functions.php:1236` chama `$wp_rewrite->flush_rules()` **a cada requisição**, não uma vez.
