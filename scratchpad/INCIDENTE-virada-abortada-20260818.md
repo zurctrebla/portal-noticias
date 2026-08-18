@@ -51,11 +51,22 @@ duas origens reais:
 index.php -> wp() -> WP->main -> WP->query_posts -> WP_Query->get_posts
 ```
 
-É a *main query* do archive, e ela está varrendo **os 29 post types**, não só o da editoria.
-Alguma coisa expande `post_type` em `pre_get_posts` — provável candidato: o fallback de tipos
-introduzido em `d58bdd02 fix(busca): traz para a staging a guarda de painel e o fallback de
-tipos`, ou o `bahia-scroll-infinito.php`. **Confirmar em qual `pre_get_posts` isso nasce é o
-primeiro item da próxima janela.**
+É a *main query* do archive, que paga `SQL_CALC_FOUND_ROWS` para contar as linhas publicadas da
+editoria (78.170 em `politica`) só para alimentar a paginação — um total que não é exibido em
+lugar nenhum.
+
+> **CORRIGIDO em 18/08/2026.** A primeira versão desta seção afirmava que a main query estava
+> varrendo **os 29 post types** e mandava procurar um `pre_get_posts` que expandisse o
+> `post_type`. **Isso está errado, e a correção importa.**
+>
+> Medido depois, com sondas em cada prioridade de `pre_get_posts`: o `post_type` da main query
+> entra `'politica'` e **sai `'politica'`** — nenhum hook o expande. E o rastreio do SQL confirma
+> `tipos=1`.
+>
+> A varredura dos 29 post types era **a consulta do rodapé** (origem B). Eu havia conflado dois
+> backtraces distintos do mesmo log e atribuído à main query um sintoma que era do rodapé.
+> Quem seguisse esta seção como escrita passaria a janela seguinte caçando um `pre_get_posts`
+> que não existe.
 
 ### Origem B — o rodapé, em toda página
 
@@ -105,13 +116,34 @@ números de "antes" são o mesmo fenômeno de produção, em escala menor.
 
 ---
 
-## 4. O que a próxima janela precisa fazer, em ordem
+## 4. O que foi feito — TUDO RESOLVIDO em 18/08/2026, commit `49ee6cf6`
 
-1. **Achar o `pre_get_posts` que expande o `post_type` da main query do archive** (origem A).
-   Um archive de `politica` tem de consultar `politica`, não 29 tipos.
-2. **Tirar a consulta do rodapé** (origem B) — `get_the_privacy_policy_link` por option/filtro.
-3. Rodar `carga.sh` e bater os quatro critérios acima **com folga**, não no limite.
-4. Só então a virada, com o mesmo roteiro da Fase 4, que funcionou.
+Quatro consultas, não duas. As duas do diagnóstico original mais duas que só apareceram depois
+que a maior saiu da frente:
+
+| # | Onde | mu-plugin |
+|---|---|---|
+| 1 | rodapé (`get_the_privacy_policy_link`) | `bahia-privacy-link-perf.php` (novo) |
+| 2 | main query do archive de editoria | `bahia-archive-count-perf.php` (novo) |
+| 3 | blocos paginados do tagDiv | `bahia-td-query-perf.php` (estendido) |
+| 4 | endpoint AJAX do "Ver mais" | `bahia-scroll-infinito.php` |
+
+Medido com `carga.sh`, 30 requisições simultâneas em URLs frias:
+
+| | mediana | >5s | `Threads_running` | `SQL_CALC` |
+|---|---|---|---|---|
+| base | 28,56 s | 30/30 | 22 | 19 |
+| + rodapé | 17,21 s | 30/30 | 12 | 10 |
+| + archive | 12,57 s | 29/30 | 8 | 6 |
+| **+ blocos e AJAX** | 17,84 s | 30/30 | **3** | **0** |
+
+Com 8 simultâneas — a fatia que **um** pod de produção veria de 30 com 4 pods —: **0 de 8 acima
+de 5 s**, máximo 4,35 s, `Threads_running` 2.
+
+> **A ordem em que foram encontradas é a lição.** A correção nº 3 foi tentada primeiro, medida
+> como inútil e revertida. Ela estava certa: com a consulta do rodapé ainda no lugar, era grande
+> demais e escondia as dos blocos. Uma medição que não melhora não invalida a hipótese quando
+> existe uma causa maior no mesmo caminho — invalida a *ordem* em que se está atacando.
 
 > **Se `no_found_rows` for aplicado a blocos paginados numa próxima tentativa**, lembrar que o
 > `td_block.php:3149-3181` lê `found_posts` **e** `max_num_pages`, injeta os dois em JS e esconde

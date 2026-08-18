@@ -444,6 +444,64 @@ sobrescreveria licença e versão" — perde o objeto: não há o que sobrescrev
 
 ---
 
+### 5.0.4 A PRÓXIMA JANELA — cenário revisado em 18/08/2026
+
+A primeira tentativa foi aplicada e revertida por saturação do banco (ver
+`INCIDENTE-virada-abortada-20260818.md`). As quatro consultas caras foram corrigidas e validadas
+sob carga (commit `49ee6cf6`). A próxima janela será **com a redação offline**.
+
+#### O que sai do roteiro
+
+**O bloqueio de `/wp-login.php` e `/wp-admin`.** Foi projetado e descartado: sem repórteres
+trabalhando, não há publicação a impedir. Fica registrado que era viável — `/etc/nginx/conf.d` é
+somente-leitura (montagem de ConfigMap), mas `/etc/nginx` é gravável, então o caminho seria
+copiar a config para um diretório gravável, inserir o bloqueio e repontar o `include` do
+`nginx.conf`, por pod, sem tocar em nada versionado.
+
+#### O que CONTINUA, e por motivos que não dependem da redação
+
+**O `.maintenance`**, por dois:
+
+1. cobre o `flush_rewrite_rules()`, que é o **único passo fora da proteção da transação** — uma
+   requisição que chegue com a opção `rewrite_rules` vazia pode dar **404 em matéria real**;
+2. dá o **corte limpo do cache**: `fastcgi_cache_valid 200 10m` faz páginas cacheadas seguirem
+   servindo o tema antigo por até 10 minutos, e sem o corte o visitante navega entre páginas nos
+   dois temas.
+
+> #### ⚠️ O `.maintenance` EXPIRA EM 600 SEGUNDOS
+>
+> `wp-includes/load.php:444`:
+> ```php
+> // If the $upgrading timestamp is older than 10 minutes, consider maintenance over.
+> if ( ( time() - $upgrading ) >= 10 * MINUTE_IN_SECONDS ) { return false; }
+> ```
+>
+> **Isso aconteceu na janela de 18/08**: o arquivo foi criado às 07:56:28 e a verificação correu
+> até 08:28 — ou seja, a partir de ~08:06 a manutenção havia caído sozinha, sem ninguém tocar em
+> nada.
+>
+> Com a redação offline não há risco de publicação indevida. O risco que **permanece** é outro:
+> o **site público volta ao ar com o tema novo antes de a verificação terminar** — e portanto
+> antes de se saber se ele vai ser mantido ou revertido.
+>
+> **Se a verificação passar de 10 minutos, RECRIAR o arquivo em todos os pods**, com timestamp
+> novo, antes de continuar. Ele é só `<?php $upgrading = time(); ?>`.
+
+**O congelamento do HPA**, lendo o número de réplicas **ANTES** e congelando **nesse número**.
+Na janela de 18/08 ele foi congelado em 3 quando havia 5, o que forçou terminação de pods; a
+correção para 5 criou dois pods novos **sem** `.maintenance`. A varredura os pegou, mas por
+sorte. Restaurar depois para `min=2 / max=5`.
+
+#### O portão novo, antes de declarar sucesso
+
+Depois do purge, com cache frio e tráfego real, medir no banco de produção:
+
+- **`Threads_running` acima de 10 → é o mesmo modo de falha → rollback**, sem investigar;
+- contar `SQL_CALC_FOUND_ROWS` no `SHOW FULL PROCESSLIST` — tem de ser **zero**;
+- repetir aos **0, 5 e 15 minutos**, porque o pior momento é o cache se enchendo.
+
+---
+
 ### 5.1 Ativação de plugins — entra na virada atômica, não no deploy
 
 **Medido em 18/08/2026**, comparando `active_plugins` dos dois ambientes: produção tem **21**
