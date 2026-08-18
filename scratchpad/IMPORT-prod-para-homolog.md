@@ -363,7 +363,34 @@ completo e o problema não existe.
 
 ---
 
-## 1.6 BLOQUEIO: os IDs de TERMO também colidem
+## 1.6 BLOQUEIO: os IDs de TERMO também colidem — **RESOLVIDO em 18/08/2026**
+
+> **EXECUTADO na fase 1 da virada, validado.** 3 termos movidos, 1 apagado.
+>
+> | Antes | Depois | O que é | Relações |
+> |---|---|---|---|
+> | 78520 | — | `category` "Featured", resíduo do demo | **APAGADO** (0 relações) |
+> | 78521 | **9100002** | `nav_menu` Principal | 10 |
+> | 78522 | **9100003** | `nav_menu` Rodapé | 10 |
+> | 78523 | **9100004** | `nav_menu` Rodapé Legal | 2 |
+>
+> `AUTO_INCREMENT` de `wp_terms` e `wp_term_taxonomy` = **9100005** (não rebaixar).
+> Mapa em **`wp_bahia_renum_map_terms`** (4 linhas, inclusive a do apagado) — **não apagar**.
+> Ponto de retorno: `backup-hml-pos-renumeracao-20260816-1636.sql.gz`.
+>
+> **Duas coisas que este plano não previa e foram encontradas na execução:**
+>
+> 1. **O template morto `9000009` (Footer - Default PRO) citava os menus por ID**, em texto
+>    puro: `[td_block_list_menu menu_id="78522"]` e `menu_id="78523"`. Nenhuma varredura de
+>    `wp_options` acharia isso. Foram trocados junto (2 substituições, conferidas). A lição é
+>    a mesma do base64: **o `post_content` dos templates é uma tabela de referências tão real
+>    quanto `wp_options`, e precisa ser varrida sempre.**
+> 2. **219 relações órfãs pré-existentes** em `wp_term_relationships` (115 `term_taxonomy_id`
+>    distintos, faixa 272–31028), apontando para termos que não existem mais. **Não vêm
+>    daqui** — os mesmos 115/219 estão no backup de 16/08. São de limpezas de tag antigas do
+>    site original. Ficam registradas para que ninguém as atribua à renumeração depois.
+
+### O texto abaixo é o plano como foi aprovado — registro histórico, com os IDs antigos
 
 Mesma família do `_subtitulo` e do `page_on_front`: o post vem, a dependência não vem, e a
 falha é silenciosa. Medido em homolog em 16/08/2026.

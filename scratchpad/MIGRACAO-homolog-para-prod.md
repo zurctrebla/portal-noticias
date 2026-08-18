@@ -132,13 +132,28 @@ entre os ambientes. O que falta em produção é o **registro** do anexo (linha 
 
 ### 1.5 Menus
 
-| ID | Nome | Itens | Local |
-|----|------|-------|-------|
-| 78521 | Principal | 10 | `header-menu` |
-| 78522 | Rodapé | 10 | `footer-menu` |
-| 78523 | Rodapé Legal | 2 | — |
+> **Renumeração de TERMOS — 18/08/2026, fase 1 da virada.** Os IDs abaixo **já estão
+> atualizados**. Fórmula: `novo = 9.100.000 + (antigo − 78.519)`. Sub-faixa 9.1xx = termo
+> nascido em homolog (9.0xx = post). Mapa em `wp_bahia_renum_map_terms`, que **não deve ser
+> apagada**. A categoria `Featured` (78520) foi **apagada**, não renumerada.
+
+| ID | Nome | Itens | Local | ID anterior |
+|----|------|-------|-------|-------------|
+| 9100002 | Principal | 10 | `header-menu` | 78521 |
+| 9100003 | Rodapé | 10 | `footer-menu` | 78522 |
+| 9100004 | Rodapé Legal | 2 | — | 78523 |
 
 Migram os termos, os itens (`nav_menu_item`) e o `theme_mods[nav_menu_locations]`.
+
+> **O menu "Rodapé" (9100003) está ligado ao local `footer-menu`, mas nada o consome.**
+> Medido em 18/08: o rodapé vivo (`9000126`) não tem bloco de menu nenhum — só logo, texto e
+> redes sociais; o "MAIS LIDAS" vem do próprio tema. O único lugar que cita menu por ID é o
+> template **morto** `9000009` (Footer - Default PRO). O "Rodapé Legal" (9100004), idem: não
+> renderiza em lugar nenhum hoje.
+>
+> Não é defeito introduzido pela renumeração — é o estado desde que o rodapé foi refeito. Mas
+> **muda a verificação da fase 5**: conferir "rodapé com os itens certos" em produção vai
+> encontrar um rodapé sem menu, e isso é o comportamento atual e esperado.
 
 ### 1.6 O que NÃO deve viajar
 
@@ -221,7 +236,7 @@ outra coisa. Um ID errado não gera erro: gera uma foto trocada ou um bloco vazi
 | 861 | `td_011[tds_footer_page]` | Opção do tema | **Verificar antes**: confirmar o que é esse ID em produção |
 | 9000165 / 9000166 | Fotos da equipe | `post_content` de 9000079 | Importar anexo, substituir o ID no conteúdo |
 | 9000168 | Logo branca do rodapé | `post_content` de 9000126 | Importar anexo, substituir o ID no conteúdo |
-| 78521 / 78522 / 78523 | Menus | `theme_mods[nav_menu_locations]` | Recriar/importar, religar os locais |
+| 9100002 / 9100003 / 9100004 | Menus (eram 78521/78522/78523) | `theme_mods_Newspaper[nav_menu_locations]` | Importar os termos **com estes IDs**, religar os locais |
 | 1777 / 1782 | EC Bahia / EC Vitória | `mu-plugins/bahia-futebol-display.php` | **Verificar**: são IDs de time da API, não do WordPress — conferir se o mu-plugin os trata como constantes |
 
 Além dos IDs, o `post_content` dos templates do tagDiv guarda **blocos codificados em
