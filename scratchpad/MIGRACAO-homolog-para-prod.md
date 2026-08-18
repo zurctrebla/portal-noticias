@@ -214,6 +214,186 @@ UPDATE wp_yoast_indexable SET title = NULL, open_graph_title = NULL
 Confere que `blogname` = `bahia.ba` e `blogdescription` = `A notícia que conecta você à Bahia`
 no destino **antes** de aplicar — as variáveis leem de lá.
 
+### 1.8 Títulos do Yoast (rodada 10) — dois scripts idempotentes, a EXECUTAR na produção
+
+Mesma natureza da 1.7 e a mesma armadilha da `wp_yoast_indexable`, em mais dois lugares. As
+duas mudanças estão feitas **no banco de homologação** e os scripts estão versionados, mas
+**nada disso viaja na imagem**: são `UPDATE`s de banco. Se ninguém rodar, a produção estreia
+o Newspaper com os títulos antigos.
+
+| script | o que corrige | alcance |
+|--------|---------------|---------|
+| `scratchpad/titulos-editorias-apply.php` | `Política: últimas notícias` → `Política` | 25 CPTs de editoria |
+| `scratchpad/titulo-quem-somos-apply.php` | `Quem Somos \| bahia.ba – Jornalismo confiável e contextualizado` → `Quem Somos` | 1 página |
+
+Como rodar, de dentro de um pod de produção — **os dois rodam secos por padrão** e reconhecem
+o ambiente sozinhos pelo `siteurl`, abortando se for outro:
+
+```bash
+php titulos-editorias-apply.php              # seco: mostra o que faria
+php titulos-editorias-apply.php --aplicar
+php titulo-quem-somos-apply.php              # seco
+php titulo-quem-somos-apply.php --aplicar
+```
+
+Rodar de novo depois não muda mais nada; a conferência sai no fim da própria execução.
+
+**Três coisas que o levantamento em homolog achou e que a produção também vai ter:**
+
+1. **O Yoast copia o template do option para a linha da indexable** e serve a partir da cópia
+   — é a lição da 1.7, e vale igual aqui. Por isso os scripts escrevem nos dois lugares.
+2. **As 7 editorias que entraram no mapa em 18/08** (`covid19`, `eleicoes2024`, `saude`,
+   `social`, `gente`, `investimentos`, `bombou`) nasceram com o padrão do Yoast, **em inglês**:
+   `Covid-19 Archive - bahia.ba`. O alvo único corrige os dois estados de uma vez.
+3. **Linhas de indexable DUPLICADAS** — 16 sub_types tinham duas, com templates diferentes;
+   vence a de id menor. O script escreve nas duas, então qual vence deixa de importar.
+
+Conferir depois de aplicar:
+
+```bash
+for s in politica covid19 social quem-somos; do
+  printf "%-14s " "$s"
+  curl -s "https://bahia.ba/$s/" | grep -o '<title>[^<]*</title>'
+done
+# esperado: "Política - bahia.ba", "Covid-19 - bahia.ba",
+#           "Coluna do Ginno - bahia.ba", "Quem Somos - bahia.ba"
+```
+
+**Fora do escopo dos scripts, de propósito:** o CPT interno `tdc-review` do tagDiv, e as 73
+chaves `title-tax-*` do option, que valem para os arquivos de taxonomia. Esses respondem 404
+hoje nos dois ambientes (18 CPTs disputando o mesmo slug de reescrita), então não há título na
+tela para corrigir — **mas se a virada consertar as taxonomias, isto volta à mesa junto**.
+
+### 1.9 Os feeds RSS — quem os controla é o tema antigo, e ninguém tinha percebido
+
+**Descoberto em 18/08/2026, por acaso, ao conferir outra coisa.** Não estava em nenhum
+inventário. É a pendência mais consequente desta rodada, porque é uma perda silenciosa: nada
+quebra, nada dá erro no painel — um endereço que hoje serve conteúdo simplesmente passa a
+responder 404 no dia da virada.
+
+`themes/bahia_refactor/functions.php:1253-1277` faz **três** coisas com feeds:
+
+1. **mata todos os feeds padrão** — `turn_off_feed()` pendurada em `do_feed`, `do_feed_rdf`,
+   `do_feed_rss`, `do_feed_rss2`, `do_feed_atom` e os dois de comentários, com um `wp_die()`;
+2. **tira os `<link rel="alternate">` de feed do `<head>`** (`remove_action('wp_head',
+   'feed_links', 2)` e `feed_links_extra`);
+3. **registra UM feed próprio**: `add_feed('feedbahiaba', ...)`, renderizado pelo template
+   `themes/bahia_refactor/rss-feedbahiaba.php`.
+
+Medido nos dois ambientes em 18/08, depois do deploy `prod-de88838f`:
+
+| endereço | produção (tema antigo) | homolog (Newspaper) |
+|----------|------------------------|---------------------|
+| `/feed/feedbahiaba/` | **200, 5 itens** | **404** |
+| `/feed/` e `/politica/feed/` | **500** ("No feed available"), em ~1,5 s — **de propósito** | **sem resposta em 45 s** |
+
+Leia a tabela na diagonal e o problema aparece sozinho: **a virada troca uma coisa que
+funciona por duas que não funcionam.**
+
+- O `feedbahiaba` **desaparece**. Ele é servido hoje, com conteúdo. Quem o consome não está
+  documentado em lugar nenhum — vale olhar o log de acesso do nginx por `feedbahiaba` antes
+  de decidir, porque pode haver agregador, parceiro ou app dependendo dele.
+- Os feeds padrão **voltam a existir** — e, a julgar por homolog, não respondem. Hoje eles
+  custam 1,5 s e devolvem 500; depois da virada passam a varrer o acervo até estourar. Pior:
+  **504 não entra no `fastcgi_cache`**, então cada acesso de robô paga o custo inteiro, e
+  endereço de feed é exatamente o que robô visita sem parar.
+- Os `<link rel="alternate">` **voltam ao `<head>`**, anunciando esses endereços para quem
+  ainda não os conhecia.
+
+**O que fazer, e é decisão sua antes de executar.** O código precisa sair do tema e virar
+mu-plugin, como já se fez com as editorias — o tema para de rodar, e com ele vai tudo isto.
+São três partes independentes, e cada uma pode ser mantida ou descartada:
+
+| parte | manter? | se mantiver |
+|-------|---------|-------------|
+| desligar os feeds padrão | **sim, recomendado** | portar `turn_off_feed` + os 7 `add_action`. Sem isso, os endereços voltam e travam. |
+| remover os `<link>` do `<head>` | acompanha a anterior | portar os dois `remove_action` |
+| o feed `feedbahiaba` | **depende de quem consome** | portar o `add_feed` **e** o template `rss-feedbahiaba.php`, que hoje é `get_template_part` do tema antigo |
+
+Enquanto isso não for decidido, **a virada leva junto uma regressão conhecida** — que é
+exatamente o tipo de coisa que a reversão de 18/08 provou que a checagem de tema não pega
+(ver `INCIDENTE-virada-abortada-20260818.md`, seção 7).
+
+### 1.10 A varredura do tema antigo — o inventário completo do que morre junto
+
+O caso dos feeds (1.9) apareceu por acaso, e isso foi o alerta: se um comportamento global
+desse tamanho estava fora de todo inventário, provavelmente havia outros. Esta seção é a
+varredura que se seguiu, feita em 18/08/2026.
+
+**Método**, porque ele importa para confiar no resultado: listar todos os `add_action`,
+`add_filter`, `remove_action` e `remove_filter` do tema — 33 no `functions.php`, mais 3 em
+cada `post-types/*.php` — e, para cada um que não seja de template, **medir o comportamento
+nos dois ambientes em tempo de execução**, não ler o código e supor. Foi medindo que duas das
+minhas hipóteses caíram (ver as notas de rodapé da tabela).
+
+Os `post-types/*.php` ficam de fora da lista abaixo: são CPT + 2 taxonomias cada, e já foram
+portados no `bahia-editorias-cpt.php` (commit `104be34f`).
+
+| comportamento | produção (tema antigo) | homolog (Newspaper) | veredito |
+|---------------|------------------------|---------------------|----------|
+| `author_base` das URLs de autor | `colunistas` | `author` | 🔴 **quebra links publicados** |
+| popup de anúncio (`adrotate_group(18)` no `wp_footer`) | presente | ausente | 🔴 **receita** |
+| filtro OneSignal (push extra p/ Android e iOS) | pendurado | ausente | 🔴 **push do app para de sair** |
+| feeds (seção 1.9) | desligados + `feedbahiaba` | padrão sem resposta, `feedbahiaba` 404 | 🔴 ver 1.9 |
+| `xmlrpc_enabled => false` | sim | não | 🟠 segurança |
+| `X-Pingback` removido do cabeçalho | sim | não | 🟠 acompanha o anterior |
+| 6 tamanhos de imagem (`destaque_*`, `news_home`, `user_avatar`) | registrados | **ausentes** | 🟠 uploads novos |
+| `posts_groupby` zerado globalmente | **sim** (¹) | não | 🟠 armadilha de medição |
+| `target="_blank"` nos links do corpo | sim | não | 🟡 comportamento visível |
+| seletor ACF de destaques só mostra publicados | sim | não (²) | 🟡 edição |
+| `show_admin_bar(false)` no site | sim | não | 🟡 cosmético |
+| páginas de opções ACF | `Opções`, `Home`, `Geral` | `Destaques da Home` | 🟢 **coberto** (³) |
+| menu "Posts" oculto | `remove_menu_page('edit.php')` | filtro `register_post_type_args` | 🟢 **coberto** (⁴) |
+| CPTs e taxonomias das editorias | tema | `bahia-editorias-cpt.php` | 🟢 coberto |
+| rótulo de `economia` | `change_post_type_labels` | mapa do mu-plugin | 🟢 coberto |
+| logo do login, rodapé do painel, barra do admin, `viewport`, build info | tema | Newspaper / irrelevante | 🟢 morre por projeto |
+
+¹ **Hipótese minha que caiu.** Achei que estivesse coberto porque `has_filter('posts_groupby')`
+devolve verdadeiro nos dois — mas isso só diz que *algum* callback existe. Medindo o valor:
+`apply_filters('posts_groupby', 'wp_posts.ID')` devolve `''` em produção e `'wp_posts.ID'` em
+homolog. Ou seja, **produção roda hoje TODAS as consultas sem `GROUP BY`**, por causa de um
+`add_filter` global e incondicional em `functions.php:578`. Isto não é regressão — é um
+problema que a virada resolve. Mas é uma diferença de comportamento entre os dois ambientes
+que pode explicar divergência de contagem ou linha duplicada ao comparar um com o outro; quem
+for medir paridade precisa saber disto antes, não depois.
+
+² O `bahia-home-destaques.php` filtra `post_status === 'publish'` **na renderização**, então
+não sai card quebrado. O que se perde é o filtro do *seletor*: o editor volta a poder escolher
+um rascunho, e o card simplesmente não aparece, sem aviso. Vale notar que só 2 dos 6 campos
+originais seguem em uso (`slider_m1` e `semi_destaques_m1`); os outros 4 eram da home antiga.
+
+³ Coberto pelo `bahia-acf-options.php`. A ausência de "Geral" é **decisão registrada**, não
+esquecimento: seus campos (`options_facebook`, `options_whatsapp`, `options_logo_login`) não
+são lidos por nada no tema novo, e expor tela cuja edição não tem efeito é pior que não tê-la.
+
+⁴ **Outra hipótese minha que caiu, e que corrige o que eu havia reportado.** O tema antigo já
+escondia "Posts" com `remove_menu_page('edit.php')` (`functions.php:47`). Portanto o filtro
+que entrou em 18/08 **não mudou nada no painel de produção** — só garantiu que a omissão
+sobreviva à virada. Em produção, a única mudança real de menu foi `mais_gente` (seção 6.4).
+
+**Um detalhe de desempenho que a varredura achou de brinde:** o `add_action('init', ...)` de
+`functions.php:1236` chama `$wp_rewrite->flush_rules()` **a cada requisição**, não uma vez.
+Com 25+ CPTs e as taxonomias de cada um, é regeneração completa das regras de reescrita em
+todo request de produção. Some com o tema, o que é bom — mas enquanto ele estiver no ar, é
+custo pago em toda página, e ajuda a explicar o baseline de produção na seção 4.7.
+
+**O caso mais urgente é o `author_base`.** Medido:
+
+| endereço | produção | homolog |
+|----------|----------|---------|
+| `/colunistas/neison-cerqueira/` | **200** | 404 |
+| `/author/neison-cerqueira/` | 404 | **200** |
+
+Todo link de colunista publicado, indexado ou compartilhado aponta para `/colunistas/`. No dia
+da virada, todos passam a 404 de uma vez. E há uma armadilha a mais: **a tabela de
+verificações da 6.1 deste documento testa `/author/<slug>/`** — ela foi escrita contra homolog
+e passaria com folga enquanto as URLs reais morriam. A linha foi corrigida.
+
+Portar `author_base` é uma linha em mu-plugin; **mas isso não basta**, porque as regras de
+reescrita precisam de flush depois. E fica a decisão de manter `colunistas` (preserva os links,
+não custa nada) ou migrar para `author` com redirect 301 de `/colunistas/*` — o que é trabalho
+de verdade e só se justifica se houver motivo editorial.
+
 ---
 
 ## 2. Mapa de dependências de ID
@@ -564,10 +744,17 @@ rollback da fase 4.
 | `/politica/` e outra editoria | Botão "VER MAIS NOTÍCIAS" azul; `/politica/page/3/` + clique carrega a página 4 |
 | `/ultimas-noticias/page/2/` | Conteúdo **diferente** da página 1 |
 | Post individual | Byline com dois autores linkados separadamente; sem Pinterest |
-| `/author/<slug>/` | **Lista matérias** (inclusive as de coautoria); título com o nome certo; responde em ~3 s |
+| `/colunistas/<slug>/` | **Responde 200** — é a URL real de produção (`author_base`, seção 1.10). Se der 404, os links de colunista publicados quebraram todos |
+| `/author/<slug>/` | **Lista matérias** (inclusive as de coautoria); título com o nome certo; responde em ~3 s. **Atenção:** em produção este endereço é 404 hoje; conferir junto com o `/colunistas/` acima |
+| Popup de anúncio | Aparece após ~2 s na home (grupo 18 do AdRotate, seção 1.10). Se sumir, é receita perdida sem aviso |
+| Push do app | Publicar uma matéria de teste e confirmar que o **app Android/iOS** recebeu — não só o navegador (filtro OneSignal, seção 1.10) |
 | `/?s=bahia` | Resultados + "Ver mais resultados" |
 | 404 | Em português; botão azul apontando para a **home de produção**; lista de notícias recentes; **responde em ~2 s** |
-| `/quem-somos/` | Fotos da equipe corretas (checar Lizandra e Tauany) |
+| `/quem-somos/` | Fotos da equipe corretas (checar Lizandra e Tauany); `<title>` = **`Quem Somos - bahia.ba`**, sem "Jornalismo confiável e contextualizado" |
+| `<title>` das editorias | `Política - bahia.ba` — **sem** ": últimas notícias" e **sem** "Archive" (seção 1.8) |
+| Menu do painel | As **nove** ocultas sumiram: Posts, Bahia, Especial, Exclusivo, Mais Gente, Entrevistas, Economia, Mais Notícias, Carnaval (seção 6.4) |
+| `/feed/feedbahiaba/` | **Ainda responde 200 com itens.** Se der 404, o `add_feed` não foi portado — seção 1.9 |
+| `/feed/` e `/politica/feed/` | Respondem **rápido** (500 ou 404). Se demorarem ou der 504, o `turn_off_feed` não foi portado — seção 1.9 |
 
 ### 6.2 Desempenho — comparar com o baseline da seção 4.7
 
@@ -611,6 +798,53 @@ DROP INDEX idx_bahia_sitemap ON wp_posts;
 Se o índice não resolver, os próximos passos, nesta ordem: (1) aumentar o
 `innodb_buffer_pool_size` da instância; (2) reduzir `entries_per_page` do Yoast — **atenção**,
 em homolog isso **não** resolveu; (3) desligar os sitemaps dos CPTs de menor tráfego.
+
+### 6.4 O painel: nove editorias ocultas, que a virada resolve sozinha — mas confira
+
+Em 18/08/2026 nove editorias saíram do menu do painel a pedido da redação: **Posts** (o tipo
+nativo), **Bahia, Especial, Exclusivo, Mais Gente, Entrevistas, Economia, Mais Notícias e
+Carnaval**. É omissão, não remoção: `public`, `publicly_queryable`, `show_ui` e `has_archive`
+seguem ligados, os arquivos e as URLs continuam no ar, e quem precisar chega por
+`edit.php?post_type=<slug>`.
+
+**Hoje isso só vale por inteiro em homolog, e a virada é o que corrige.** O motivo:
+
+- as 8 editorias saem por `'show_in_menu' => false` no mapa do `bahia-editorias-cpt.php`, que
+  registra em `init` **prioridade 0**;
+- o `bahia_refactor` registra os mesmos CPTs em `init` **prioridade 10** — depois, portanto — e
+  devolve `show_in_menu => true`, desfazendo a omissão. Enquanto o tema antigo estiver no ar,
+  as 8 continuam visíveis na produção;
+- o **Posts** nativo não passa pelo mapa: vai por filtro em `register_post_type_args`, que pega
+  qualquer registro, inclusive o do core. Esse já some nos dois ambientes.
+
+Medido na produção em 18/08, logo depois do deploy `prod-de88838f`:
+
+| tipo | `show_in_menu` na produção | por quê |
+|------|---------------------------|---------|
+| `post` | `false` | filtro, vence sempre |
+| `mais_gente` | `false` | o tema **não registra** este CPT — ver abaixo |
+| os outros 7 | `true` | o tema re-registra e sobrescreve |
+
+O caso do `mais_gente` é a mesma podridão já documentada no commit `104be34f`: existe
+`themes/bahia_refactor/post-types/mais_gente.php`, mas a lista escrita à mão em
+`functions.php:56` inclui `'gente'` e **não** `'mais_gente'`. O tema nunca carrega o arquivo,
+não registra o tipo, e o registro do mu-plugin prevalece.
+
+**Na virada, portanto, não há nada a executar** — o `bahia_refactor` para de rodar, ninguém
+mais sobrescreve, e as nove somem sozinhas. O que há é a **conferência** da tabela em 6.1.
+
+Se em algum momento for preciso ocultá-las na produção **antes** da virada, o caminho é mover
+as 8 do mapa para o mesmo filtro `register_post_type_args` que já cuida do `post` — ele roda
+em qualquer registro e venceria o do tema. Não foi feito porque, no cenário de hoje, mudaria o
+painel que a redação usa em produção, e o pedido nasceu no contexto de homolog.
+
+**Para devolver uma editoria ao menu:** apagar o `'show_in_menu' => false` da linha dela em
+`bahia_editorias_map()`. Não precisa de flush de rewrite — `show_in_menu` não entra em regra de
+reescrita, e por isso a versão do plugin não foi bumpada.
+
+Duas destas ainda publicavam quando foram ocultadas, e isso está registrado para não virar
+mistério: **Bahia** (420 matérias em 90 dias, última em 28/07/2026) e **Economia** (53 em 90
+dias, última em 24/07/2026). Não é editoria morta — é consolidação editorial.
 
 ---
 
