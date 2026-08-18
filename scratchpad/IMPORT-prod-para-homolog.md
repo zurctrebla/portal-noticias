@@ -250,8 +250,14 @@ Antes do import, escreva `RESTAURACAO-import-YYYYMMDD.md` com, no mínimo:
 **Decidido em 16/08/2026.** Este documento especificava tudo sobre o destino e **nada sobre a
 origem** — falha registrada aqui para não se repetir na virada.
 
-Produção **não é lida ao vivo**. O responsável gera um dump, entrega o arquivo, e todas as
-fases (dry-run, import, conferência) leem **desse arquivo**.
+Produção **não é lida ao vivo**. Gera-se um dump uma vez, e todas as fases (dry-run,
+import, conferência) leem **desse arquivo**.
+
+> **Quem executa:** o dump é gerado por `kubectl` contra o cluster de produção, mediante
+> autorização explícita e pontual — decidido em 17/08/2026. É a **única** operação deste
+> roteiro que toca produção, e é somente leitura: `mysqldump --single-transaction`, sem
+> `--lock-all-tables` e sem `--master-data`, portanto sem travar tabela num banco em
+> operação. Nada é escrito lá em nenhuma hipótese.
 
 ### Por que, e este é o motivo mais forte
 
