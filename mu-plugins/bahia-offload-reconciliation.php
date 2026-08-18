@@ -45,19 +45,34 @@ class Bahia_Offload_Reconciliation {
 	 * antiga (pre-migracao para o EKS) ainda serve esses arquivos por HTTP e e a
 	 * unica origem para o acervo legado.
 	 *
-	 * DESLIGADA POR PADRAO. O IP 172.31.0.178 e da VPS Docker Swarm anterior,
-	 * em outra VPC e provavelmente inalcancavel a partir do EKS -- tentar a rede
-	 * ali so renderia timeouts a cada ciclo do cron. Com origem vazia a rotina
-	 * segue reconciliando normalmente todo arquivo que exista em disco (EFS) e
-	 * apenas registra o que nao encontrou, sem tocar na rede (ver o `continue`
-	 * em copy_missing_files_locally()).
+	 * DESLIGADA POR PADRAO -- e o motivo NAO e alcancabilidade.
 	 *
-	 * Para reativar, defina a constante no wp-config.php com a origem desejada:
+	 * A versao anterior deste comentario dizia que 172.31.0.178 estava "em outra
+	 * VPC e provavelmente inalcancavel a partir do EKS", e que ligar a origem so
+	 * renderia timeouts. Medido em 18/08/2026 de dentro do pod de producao:
+	 *
+	 *     172.31.0.178:80    -> ABERTA
+	 *     172.31.70.197:3306 -> ABERTA   (o proprio RDS de producao)
+	 *
+	 * A faixa 172.31/16 e o VPC default, onde vive o banco de producao; os pods
+	 * falam com ele o dia inteiro. A VPS Docker Swarm anterior esta de pe e e
+	 * alcancavel. Corrigido aqui porque comentario errado envelhece pior que
+	 * codigo errado: ninguem o testa.
+	 *
+	 * O motivo real de ficar desligada e que a VPS esta em vias de ser encerrada.
+	 * Reconciliar contra uma origem que vai sumir troca um erro visivel (arquivo
+	 * ausente, registrado no log) por um silencioso (copia feita de uma fonte
+	 * obsoleta, que para de funcionar sem aviso no dia do desligamento).
+	 *
+	 * Com origem vazia a rotina segue reconciliando normalmente todo arquivo que
+	 * exista em disco (EFS) e apenas registra o que nao encontrou, sem tocar na
+	 * rede (ver o `continue` em copy_missing_files_locally()).
+	 *
+	 * Para reativar enquanto a VPS existir, defina a constante no wp-config.php:
 	 *
 	 *     define( 'BAHIA_OFFLOAD_FALLBACK_ORIGIN', 'http://172.31.0.178' );
 	 *
-	 * ou, em runtime, via o filtro `bahia_offload_fallback_origin`. So faz
-	 * sentido se a origem legada estiver de fato acessivel a partir do cluster.
+	 * ou, em runtime, via o filtro `bahia_offload_fallback_origin`.
 	 */
 	public static function fallback_origin() {
 		$origin = defined( 'BAHIA_OFFLOAD_FALLBACK_ORIGIN' )

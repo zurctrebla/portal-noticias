@@ -14,6 +14,10 @@
  *              foogallery, regenerate-thumbnails e o proprio amazon-s3-and-cloudfront. Como a
  *              midia e servida por CloudFront, a URL nunca casa com o path local e todos caem
  *              no mesmo full-scan. Este filtro protege todos de uma vez, no core.
+ *
+ *              Depois da troca de tema entra mais um chamador, pelo mesmo caminho: o tagDiv,
+ *              em td_util::get_attachment_id, que delega ao core. Ou seja, a protecao vale
+ *              nos dois temas e este arquivo NAO deve ser removido junto com o bahia_refactor.
  * Author: bahia.ba
  * Version: 1.0.0
  */

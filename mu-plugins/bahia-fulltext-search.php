@@ -42,29 +42,34 @@ function bahia_ft_table() {
 }
 
 /**
- * Post types indexados/buscáveis.
+ * Post types indexados/buscáveis. É a UNIÃO de duas fontes, nunca uma no lugar da outra.
  *
- * Os dois ambientes registram as editorias de formas diferentes, e este é o único
- * ponto do arquivo que dependia disso:
+ * A versão anterior escolhia entre elas: usava bahia_editorias_map() quando existisse
+ * e, só na ausência dele, perguntava ao WordPress. Isso é uma armadilha, porque esta
+ * lista não decide apenas o que a busca cobre — ela decide, em bahia_ft_sync(), o que
+ * é APAGADO da tabela-sombra a cada save_post. Um tipo que exista no site e falte na
+ * lista some do índice silenciosamente, uma matéria por vez, e um bahia_ft_rebuild()
+ * o elimina de uma vez.
  *
- *  - homolog (tema Newspaper): as editorias vêm do mu-plugin bahia-editorias-cpt.php,
- *    que expõe bahia_editorias_map();
- *  - produção (tema bahia_refactor): as editorias são CPTs registrados pelo PRÓPRIO
- *    TEMA, e bahia_editorias_map() não existe. Cair no array vazio indexaria só
- *    'post' — que em produção tem 1 matéria, contra 257.877 nos CPTs. A busca
- *    voltaria vazia.
+ * Medido em 18/08/2026, na véspera da troca de tema: em produção o mapa não existia e
+ * o WordPress devolvia 25 tipos; passar a usar só o mapa deixaria 'page' de fora, além
+ * de qualquer editoria que o mapa não listasse. A união não perde nenhum dos dois lados
+ * e degrada bem: se um deles ficar incompleto, o outro cobre.
  *
- * Por isso o fallback pergunta ao WordPress quais tipos são públicos e buscáveis,
- * em vez de assumir uma lista. Confere com o que a busca nativa cobriria.
+ *  - WordPress: a verdade sobre o que está registrado AGORA, seja pelo tema antigo
+ *    (bahia_refactor registra as editorias sozinho) ou pelo mu-plugin de CPTs.
+ *  - bahia_editorias_map(): garante as editorias mesmo em ordem de carregamento em que
+ *    elas ainda não estejam registradas quando esta função for chamada.
  */
 function bahia_ft_types() {
+    $types = get_post_types(array('public' => true, 'exclude_from_search' => false), 'names');
+    unset($types['attachment']);
+    $types = array_values($types);
+
     if (function_exists('bahia_editorias_map')) {
-        $types = array_keys(bahia_editorias_map());
-    } else {
-        $types = get_post_types(array('public' => true, 'exclude_from_search' => false), 'names');
-        unset($types['attachment']);
-        $types = array_values($types);
+        $types = array_merge($types, array_keys(bahia_editorias_map()));
     }
+
     $types[] = 'post';
     return array_values(array_unique($types));
 }
