@@ -344,14 +344,35 @@ Convivência com o tema antigo está resolvida: o mu-plugin registra o feed em `
 99 e limpa o `do_feed_feedbahiaba` antes, senão os dois callbacks ficariam pendurados e o XML
 sairia **duplicado** em produção enquanto o `bahia_refactor` estiver no ar.
 
-**A decisão que sobra para você:** os feeds desligados respondem **500**, que é o que o tema
-sempre fez e o que o porte reproduz. 500 diz ao robô "deu erro, tente de novo" — e ele tenta,
-para sempre. Um **410** diria "isto acabou", e os endereços sairiam dos índices. É uma linha
-em `bahia_feeds_desligado()`.
+#### As duas decisões, tomadas em 18/08/2026
 
-**E a pergunta que continua aberta:** quem consome o `feedbahiaba`? Ele serve conteúdo hoje em
-produção e não está documentado em lugar nenhum. Vale procurar por `feedbahiaba` no log de
-acesso do nginx antes de qualquer decisão sobre ele.
+**1. Os feeds respondem 410, e não o 500 do tema.** 500 diz "deu erro do meu lado, tente de
+novo", e o robô obedece — para sempre. 410 diz "isto existiu e acabou": buscador tira do
+índice, leitor de RSS para de tentar. A frase da resposta continua a mesma do tema, para quem
+procurar pelo texto no histórico encontrar a continuidade.
+
+**2. O `feedbahiaba` está DESLIGADO — ninguém o consumia.** Era o único feed vivo do portal,
+mas sem consumidor um endereço que varre o acervo a cada visita de robô é só custo.
+
+O código dele **não foi apagado**: está inteiro no mu-plugin, testado e inerte. O interruptor
+é uma linha:
+
+```php
+// mu-plugins/bahia-feeds.php
+define('BAHIA_FEEDS_PROPRIO_ATIVO', false);   // trocar para true religa
+```
+
+Religar não pede mais nada — nem flush de reescrita, nem bump de versão. O registro do
+`add_feed` fica **fora** do interruptor de propósito: com o feed desligado, o que se quer em
+`/feed/feedbahiaba/` é o 410 barato, e para o WordPress reconhecer aquilo como feed o nome
+precisa estar registrado. Sem o registro a URL cairia no 404 — que neste site é o caminho mais
+caro que existe (o `next_prev` do tagDiv pré-renderiza, e 404 não entra no `fastcgi_cache`).
+
+Se religar um dia, confira junto o `BAHIA_FEEDS_ITENS` (5) e a lista de `bahia_feeds_tipos()`,
+que publica **todas** as editorias do mapa — inclusive as ocultas no painel pela seção 6.4.
+
+Estado medido em homolog depois das duas decisões: `/feed/`, `/politica/feed/`,
+`/comments/feed/`, `/feed/rss2/` e `/feed/feedbahiaba/` todos em **410**, entre 0,53 s e 1,7 s.
 
 ### 1.10 A varredura do tema antigo — o inventário completo do que morre junto
 
@@ -803,8 +824,7 @@ rollback da fase 4.
 | `/quem-somos/` | Fotos da equipe corretas (checar Lizandra e Tauany); `<title>` = **`Quem Somos - bahia.ba`**, sem "Jornalismo confiável e contextualizado" |
 | `<title>` das editorias | `Política - bahia.ba` — **sem** ": últimas notícias" e **sem** "Archive" (seção 1.8) |
 | Menu do painel | As **nove** ocultas sumiram: Posts, Bahia, Especial, Exclusivo, Mais Gente, Entrevistas, Economia, Mais Notícias, Carnaval (seção 6.4) |
-| `/feed/feedbahiaba/` | **Ainda responde 200 com itens.** Se der 404, o `add_feed` não foi portado — seção 1.9 |
-| `/feed/` e `/politica/feed/` | Respondem **rápido** (500 ou 404). Se demorarem ou der 504, o `turn_off_feed` não foi portado — seção 1.9 |
+| Feeds (`/feed/`, `/politica/feed/`, `/feed/feedbahiaba/`) | **Todos em 410, em menos de 2 s.** 404 = mu-plugin fora do ar; demora ou 504 = o corte em `parse_request` não agiu (seção 1.9) |
 
 ### 6.2 Desempenho — comparar com o baseline da seção 4.7
 

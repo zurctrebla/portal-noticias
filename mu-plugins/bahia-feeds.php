@@ -33,20 +33,47 @@ if (!defined('ABSPATH')) {
 /** Bump para forçar novo flush quando mexer no `add_feed` abaixo. */
 define('BAHIA_FEEDS_VER', '1.0.0');
 
-/** Quantos itens o feed publica. Era 5 no template do tema. */
+/** Quantos itens o feed publica, quando ligado. Era 5 no template do tema. */
 define('BAHIA_FEEDS_ITENS', 5);
+
+/**
+ * O FEED PRÓPRIO ESTÁ DESLIGADO. Decidido em 18/08/2026 — e este é o interruptor.
+ *
+ * O `feedbahiaba` era o único feed vivo do portal: respondia 200 com 5 itens em produção.
+ * Antes de portá-lo, a pergunta óbvia era quem o consumia, já que não havia registro em lugar
+ * nenhum. A resposta veio da redação: **ninguém**. Sem consumidor, um endereço que varre o
+ * acervo a cada visita de robô é só custo.
+ *
+ * O código dele fica INTEIRO aqui, funcionando e testado — não foi apagado, foi desligado.
+ * Para religar, basta trocar `false` por `true` nesta linha. Nada mais:
+ *
+ *   - a regra de reescrita continua registrada (ver `add_feed` mais abaixo, e o porquê disso
+ *     estar fora do interruptor), então não é preciso flush nem bump de versão;
+ *   - o renderizador, o `pre_get_posts` que molda a consulta e o curto-circuito do
+ *     `Last-Modified` já estão no lugar e são inertes enquanto isto for `false`;
+ *   - a validação feita em 18/08 com ele ligado está registrada no roteiro da virada
+ *     (`scratchpad/MIGRACAO-homolog-para-prod.md`, seção 1.9): 200 em 0,69 s, 5 itens, XML
+ *     válido, um único `<rss>`.
+ *
+ * Se religar, confira também `BAHIA_FEEDS_ITENS` e a lista de editorias em
+ * `bahia_feeds_tipos()` — o feed publica todas as do mapa, inclusive as ocultas no painel.
+ */
+define('BAHIA_FEEDS_PROPRIO_ATIVO', false);
 
 /* ---------------------------------------------------------------------------
    1. Desligar os feeds padrão
    --------------------------------------------------------------------------- */
 
 /**
- * Mantido o texto e o código HTTP do tema (500), para o porte não mudar comportamento junto
- * com o lugar.
+ * 410 GONE, E NÃO O 500 DO TEMA. Decidido em 18/08/2026.
  *
- * FICA A DECISÃO, que é sua e não minha: 500 diz ao robô "deu erro, tente de novo", e ele
- * tenta — para sempre. Um 410 diria "isto acabou, esqueça", e o endereço sairia dos índices.
- * Como 500 é o que está no ar hoje, é o que este porte reproduz.
+ * O tema respondia 500 — o padrão do `wp_die()` sem argumento de status. Funciona, mas diz a
+ * coisa errada: 500 é "deu erro do meu lado, tente de novo", e o robô obedece, para sempre. É
+ * o pior dos mundos num endereço que ninguém mais serve e que robô visita sem parar.
+ *
+ * 410 é "isto existiu e acabou". Buscadores tiram o endereço do índice em vez de reagendar, e
+ * leitores de RSS param de tentar. A frase segue a mesma do tema, de propósito: quem procurar
+ * pelo texto no histórico encontra a continuidade.
  */
 function bahia_feeds_desligado() {
     wp_die(
@@ -54,7 +81,9 @@ function bahia_feeds_desligado() {
             /* Mesma frase do tema, inclusive a falta de espaço depois da vírgula. */
             'No feed available,please visit our <a href="%s">homepage</a>!',
             esc_url(get_bloginfo('url'))
-        )
+        ),
+        '',
+        array('response' => 410)
     );
 }
 
@@ -80,8 +109,8 @@ add_action('parse_request', function ($wp) {
     if (empty($wp->query_vars['feed'])) {
         return;
     }
-    if ('feedbahiaba' === $wp->query_vars['feed']) {
-        return;   // o nosso; segue o fluxo normal
+    if (BAHIA_FEEDS_PROPRIO_ATIVO && 'feedbahiaba' === $wp->query_vars['feed']) {
+        return;   // o nosso, ligado; segue o fluxo normal
     }
 
     bahia_feeds_desligado();
@@ -116,6 +145,16 @@ remove_action('wp_head', 'feed_links_extra', 3);
  *
  * Registrar em 99 (depois do tema) e limpar o hook antes garante um renderizador só, o daqui,
  * nos dois ambientes. Quando o tema sair, a limpeza vira no-op e nada muda.
+ *
+ * O REGISTRO FICA FORA DO INTERRUPTOR, e isso é de propósito. Com o feed desligado, o que se
+ * quer em `/feed/feedbahiaba/` é um 410 barato — e para o WordPress reconhecer aquilo como
+ * requisição de feed (e o corte em `parse_request` agir), o nome precisa estar registrado.
+ * Sem o registro, a URL não casaria com regra nenhuma e cairia no 404, que neste site é o
+ * caminho mais caro que existe: o `next_prev` do tagDiv pré-renderiza e já levou o 404 a
+ * dezenas de segundos, e 404 não entra no fastcgi_cache.
+ *
+ * Ou seja: registrado sempre, servido só quando BAHIA_FEEDS_PROPRIO_ATIVO for true. É também
+ * o que faz religar custar uma linha, sem flush de reescrita.
  */
 add_action('init', function () {
     remove_all_actions('do_feed_feedbahiaba');
