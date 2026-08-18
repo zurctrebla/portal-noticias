@@ -5,13 +5,33 @@
  *              arquivos de editoria, busca, sidebar e blocos relacionados), sempre em
  *              palavra inteira. NÃO toca no <h1> do single, no <title>, nas meta tags
  *              do Yoast, nos feeds, no admin nem nos itens de menu.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Bahia.ba
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
+
+/**
+ * VALE NOS DOIS AMBIENTES, E NOS DOIS TEMAS. Decidido em 18/08/2026.
+ *
+ * No mesmo dia, o `bahia-remove-dup-featured.php` ganhou uma guarda que o desliga fora do
+ * Newspaper: ele apagava a única foto da matéria no `bahia_refactor`, porque o tema antigo
+ * não redesenha a destacada. A pergunta natural em seguida foi se este arquivo deveria
+ * ganhar a mesma guarda — ele também nasceu para o layout do Newspaper e também está
+ * agindo no tema antigo, cortando títulos longos nas listagens de produção.
+ *
+ * A resposta foi NÃO, e a diferença é de natureza, não de descuido:
+ *
+ *   - lá, o mu-plugin **removia** conteúdo que o tema não repunha: perda pura;
+ *   - aqui, ele **encurta** o que continua legível e clicável, e o título inteiro segue
+ *     intacto no `<h1>` da matéria, no `<title>` e nas meta tags.
+ *
+ * O limite de 70 é regra editorial, não detalhe de layout: vale enquanto o `bahia_refactor`
+ * estiver no ar e continua valendo depois da virada. **Não acrescentar guarda de tema aqui**
+ * por simetria com o outro arquivo — a simetria é aparente.
+ */
 
 define('BAHIA_LIMITE_TITULO', 70);
 define('BAHIA_LIMITE_RESUMO', 160);
