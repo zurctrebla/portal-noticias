@@ -11,8 +11,9 @@
  *              QUANDO ele referencia o mesmo attachment da featured image.
  *
  *              100% display-time e reversível (não escreve no banco). Só age quando
- *              a 1ª imagem do corpo == featured; se forem diferentes, não mexe.
- * Version: 1.0.0
+ *              a 1ª imagem do corpo == featured; se forem diferentes, não mexe. E só com o
+ *              Newspaper ativo — ver a guarda logo abaixo e o incidente que a motivou.
+ * Version: 1.1.0
  * Author: Bahia.ba
  */
 
@@ -20,9 +21,42 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Temas que desenham a imagem destacada POR FORA do conteúdo. A remoção só faz sentido
+ * neles: é neles que a foto aparece duas vezes.
+ */
+define('BAHIA_RDF_TEMAS_COM_DESTACADA', 'Newspaper');
+
+/**
+ * INCIDENTE DE 18/08/2026 — por que esta guarda existe.
+ *
+ * A virada para o Newspaper foi abortada e o tema voltou para `bahia_refactor`, mas os
+ * mu-plugins da migração continuaram no disco: mu-plugin carrega sempre, não pergunta qual
+ * tema está ativo. Este filtro seguiu removendo o primeiro `[caption]` do corpo — só que
+ * `bahia_refactor/single_web.php` e `single_mobile.php` **não imprimem a destacada em lugar
+ * nenhum**. O resultado não foi uma foto, foi nenhuma: toda matéria ficou sem imagem, em
+ * desktop e em celular, nova e antiga, porque 100% do acervo começa com
+ * `[caption]<img class="wp-image-{ID}">` e esse ID é justamente o `_thumbnail_id` (a ponte
+ * `acf-imagem-featured.php` garante isso). A legenda com o crédito da foto ia junto.
+ *
+ * A premissa do arquivo — "o tema já mostra a destacada no topo" — estava escrita na
+ * descrição e em lugar nenhum no código. Agora está no código.
+ *
+ * Não é `Newspaper` no ar? O filtro não age, e o corpo volta a ser a única fonte da foto.
+ * Quando a virada for retomada, ele volta sozinho, sem ninguém precisar lembrar disto.
+ */
+function bahia_rdf_tema_mostra_destacada() {
+    $temas = array_map('trim', explode(',', BAHIA_RDF_TEMAS_COM_DESTACADA));
+
+    return in_array(get_template(), $temas, true) || in_array(get_stylesheet(), $temas, true);
+}
+
 add_filter('the_content', function ($content) {
     // Só no corpo do post principal (não em related posts, widgets, feeds, excerpts).
     if (is_admin() || !is_singular()) {
+        return $content;
+    }
+    if (!bahia_rdf_tema_mostra_destacada()) {
         return $content;
     }
     if (get_the_ID() !== get_queried_object_id()) {
