@@ -41,25 +41,51 @@ define('BAHIA_EDITORIAS_CPT_VER', '1.2.0');
  * Ela também alimenta bahia_ft_types() do bahia-fulltext-search.php — um tipo
  * ausente aqui é apagado da tabela-sombra de busca a cada save_post.
  */
+/**
+ * OMITIR NÃO É APAGAR — as editorias com `show_in_menu => false`. Decidido em 18/08/2026.
+ *
+ * Nove editorias saíram do menu do painel a pedido da redação: Posts (o tipo NATIVO, tratado
+ * no fim deste arquivo, não aqui), Bahia, Especial, Exclusivo, Mais Gente, Entrevistas,
+ * Economia, Mais Notícias e Carnaval. Somam-se às duas que já vinham ocultas do tema antigo,
+ * Gente e Bombou.
+ *
+ * O que NÃO muda, e é o ponto: `public`, `publicly_queryable`, `show_ui` e `has_archive`
+ * continuam ligados. Os arquivos seguem no ar, as URLs seguem respondendo, o acervo fica
+ * inteiro e as matérias continuam editáveis — o painel só para de OFERECER a editoria no
+ * menu lateral e no "+ Novo". Quem precisar chega por `edit.php?post_type=<slug>`.
+ *
+ * As taxonomias {slug}_cat e {slug}_tag delas somem do menu junto, porque o core as pendura
+ * como submenu do tipo. Elas continuam registradas e os termos continuam valendo.
+ *
+ * Para devolver uma ao menu, apague o `'show_in_menu' => false` da linha dela. É só isso —
+ * não precisa de flush de rewrite (ver bahia_editorias_maybe_flush() no fim do arquivo:
+ * `show_in_menu` não entra em regra de reescrita, e a versão do plugin NÃO foi bumpada de
+ * propósito para não disparar um flush desnecessário).
+ *
+ * DUAS DESTAS AINDA PUBLICAVAM quando foram ocultadas, e isso está aqui para não virar
+ * mistério daqui a seis meses: Bahia (420 matérias em 90 dias, última em 28/07/2026) e
+ * Economia (53 em 90 dias, última em 24/07/2026). Não é editoria morta — é consolidação
+ * editorial. As outras seis estavam paradas desde 2026-03 ou antes.
+ */
 function bahia_editorias_map() {
     return array(
         'politica'       => array('label' => 'Política',      'with_front' => true),
         'salvador'       => array('label' => 'Salvador',      'with_front' => true),
-        'bahia'          => array('label' => 'Bahia',         'with_front' => true),
+        'bahia'          => array('label' => 'Bahia',         'with_front' => true,  'show_in_menu' => false),
         'municipios'     => array('label' => 'Municípios',    'with_front' => true),
         'justica'        => array('label' => 'Justiça',       'with_front' => true),
-        'especial'       => array('label' => 'Especial',      'with_front' => false),
-        'exclusivo'      => array('label' => 'Exclusivo',     'with_front' => false),
+        'especial'       => array('label' => 'Especial',      'with_front' => false, 'show_in_menu' => false),
+        'exclusivo'      => array('label' => 'Exclusivo',     'with_front' => false, 'show_in_menu' => false),
         'esporte'        => array('label' => 'Esporte',       'with_front' => true),
         'brasil'         => array('label' => 'Brasil',        'with_front' => true),
         'entretenimento' => array('label' => 'Entretenimento','with_front' => true),
-        'mais_gente'     => array('label' => 'Mais Gente',    'with_front' => false),
-        'entrevista'     => array('label' => 'Entrevistas',   'with_front' => false),
-        'economia'       => array('label' => 'Economia',      'with_front' => true),
+        'mais_gente'     => array('label' => 'Mais Gente',    'with_front' => false, 'show_in_menu' => false),
+        'entrevista'     => array('label' => 'Entrevistas',   'with_front' => false, 'show_in_menu' => false),
+        'economia'       => array('label' => 'Economia',      'with_front' => true,  'show_in_menu' => false),
         'mundo'          => array('label' => 'Mundo',         'with_front' => true),
-        'mais_noticias'  => array('label' => 'Mais Notícias', 'with_front' => false),
+        'mais_noticias'  => array('label' => 'Mais Notícias', 'with_front' => false, 'show_in_menu' => false),
         'artigo'         => array('label' => 'Artigos',       'with_front' => false),
-        'carnaval'       => array('label' => 'Carnaval',      'with_front' => false),
+        'carnaval'       => array('label' => 'Carnaval',      'with_front' => false, 'show_in_menu' => false),
 
         // --- Editorias que o bahia_refactor registrava e este mapa não cobria ---
         // Levantadas em 18/08/2026 comparando $wp_post_types em tempo de execução
@@ -169,3 +195,33 @@ function bahia_editorias_maybe_flush() {
     }
 }
 add_action('init', 'bahia_editorias_maybe_flush', 999);
+
+/**
+ * "Posts" — o tipo NATIVO do WordPress — também sai do menu (18/08/2026).
+ *
+ * Ele entrou no mesmo pedido das oito editorias acima, mas não está no mapa e nunca poderia
+ * estar: `post` é registrado pelo próprio core, em create_initial_post_types(), muito antes
+ * deste arquivo rodar. Por isso o mecanismo é outro — o filtro dos argumentos de registro.
+ *
+ * Conferido no core desta imagem antes de escrever, porque versões antigas do WordPress
+ * fixavam o item na mão (`$menu[5] = array(__('Posts'), ...)`), e aí `show_in_menu` não
+ * adiantaria nada. Nesta, wp-admin/menu.php:122-128 percorre
+ * `array_merge(array('post','page'), $types)` e pula quem não tem `show_in_menu === true`.
+ * Ou seja: o tipo nativo obedece ao mesmo argumento que as editorias — um mecanismo só para
+ * as nove, em vez de um remove_menu_page() avulso.
+ *
+ * O "+ Novo > Post" da barra some junto: `show_in_admin_bar` cai no valor de `show_in_menu`
+ * quando não é declarado, e o filtro roda ANTES desse padrão ser calculado (WP_Post_Type::
+ * set_props aplica o filtro na primeira linha).
+ *
+ * Como nas editorias, isto é omissão e não remoção: `public` continua true, os posts nativos
+ * seguem acessíveis e editáveis por `edit.php`. Some com ele o submenu de Categorias e Tags
+ * nativas, que é filho deste tipo.
+ */
+add_filter('register_post_type_args', function ($args, $post_type) {
+    if ('post' === $post_type) {
+        $args['show_in_menu'] = false;
+    }
+
+    return $args;
+}, 10, 2);
