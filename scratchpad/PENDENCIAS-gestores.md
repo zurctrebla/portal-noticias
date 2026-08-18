@@ -385,3 +385,46 @@ contraste AA contra o texto branco — o componente já escurece o fundo automat
 
 **Se a resposta for "está bom assim", não há trabalho a fazer** — o padrão preto continua e o
 site fica como está hoje.
+
+---
+
+## 9. Produção serve o site inteiro SEM compressão
+
+**Medido em 18/08/2026, na fase 2 da virada. Pré-existente, não causado por este trabalho.**
+
+### O que é
+
+Servidores web comprimem o que enviam (gzip ou brotli). Texto — HTML, CSS, JavaScript —
+encolhe tipicamente para 15–20% do tamanho original. É padrão da indústria há duas décadas e
+o navegador faz a descompressão sozinho, sem custo perceptível.
+
+**O nginx de produção não comprime nada.** Verificado pedindo explicitamente:
+
+```
+curl -sI https://bahia.ba/politica/ -H "Accept-Encoding: gzip, deflate, br"
+   -> nenhum cabeçalho content-encoding na resposta
+   -> 197.309 bytes transferidos
+```
+
+Esses 197 KB caberiam em cerca de 20 KB.
+
+### Por que importa
+
+Vale para **todo** o site, não só para o HTML: a folha de estilo do tema sozinha tem 650 KB,
+e também viaja inteira.
+
+Quem paga a conta é principalmente o leitor no celular, em rede móvel — é lá que cada
+100 KB vira segundo de espera. E é peso de saída da AWS, ou seja, custo de banda medido em
+fatura.
+
+### O que é preciso decidir
+
+**Ligar a compressão no ConfigMap do nginx.** É mudança de uma dezena de linhas
+(`gzip on`, `gzip_types`, `gzip_min_length`), **aditiva e reversível** — se algo sair errado,
+volta-se o ConfigMap e reinicia-se o pod.
+
+Não é decisão de conteúdo, é de infraestrutura, e o único motivo de não estar feita hoje é
+não ser assunto da janela de migração do tema.
+
+**Fica para depois da virada**, com o site novo já estabilizado, para que qualquer efeito
+seja atribuível a uma coisa só.

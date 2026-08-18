@@ -357,6 +357,93 @@ Cada etapa é reversível sozinha. Não avançar sem conferir a anterior.
 | 12 | Rodar as verificações da seção 6 | Se falhar, voltar etapa a etapa; em último caso, restaurar o snapshot |
 | 13 | Tirar da manutenção | — |
 
+### 5.0 FASE 3 EXECUTADA — 18/08/2026. O que entrou, o que ficou de fora e por quê
+
+Aplicada em quatro blocos, com conferência de HTML entre cada um: **o site de produção ficou
+byte a byte idêntico depois de todos os quatro** (a única variação era rotação de anúncio do
+AdRotate, normalizada no instrumento de comparação).
+
+| Bloco | Gravado |
+|---|---|
+| anexos | 41 `attachment` + 174 `postmeta` + **41 linhas em `wp_as3cf_items`** |
+| templates | 13 `tdb_templates` + 97 `postmeta` |
+| páginas | **3** `page` + 19 `postmeta` |
+| menus | 22 `nav_menu_item` + 176 `postmeta` + 3 `wp_terms` + 3 `wp_term_taxonomy` + 22 `wp_term_relationships` |
+
+Total: **79 posts, 466 postmeta, 41 offload, 3 termos, 22 relações.** Zero órfãos em qualquer
+direção. Os 41 anexos foram conferidos **respondendo 200 pelo CloudFront a partir de produção**
+— não só a existência da linha de offload.
+
+#### As duas páginas que ficaram de fora — de propósito, não por esquecimento
+
+`9000118` (`home`) e `9000155` (`home-temporaria`) **não foram migradas**. São resíduo das
+tentativas de montagem da home em homolog: medido, **nada aponta para elas** — 0 referências em
+`wp_options`, 0 em `wp_postmeta`, 0 em `post_content` de qualquer post, e nenhuma é o
+`page_on_front` (que é a `9000142`). Migrá-las criaria `/home/` e `/home-temporaria/` públicas e
+indexáveis em produção, sem propósito.
+
+Se um dia fizerem falta, entram depois: os IDs continuam livres em produção e o payload
+`f3-payload.json` as contém.
+
+#### O que NÃO entrou na fase 3, e para onde foi
+
+| Item | Destino | Razão |
+|---|---|---|
+| **`wpseo_titles`** | **FASE 4** | Ver 5.0.1 abaixo — muda o que o Google vê, hoje |
+| `td_011` | fase 4 | Já era o plano; ver 5.0.2 |
+| `siteurl`, `home` | nunca | Estado do ambiente |
+| `options_slider_m1`, `options_semi_destaques_m1` | **nunca** | Sobrescreveria os destaques atuais de produção pelos de 28/07. Conferidas intactas depois da fase: 1 e 4 itens |
+| `blogdescription` | **nunca** | Produção tem *"A notícia que conecta você à Bahia"*, homolog tem *"A notícia no ponto certo"*. **O valor de produção é o certo** — é dele que o `%%sitedesc%%` do Yoast monta o título da home (§1.7) |
+| `wp_historico_destaques` | nunca | FK real para `wp_posts.ID` |
+| 45 `revision` | nunca | Não é conteúdo publicado |
+| `#9000195`, **`#9000199`**, `#9000212` | **nunca** | Conteúdo editorial nascido em homolog em 16/08 — o 9000199 é uma matéria de esporte **publicada**. Produção é a fonte da verdade do acervo |
+
+#### 5.0.1 Por que `wpseo_titles` saiu da fase 3
+
+Comparação chave a chave: 1.065 em produção, 1.115 no payload, **0 seriam perdidas**. Mas das
+78 chaves que mudam de valor, **4 são `breadcrumbs-*` e já são visíveis hoje**: o Yoast emite
+`yoast-schema-graph` em produção e o `BreadcrumbList` usa `"name":"Home"`, que viraria
+`"Início"`. É dado estruturado que o Google lê.
+
+As outras 74 são `title-*` e **não** têm efeito hoje — o `bahia_refactor` fixa
+`<title>Bahia.Ba</title>` em toda página e ignora o Yoast (conferido na home, em `/politica/`,
+na busca e no 404). Passam a valer exatamente quando o tema trocar.
+
+E entre as **50 chaves novas** há **5 `noindex-*`**, que são diretiva de indexação.
+
+Aplicar **por união**, nunca gravando a opção inteira:
+
+```php
+$atual = get_option('wpseo_titles');
+foreach ($payload['wpseo_titles'] as $k => $v) { $atual[$k] = $v; }
+update_option('wpseo_titles', $atual);   // 1.065 -> 1.115, nada perdido
+```
+
+#### 5.0.2 `td_011` NÃO EXISTE em produção — isto muda a fase 4
+
+Medido em 18/08: `SELECT option_value FROM wp_options WHERE option_name='td_011'` volta
+**vazio**. A opção é criada pelo tema Newspaper na ativação, e o tema nunca esteve ativo lá.
+
+Consequência: a fase 4 **não** vai "migrar chaves por cima de uma opção existente". A ordem
+correta é trocar `template`/`stylesheet`, deixar o tema criar a `td_011` com os padrões dele, e
+**só então** escrever as chaves da §1.3.1. O aviso original — "copiar a opção inteira
+sobrescreveria licença e versão" — perde o objeto: não há o que sobrescrever.
+
+#### 5.0.3 `tds_footer_page = 861` — **NÃO CORRIGIR NA VIRADA**
+
+> ## ⚠️ O ID 861 aponta para uma MATÉRIA, não para uma página. ISSO É O ESPERADO.
+>
+> Em **produção** o 861 é `Cinco postos do SAC modificam horário de funcionamento`, post do
+> tipo `bahia`, publicado. Em **homolog** é exatamente o mesmo post. O valor é **idêntico nos
+> dois ambientes** e é **anterior a todo este trabalho**.
+>
+> **NÃO "conserte" isso no meio da virada.** É precisamente o tipo de coisa que parece um erro
+> óbvio, tenta a mão de quem está executando, e vira uma mudança não planejada dentro da janela
+> mais sensível do projeto. Se merece revisão, é depois, com o site estável e como decisão
+> própria — não como remendo de madrugada.
+
+---
+
 ### 5.1 Ativação de plugins — entra na virada atômica, não no deploy
 
 **Medido em 18/08/2026**, comparando `active_plugins` dos dois ambientes: produção tem **21**
