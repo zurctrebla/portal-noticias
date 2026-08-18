@@ -44,15 +44,51 @@ if (!defined('ABSPATH')) {
 /** ID impossível: acima do teto de bigint(20) usado em wp_posts.ID. */
 const BAHIA_PLP_ID_IMPOSSIVEL = 9223372036854775807;
 
+/**
+ * INCIDENTE DE 18/08/2026, À TARDE — por que a assinatura é conferida ARGUMENTO A ARGUMENTO.
+ *
+ * A primeira versão deste arquivo reconhecia a consulta do td_util por dois traços:
+ * `post_type` igual a 'any' e `p` ausente ou zero. Isso não é uma assinatura, é uma
+ * coincidência comum: QUALQUER consulta secundária que use 'any' e não passe um `p` cai
+ * nela — inclusive as legítimas, que então recebem `p = PHP_INT_MAX` e voltam vazias.
+ *
+ * Foi o que aconteceu com o bloco "+ Mais Lidas". O `render()` do
+ * mu-plugins/bahia-mais-lidas.php monta `post__in` + `post_type => 'any'`; a lista sumiu
+ * inteira da home de homologação às 09:26 UTC, quando a revisão 65 subiu com a correção do
+ * 504. O `mais_lidas2()` do bahia_refactor (themes/bahia_refactor/functions.php:1080) monta
+ * a MESMA consulta e é o caminho primário da lista em produção — lá o defeito não apareceu
+ * só porque o transient do GA4 estava vazio e a função caiu no fallback SQL sozinha.
+ *
+ * A consulta que se quer neutralizar é literalmente esta, e nada além dela:
+ *
+ *     new WP_Query(['post_type' => 'any', 'p' => $policy_page_id])
+ *
+ * Dois argumentos. Por isso a conferência é sobre `$q->query` — os argumentos COMO FORAM
+ * PASSADOS, antes de o WP preencher os padrões —, e não sobre query_vars já normalizados.
+ * Uma consulta com `post__in`, `post_status`, `posts_per_page` ou qualquer outra coisa é
+ * outra consulta e passa incólume, ainda que também use 'any'.
+ *
+ * Contrapartida assumida: se o tagDiv um dia acrescentar um argumento à chamada, a
+ * assinatura deixa de bater e a varredura volta a rodar — o site fica lento de novo, não
+ * quebrado. É o lado certo para errar, e o sintoma (páginas em 7-9 s) é o mesmo do 504 de
+ * 18/08, já documentado em scratchpad/INCIDENTE-virada-abortada-20260818.md.
+ */
+const BAHIA_PLP_ASSINATURA = array('p', 'post_type');
+
 add_action('pre_get_posts', 'bahia_plp_neutraliza_varredura', 1);
 function bahia_plp_neutraliza_varredura($q) {
     if (!$q instanceof WP_Query || $q->is_main_query()) {
         return;
     }
 
-    // A assinatura exata da consulta do td_util: post_type 'any' e p ausente/zero.
-    // Qualquer outra combinação passa incólume.
     if ($q->get('post_type') !== 'any') {
+        return;
+    }
+
+    // Assinatura exata: exatamente `post_type` e `p`, nada mais.
+    $passados = array_keys((array) $q->query);
+    sort($passados);
+    if ($passados !== BAHIA_PLP_ASSINATURA) {
         return;
     }
     if ((int) $q->get('p') !== 0) {
