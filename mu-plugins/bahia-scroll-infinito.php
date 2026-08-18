@@ -687,7 +687,14 @@ function bahia_si_ajax_handler() {
         'orderby'                => 'date',
         'order'                  => 'DESC',
         'ignore_sticky_posts'    => true,
-        'no_found_rows'          => false,
+        // Um post a MAIS em vez de contar o acervo. `no_found_rows => false` obrigava o
+        // SQL_CALC_FOUND_ROWS a contar as ~78 mil linhas publicadas da editoria a cada
+        // clique em "Ver mais", só para preencher `max_pages` — e o único uso de
+        // `max_pages` aqui é o booleano `has_more`. O post extra responde isso em tempo
+        // constante e é descartado da saída logo abaixo.
+        // Ver scratchpad/INCIDENTE-virada-abortada-20260818.md.
+        'no_found_rows'          => true,
+        'posts_per_page'         => $posts_per_page + 1,
         'update_post_meta_cache' => true,
         'update_post_term_cache' => true,
     );
@@ -706,13 +713,26 @@ function bahia_si_ajax_handler() {
 
     $query = new WP_Query($args);
 
+    // Descarta o post extra e reconstroi max_pages/found_posts a partir dele: nao e o
+    // total real (ninguem o exibe), e o minimo que faz `has_more` decidir certo.
+    $ha_mais = ($query->post_count > $posts_per_page);
+    if ($ha_mais) {
+        array_pop($query->posts);
+        $query->post_count    = count($query->posts);
+        $query->found_posts   = $paged * $posts_per_page + 1;
+        $query->max_num_pages = $paged + 1;
+    } else {
+        $query->found_posts   = ($paged - 1) * $posts_per_page + $query->post_count;
+        $query->max_num_pages = $paged;
+    }
+
     $response = array(
         'html'        => '',
         'ids'         => array(),
         'count'       => 0,
         'paged'       => $paged,
         'max_pages'   => (int) $query->max_num_pages,
-        'has_more'    => $paged < (int) $query->max_num_pages,
+        'has_more'    => $ha_mais,
         'total_posts' => (int) $query->found_posts,
     );
 

@@ -1,5 +1,39 @@
 # Restauração de PRODUÇÃO — backup da fase 0 da virada do tema
 
+> ## ⚠️ REVISADO em 18/08/2026, fora de janela. Três correções que mudam o rollback.
+>
+> ### 1. O dump das 07:07 é ANTERIOR à fase 3
+>
+> Ele **não** contém a migração de banco. Restaurá-lo desfaz:
+>
+> | | |
+> |---|---|
+> | posts na faixa 9.000.000+ | **79** |
+> | postmeta | **466** |
+> | termos 9.100.000+ / relações | **3** / **22** |
+> | `wp_as3cf_items` | **41** |
+> | `wpseo_titles` | volta de **1.115** para **991** chaves |
+>
+> **Passo extra obrigatório depois de restaurar este dump:** reaplicar o payload congelado
+> `scratchpad/f3-payload-20260818.json`, com o script de blocos da fase 3. Sem isso o banco fica
+> sem os templates, as páginas, os anexos e os menus da virada — e a próxima tentativa começa do
+> zero.
+>
+> A parte boa: **nenhum acervo editorial se perde**. Conferido em 18/08 — `MAX(wp_posts.ID)`
+> continua 550709 e zero posts foram publicados desde o dump.
+>
+> ### 2. A imagem de rollback mudou duas vezes
+>
+> A `prod-77b43a46…` citada na seção 3 é **anterior à fase 2**: voltar para ela tira do disco o
+> tema Newspaper, os 31 mu-plugins e os plugins tagDiv — desfaz muito mais do que a virada.
+> Ver a seção 3 para a tag corrente.
+>
+> ### 3. Se a próxima janela for em outro dia, tire dump e snapshot NOVOS
+>
+> Um dump posterior à fase 3 já inclui os 79 posts e a `wpseo_titles` em 1.115, e o rollback
+> volta a ser um passo só. Os atuais continuam válidos como rede de segurança mais antiga —
+> **não apagar nenhum snapshot.**
+
 **Gerado em:** 18/08/2026, 07:07–07:11 (horário local; o dump registra `6:11:11` em UTC)
 **Contexto:** fase 0 da virada do tema `bahia_refactor` → `Newspaper` em produção.
 
