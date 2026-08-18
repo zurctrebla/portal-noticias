@@ -3,6 +3,10 @@
 **Estado: produção estável no `bahia_refactor`. A Fase 4 foi aplicada e revertida.**
 Nada da Fase 3 se perdeu. A próxima janela começa daqui.
 
+> **A reversão não devolveu produção ao estado anterior — e ninguém percebeu por 3 horas.**
+> A foto sumiu de **todas** as matérias. Ver a seção 7: é a lição mais cara desta janela, e não
+> tem nada a ver com desempenho.
+
 ---
 
 ## 1. O que aconteceu, em ordem
@@ -171,3 +175,75 @@ de 5 s**, máximo 4,35 s, `Threads_running` 2.
 > **Erro de execução a não repetir:** o HPA foi congelado em 3 quando havia **5** réplicas, o que
 > forçou terminação, e depois em 5, o que criou dois pods **sem** `.maintenance`. A varredura os
 > pegou, mas por sorte. **Ler o número de réplicas ANTES e congelar nele.**
+
+---
+
+## 7. O resíduo que a checagem de reversão não pegou: a foto de todas as matérias
+
+Relatado pelos repórteres em 18/08, por volta das 10:00 UTC, e confirmado: **nenhuma matéria
+exibia foto**, em desktop e em celular, publicação nova e acervo antigo.
+
+### O que aconteceu
+
+O mu-plugin `bahia-remove-dup-featured.php` remove o primeiro `[caption]` do corpo do post
+quando ele aponta para o mesmo anexo da imagem destacada. Ele existe porque o **Newspaper**
+redesenha a destacada no topo, por fora do conteúdo — sem ele a foto sairia duas vezes.
+
+Só que `bahia_refactor/single_web.php` e `single_mobile.php` **não imprimem a destacada em lugar
+nenhum**. No tema antigo, a foto dentro do conteúdo é a única que existe. O filtro tirava, e nada
+repunha.
+
+Pegou 100% do acervo porque a premissa se confirma sempre: as matérias começam com
+`[caption]<img class="wp-image-{ID}">` e esse `{ID}` é justamente o `_thumbnail_id`, que a ponte
+`acf-imagem-featured.php` grava a partir do campo ACF `imagem`. O crédito do fotógrafo, que vive
+na legenda, ia junto.
+
+### A janela
+
+Os dois mu-plugins chegaram à `main` **nesta janela**, no merge `071af82c` — os commits são de
+29/07 e 04/08, mas viveram em `staging` até aqui. Logo:
+
+| | |
+|---|---|
+| Defeito começa | **07:19 UTC**, rollout da revisão 35 (fase 2) |
+| Suspenso | 07:56 (`.maintenance`) → 08:28, com o **Newspaper** ativo, quando o filtro estava certo |
+| Volta | **08:28 UTC**, na reversão para o `bahia_refactor` |
+| Termina | **11:13 UTC**, revisão 39 |
+
+Ou seja: **a fase 2 já tinha quebrado a foto, antes de a virada começar.** A reversão da fase 4
+devolveu o tema, mas não podia devolver o código — e recolocou o site exatamente no estado
+quebrado. Foi por isso que passou por toda a checagem de reversão: ela comparou o depois com o
+antes *da fase 4*, e o defeito era anterior a ele.
+
+### A lição, que é generalizável
+
+**Reverter o tema não reverte o código.** A reversão desativou os 3 plugins tagDiv e apagou
+`td_011` e `theme_mods_Newspaper` — mas **mu-plugin não tem chave de liga/desliga**: está no
+disco, carrega sempre, e não pergunta qual tema está ativo. Todo mu-plugin escrito assumindo o
+Newspaper é uma bomba armada enquanto o `bahia_refactor` estiver no ar.
+
+Varredura feita depois do incidente, nos 51 arquivos de `mu-plugins/`: **nenhum** consultava o
+tema ativo — o corrigido é hoje o único que consulta. Os
+que mexem em saída de conteúdo são `bahia-remove-dup-featured.php` (corrigido),
+`bahia-home-destaques.php` e `bahia-scroll-infinito.php` (procuram markup do tagDiv, não acham,
+saem sem efeito) e `bahia-limites-texto.php` — este **age** no tema antigo, cortando títulos em 70
+nas listagens, e **fica assim por decisão editorial de 18/08**, registrada no próprio arquivo.
+
+### O que passa a valer
+
+1. **Depois de qualquer reversão de tema, abrir uma matéria e um archive do tema antigo** e
+   comparar com uma captura anterior à janela. A checagem de 18/08 verificou tema, opções,
+   plugins, rewrite rules, 404 e desempenho — e nada disso olha para o que o leitor vê.
+2. **Mu-plugin escrito para o Newspaper nasce com guarda de tema**, como a
+   `bahia_rdf_tema_mostra_destacada()`. Quem depende do tema tem de dizer isso no código, não na
+   descrição do arquivo — lá estava escrito, e não impediu nada.
+3. **A fase 2 precisa da mesma prova que a fase 4.** Ela põe código novo em produção com o tema
+   antigo servindo: é uma mudança de comportamento, não uma preparação inerte.
+
+### Correção
+
+Guarda de tema no `bahia-remove-dup-featured.php` (commit `8187d2f5`, merge `cce23200`,
+revisão 39). Conferido em produção: 10 matérias de `/politica/` mais 1 de cada uma de outras 8
+editorias — 18 matérias, cada uma em desktop e em celular, **36 de 36 com a foto de volta**.
+Inclui um post da faixa nova de IDs (9000207), então o conserto não depende da origem do post.
+O filtro volta a agir sozinho quando o Newspaper for ativado, sem ninguém precisar lembrar.

@@ -22,13 +22,24 @@
 > A parte boa: **nenhum acervo editorial se perde**. Conferido em 18/08 — `MAX(wp_posts.ID)`
 > continua 550709 e zero posts foram publicados desde o dump.
 >
-> ### 2. A imagem de rollback é OUTRA — três tags, três profundidades
+> ### 2. A imagem de rollback é OUTRA — e mudou de novo em 18/08 às 11:13
 >
 > | Tag | O que é | Quando usar |
 > |---|---|---|
-> | **`prod-19d16299e1faff8c56faec70db22218863630826`** | **A que está no ar** (revisão 36, 18/08 09:32). Tema Newspaper no disco e **inativo**, os 4 mu-plugins de correção de consulta | **É esta a imagem de rollback da próxima janela.** A virada é banco; só se o *código* falhar é que se volta a imagem — e se volta para esta |
-> | `prod-071af82c…` | revisão 35, antes das correções de consulta | Só se as correções de consulta se mostrarem o problema |
-> | `prod-77b43a46…` | revisão 34, **anterior à fase 2** | Tira do disco o tema, os 31 mu-plugins e os plugins tagDiv — desfaz muito mais que a virada. Último recurso |
+> | **`prod-cce2320089df02bafaaf8af7e9a241d173646dfb`** | **A que está no ar** (revisão 39, 18/08 11:13). É a 38 mais a guarda de tema do `bahia-remove-dup-featured.php` | **É esta a imagem de rollback da próxima janela.** A virada é banco; só se o *código* falhar é que se volta a imagem |
+> | `prod-5bf7a8ed…` | revisão 38, 10:23 — Dendê, a arte do título saindo do repositório para a Biblioteca de Mídia | ⚠️ **devolve o defeito da foto** (ver abaixo) |
+> | `prod-a8def0c4…` | revisão 37, 10:12 — Dendê, o título do archive virando a arte da marca | ⚠️ **devolve o defeito da foto** |
+> | `prod-19d16299…` | revisão 36, 09:32 — tema Newspaper no disco e **inativo**, os 4 mu-plugins de correção de consulta | ⚠️ **devolve o defeito da foto** |
+> | `prod-071af82c…` | revisão 35, antes das correções de consulta | Só se as correções de consulta se mostrarem o problema. ⚠️ idem |
+> | `prod-77b43a46…` | revisão 34, **anterior à fase 2** | Tira do disco o tema, os 31 mu-plugins e os plugins tagDiv — desfaz muito mais que a virada. Último recurso. **Não** tem o defeito, porque não tem os mu-plugins |
+>
+> **Por que voltar para 35, 36, 37 ou 38 quebra o site.** Nessa faixa o
+> `bahia-remove-dup-featured.php` já está no disco e ainda **sem** a guarda de tema. Ele foi
+> escrito para o Newspaper, que redesenha a imagem destacada no topo; com o `bahia_refactor`
+> ativo, que não redesenha, ele apaga a única foto da matéria — e o crédito junto. Em 18/08 isso
+> derrubou a foto de **todo** o acervo, em desktop e celular, até a revisão 39. Se a janela
+> exigir uma dessas imagens, o passo seguinte é obrigatório: copiar o
+> `mu-plugins/bahia-remove-dup-featured.php` da `main` para os pods, ou o defeito volta com ela.
 >
 > A seção 3 abaixo, escrita na fase 0, cita a `prod-77b43a46…` como "a" imagem de rollback.
 > **Está desatualizada**: era verdade antes da fase 2.
