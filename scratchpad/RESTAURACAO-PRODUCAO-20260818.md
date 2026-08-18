@@ -22,11 +22,16 @@
 > A parte boa: **nenhum acervo editorial se perde**. Conferido em 18/08 — `MAX(wp_posts.ID)`
 > continua 550709 e zero posts foram publicados desde o dump.
 >
-> ### 2. A imagem de rollback mudou duas vezes
+> ### 2. A imagem de rollback é OUTRA — três tags, três profundidades
 >
-> A `prod-77b43a46…` citada na seção 3 é **anterior à fase 2**: voltar para ela tira do disco o
-> tema Newspaper, os 31 mu-plugins e os plugins tagDiv — desfaz muito mais do que a virada.
-> Ver a seção 3 para a tag corrente.
+> | Tag | O que é | Quando usar |
+> |---|---|---|
+> | **`prod-19d16299e1faff8c56faec70db22218863630826`** | **A que está no ar** (revisão 36, 18/08 09:32). Tema Newspaper no disco e **inativo**, os 4 mu-plugins de correção de consulta | **É esta a imagem de rollback da próxima janela.** A virada é banco; só se o *código* falhar é que se volta a imagem — e se volta para esta |
+> | `prod-071af82c…` | revisão 35, antes das correções de consulta | Só se as correções de consulta se mostrarem o problema |
+> | `prod-77b43a46…` | revisão 34, **anterior à fase 2** | Tira do disco o tema, os 31 mu-plugins e os plugins tagDiv — desfaz muito mais que a virada. Último recurso |
+>
+> A seção 3 abaixo, escrita na fase 0, cita a `prod-77b43a46…` como "a" imagem de rollback.
+> **Está desatualizada**: era verdade antes da fase 2.
 >
 > ### 3. Se a próxima janela for em outro dia, tire dump e snapshot NOVOS
 >
