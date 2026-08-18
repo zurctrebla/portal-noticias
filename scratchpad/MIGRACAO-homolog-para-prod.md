@@ -357,6 +357,49 @@ Cada etapa é reversível sozinha. Não avançar sem conferir a anterior.
 | 12 | Rodar as verificações da seção 6 | Se falhar, voltar etapa a etapa; em último caso, restaurar o snapshot |
 | 13 | Tirar da manutenção | — |
 
+### 5.1 Ativação de plugins — entra na virada atômica, não no deploy
+
+**Medido em 18/08/2026**, comparando `active_plugins` dos dois ambientes: produção tem **21**
+ativos, homolog tem **24**. A diferença é exatamente três, e todos os três são do tagDiv:
+
+```
+td-composer/td-composer.php
+td-cloud-library/td-cloud-library.php
+td-social-counter/td-social-counter.php
+```
+
+**Nenhum plugin está ativo em produção e inativo em homolog** — não há nada a desativar por
+engano, e os 21 comuns são os mesmos.
+
+**Por que isso é bloqueante e não cosmético:** o `td-composer` não é acessório do Newspaper —
+é quem **renderiza o single e o archive**. O `template_include` desvia para
+`plugins/td-composer/legacy/Newspaper/`, e o `loop-single.php` que vale é o do plugin, não o do
+tema. Trocar `template`/`stylesheet` sem ativar o `td-composer` deixa o site com o tema novo e
+sem o motor que desenha as páginas.
+
+O deploy da fase 2 **não ativa nada**: colocar arquivo em `plugins/` não mexe em
+`active_plugins`, que é opção de banco. A ativação é escrita de banco e pertence ao bloco
+atômico da fase 4:
+
+```php
+$ativos = get_option('active_plugins');
+$novos  = array('td-composer/td-composer.php',
+                'td-cloud-library/td-cloud-library.php',
+                'td-social-counter/td-social-counter.php');
+update_option('active_plugins', array_values(array_unique(array_merge($ativos, $novos))));
+```
+
+**No rollback, desativar os três junto com a volta do tema** — na mesma transação lógica em que
+`template`/`stylesheet` voltam para `bahia_refactor`. Um `td-composer` ativo com o tema antigo
+sequestra o `template_include` e serve páginas do Newspaper sobre o tema errado:
+
+```php
+update_option('active_plugins', array_values(array_diff(get_option('active_plugins'), $novos)));
+```
+
+Anotar o valor de `active_plugins` **antes** de escrever, junto com os demais valores de
+rollback da fase 4.
+
 > A ordem importa por um motivo específico: **`td_011` é reescrito por último** (etapa 8).
 > Enquanto as chaves ainda apontam para os templates antigos, o site continua servindo o
 > layout velho — ou seja, todas as etapas de 3 a 7 podem ser feitas com o site no ar sem
@@ -429,6 +472,27 @@ em homolog isso **não** resolveu; (3) desligar os sitemaps dos CPTs de menor tr
 ## 7. Sugestão a discutir na ocasião: apontar o DNS para o Swarm antigo
 
 **Ainda não é uma decisão. É uma opção com riscos reais, para ser avaliada na hora.**
+
+> **18/08/2026 — a premissa mudou, a recomendação não. NÃO usada na virada de hoje.**
+>
+> Este documento e o comentário do `bahia-offload-reconciliation.php` partiam de que a VPS
+> antiga estava fora de alcance do cluster ("em outra VPC e provavelmente inalcançável a
+> partir do EKS"). **É falso, e foi medido do próprio pod de produção:**
+>
+> ```
+> 172.31.0.178:80    -> porta 80 ABERTA
+> 172.31.70.197:3306 -> ABERTA   (o RDS de produção)
+> ```
+>
+> A faixa `172.31/16` é o VPC **default**, onde vive o próprio banco de produção — os pods
+> falam com ele o dia inteiro. Existe rota, e o Swarm antigo está de pé.
+>
+> **Isso não promove a ideia a recomendável.** Os dois bloqueantes da lista abaixo continuam
+> inteiros e nenhum é de rede: o **certificado HTTPS** válido para `bahia.ba` no IP antigo
+> (item 2) e o **destino das publicações feitas durante a janela** (item 4), que iriam para o
+> banco do Swarm e sumiriam na volta do DNS. Alcançabilidade nunca foi o obstáculo.
+>
+> Fica registrado para que ninguém descarte nem adote a opção pelo motivo errado.
 
 **A ideia:** durante a janela, apontar o DNS de `bahia.ba` para o Docker Swarm antigo
 (**54.243.117.103**), que ainda está no ar. O visitante continua vendo um site funcionando

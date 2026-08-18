@@ -345,3 +345,43 @@ decisão comercial; não se inventou posição para nenhum.
 
 `/dende-e-poder/` responde 200, com título e menu corretos, e **zero matérias**. O leitor vê
 uma página de seção sem conteúdo. Precisa de pauta ou de saída do menu antes da homologação.
+
+---
+
+## 8. Cor própria das tags de editoria — 15 das 25 estão no preto padrão
+
+**Levantado em 18/08/2026, na fase 2 da virada. Não é defeito, é escolha em aberto.**
+
+### O que é
+
+Cada matéria exibe, no card e no topo, um selo com o nome da editoria. Dez editorias têm cor
+própria, definida ao longo das rodadas de ajuste visual, e as demais caem num **padrão preto
+com texto branco** — legítimo, com contraste máximo (21:1), e já é o que acontece hoje.
+
+| Com cor própria (10) | No preto padrão (15) |
+|---|---|
+| Política, Salvador, Municípios, Justiça, Esporte, Brasil, Entretenimento, Mundo, Artigos, Dendê e Poder | Bahia, Especial, Exclusivo, Economia, Entrevistas, Mais Notícias, Carnaval, Mais Gente, **Covid-19**, **Eleições 2024**, **Saúde e Bem Estar**, **Coluna do Ginno**, **Gente**, **Investimentos**, **Bombou** |
+
+As sete em **negrito** são as editorias que a fase 2 trouxe de volta ao mapa. As outras oito já
+estavam no preto antes deste trabalho.
+
+### Por que importa
+
+O selo colorido é o que dá reconhecimento imediato da editoria numa home com muitos cards.
+Onde ele é preto, a editoria some visualmente no meio das outras — o leitor lê o texto do selo
+em vez de reconhecê-lo pela cor.
+
+Não afeta acessibilidade: o preto com texto branco é o melhor contraste da paleta inteira.
+
+### O que é preciso decidir
+
+**Quais dessas 15, se alguma, merecem cor própria** — provavelmente só as de tráfego real, não
+as 15. Pelo acervo de produção, as candidatas naturais são **Economia** (18.972 matérias
+publicadas), **Bahia** (17.161) e **Covid-19** (10.871); as demais somam menos de 3.000 cada.
+
+Cada cor nova precisa de um tom que (a) não se confunda com os dez já em uso e (b) passe em
+contraste AA contra o texto branco — o componente já escurece o fundo automaticamente até
+4,5:1 quando necessário, então a escolha é de matiz, não de luminosidade.
+
+**Se a resposta for "está bom assim", não há trabalho a fazer** — o padrão preto continua e o
+site fica como está hoje.
