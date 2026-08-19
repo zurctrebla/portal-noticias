@@ -24,3 +24,7 @@ themes/bahia_refactor/dist
 # OS
 .DS_Store
 Thumbs.db
+
+# Tema padrão do WordPress 6.8, escrito pelo container ao subir o core.
+# Não é usado (o site roda Newspaper) e não deve entrar na imagem.
+themes/twentytwentyfive/
