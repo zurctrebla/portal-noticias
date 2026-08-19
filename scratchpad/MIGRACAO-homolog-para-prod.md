@@ -264,6 +264,42 @@ chaves `title-tax-*` do option, que valem para os arquivos de taxonomia. Esses r
 hoje nos dois ambientes (18 CPTs disputando o mesmo slug de reescrita), então não há título na
 tela para corrigir — **mas se a virada consertar as taxonomias, isto volta à mesa junto**.
 
+### 1.8-A A Fase 3 só trouxe a faixa 9.000.000+ — o que já existia nos dois ficou para trás
+
+**Descoberto em 19/08/2026, depois da virada, por relato da redação:** `/ultimas-noticias/`
+estava em branco em produção.
+
+A causa não é o tema nem o bloco. É o recorte da Fase 3: ela importou o conteúdo **novo**,
+criado em homolog e renumerado para 9.000.000+. Uma página que já existia nos DOIS ambientes
+com o mesmo ID não entrava nesse recorte — e, se tivesse sido editada em homolog durante a
+migração, a edição não viajava.
+
+Foi o caso da página **477, "Últimas notícias"**:
+
+| | conteúdo |
+|---|---|
+| homolog | 636 bytes — `[td_flex_block_1 limit="12" installed_post_types="…18 editorias…" …]` |
+| produção | **0 bytes** |
+
+Sob o `bahia_refactor` a página funcionava por template do tema; com o Newspaper, ela renderiza
+o próprio conteúdo — que em produção era vazio. Blank page, sem erro.
+
+**A pergunta que importava era se havia mais.** Comparei o `MD5(post_content)` de todas as
+páginas com ID < 9.000.000 nos dois ambientes: **12 páginas em cada, e só a 477 diferia.** A
+lacuna é isolada, não sistêmica. Corrigido copiando o conteúdo de homolog; o texto aplicado
+está em `scratchpad/pagina-477-ultimas-noticias.txt`.
+
+> **Para a próxima migração:** o recorte por faixa de ID é seguro para conteúdo novo e cego
+> para conteúdo editado. Antes de declarar a fase concluída, comparar o hash do `post_content`
+> das páginas e dos templates que existem nos dois lados — é uma consulta e pega exatamente
+> este tipo de omissão silenciosa.
+
+**Pendência menor, herdada:** o `installed_post_types` do bloco lista 18 editorias e não inclui
+as 7 que entraram no mapa em 18/08 (`covid19`, `eleicoes2024`, `saude`, `social`, `gente`,
+`investimentos`, `bombou`). Hoje é inerte — todas estão paradas desde 2025 ou antes, e não
+apareceriam numa lista de "últimas" de qualquer forma. Corrigir **em homolog primeiro**, para
+que viaje pela via normal em vez de virar outra divergência.
+
 ### 1.9 Os feeds RSS — quem os controla é o tema antigo, e ninguém tinha percebido
 
 **Descoberto em 18/08/2026, por acaso, ao conferir outra coisa.** Não estava em nenhum
