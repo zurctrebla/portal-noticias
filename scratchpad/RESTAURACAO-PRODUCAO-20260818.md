@@ -26,7 +26,8 @@
 >
 > | Tag | O que é | Quando usar |
 > |---|---|---|
-> | **`prod-de88838fa1332f1d1ee1a665d95d9750e6267ff9`** | **A que está no ar** (revisão 40, 18/08 22:13). É a 39 mais a correção do `bahia-privacy-link-perf.php` e a omissão das nove editorias no painel | **É esta a imagem de rollback — ver a seção 3-A.** A virada é banco; só se o *código* falhar é que se volta a imagem |
+> | **`prod-7bd0c9f673eae50346c7e8c10eaec851a3c0d84e`** | **A que está no ar** (revisão 41, 19/08 08:3x, depois da virada). É a 40 mais `author_base = colunistas` e os portes de feeds, push do app e XML-RPC | **É esta a imagem atual.** |
+> | **`prod-de88838fa1332f1d1ee1a665d95d9750e6267ff9`** | revisão 40, 18/08 22:13 — o estado imediatamente ANTES da virada de 19/08 | **É esta a imagem de ROLLBACK — ver a seção 3-A.** Voltar para ela devolve `/colunistas/` a 404 e religa os feeds padrão |
 > | `prod-cce2320089df02bafaaf8af7e9a241d173646dfb` | revisão 39, 18/08 11:13 — a 38 mais a guarda de tema do `bahia-remove-dup-featured.php` | ⚠️ **devolve o defeito do "+ Mais Lidas"**, que só aparece com o Newspaper ativo |
 > | `prod-5bf7a8ed…` | revisão 38, 10:23 — Dendê, a arte do título saindo do repositório para a Biblioteca de Mídia | ⚠️ **devolve o defeito da foto** (ver abaixo) |
 > | `prod-a8def0c4…` | revisão 37, 10:12 — Dendê, o título do archive virando a arte da marca | ⚠️ **devolve o defeito da foto** |

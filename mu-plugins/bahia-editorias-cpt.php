@@ -44,10 +44,15 @@ define('BAHIA_EDITORIAS_CPT_VER', '1.2.0');
 /**
  * OMITIR NÃO É APAGAR — as editorias com `show_in_menu => false`. Decidido em 18/08/2026.
  *
- * Nove editorias saíram do menu do painel a pedido da redação: Posts (o tipo NATIVO, tratado
- * no fim deste arquivo, não aqui), Bahia, Especial, Exclusivo, Mais Gente, Entrevistas,
- * Economia, Mais Notícias e Carnaval. Somam-se às duas que já vinham ocultas do tema antigo,
- * Gente e Bombou.
+ * Treze editorias saíram do menu do painel a pedido da redação, em duas levas:
+ *
+ *   18/08 — Posts (o tipo NATIVO, tratado no fim deste arquivo, não aqui), Bahia, Especial,
+ *           Exclusivo, Mais Gente, Entrevistas, Economia, Mais Notícias e Carnaval.
+ *   19/08 — Covid-19, Eleições 2024, Saúde e Bem Estar e Social (Coluna do Ginno).
+ *
+ * Somam-se às duas que já vinham ocultas do tema antigo, Gente e Bombou: 14 CPTs ocultos dos
+ * 25 do mapa, e sobram 11 no menu — Política, Salvador, Municípios, Justiça, Esporte, Brasil,
+ * Entretenimento, Mundo, Artigos, Investimentos e Dendê e Poder.
  *
  * O que NÃO muda, e é o ponto: `public`, `publicly_queryable`, `show_ui` e `has_archive`
  * continuam ligados. Os arquivos seguem no ar, as URLs seguem respondendo, o acervo fica
@@ -62,10 +67,13 @@ define('BAHIA_EDITORIAS_CPT_VER', '1.2.0');
  * `show_in_menu` não entra em regra de reescrita, e a versão do plugin NÃO foi bumpada de
  * propósito para não disparar um flush desnecessário).
  *
- * DUAS DESTAS AINDA PUBLICAVAM quando foram ocultadas, e isso está aqui para não virar
- * mistério daqui a seis meses: Bahia (420 matérias em 90 dias, última em 28/07/2026) e
- * Economia (53 em 90 dias, última em 24/07/2026). Não é editoria morta — é consolidação
- * editorial. As outras seis estavam paradas desde 2026-03 ou antes.
+ * TRÊS DESTAS AINDA PUBLICAVAM quando foram ocultadas, e isso está aqui para não virar
+ * mistério daqui a seis meses: Bahia (420 matérias em 90 dias, última em 28/07/2026),
+ * Economia (53 em 90 dias, última em 24/07/2026) e Saúde e Bem Estar (19 em 90 dias, última
+ * em 28/07/2026). Não são editorias mortas — é consolidação editorial.
+ *
+ * As demais estavam paradas: Covid-19 desde 11/03/2024, Eleições 2024 desde 17/12/2024,
+ * Social desde 11/06/2025, e as de 18/08 desde 2026-03 ou antes.
  */
 function bahia_editorias_map() {
     return array(
@@ -92,14 +100,14 @@ function bahia_editorias_map() {
         // nos dois ambientes: 15.540 matérias publicadas iriam a 404 sem elas.
         // Argumentos copiados de themes/bahia_refactor/post-types/*.php, com os
         // quatro casos que uma cópia por padrão erraria marcados abaixo.
-        'covid19'        => array('label' => 'Covid-19',      'with_front' => true),
+        'covid19'        => array('label' => 'Covid-19',      'with_front' => true,  'show_in_menu' => false),
         // with_front FALSE (post-types/eleicoes2024.php:19)
-        'eleicoes2024'   => array('label' => 'Eleições 2024', 'with_front' => false),
-        'saude'          => array('label' => 'Saúde e Bem Estar', 'with_front' => true),
+        'eleicoes2024'   => array('label' => 'Eleições 2024', 'with_front' => false, 'show_in_menu' => false),
+        'saude'          => array('label' => 'Saúde e Bem Estar', 'with_front' => true, 'show_in_menu' => false),
         // labels['name'] é 'Coluna do Ginno' — é o título do archive /social/.
         // O menu do painel e as taxonomias usam 'Social' (post-types/social.php:7-11).
         'social'         => array('label' => 'Coluna do Ginno', 'menu_name' => 'Social',
-                                  'singular' => 'Social', 'with_front' => true),
+                                  'singular' => 'Social', 'with_front' => true, 'show_in_menu' => false),
         // show_in_menu FALSE (post-types/gente.php:17)
         'gente'          => array('label' => 'Gente',         'with_front' => true,
                                   'show_in_menu' => false),

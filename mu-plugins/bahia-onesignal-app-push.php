@@ -67,6 +67,17 @@ add_filter('onesignal_send_notification', 'bahia_os_push_do_app', 10, 4);
  *      chamada ao app falhasse, o push do NAVEGADOR ia junto, porque o plugin recebia null
  *      no filtro. Falha em um canal derrubava o outro. Agora devolve `$fields` sempre.
  *
+ * CUIDADO AO TESTAR: este filtro FAZ CHAMADA EXTERNA. Chamar
+ * `apply_filters('onesignal_send_notification', ...)` à mão em produção dispara um POST real
+ * para a API do OneSignal. Aconteceu em 19/08, num script de validação: o payload sintético não
+ * tinha `app_id` e a OneSignal recusou com HTTP 400, então nada foi enviado — mas a chamada
+ * saiu. Em homologação isso não ocorre porque a trava de ambiente barra antes.
+ *
+ * Para conferir o porte sem disparar nada, verifique o GANCHO e a TRAVA, nunca o filtro:
+ *
+ *     has_filter('onesignal_send_notification', 'bahia_os_push_do_app')   // deve ser != false
+ *     bahia_os_ambiente_autorizado()                                      // true só em produção
+ *
  * @param array   $fields     payload que o plugin vai enviar ao navegador.
  * @param string  $new_status
  * @param string  $old_status
