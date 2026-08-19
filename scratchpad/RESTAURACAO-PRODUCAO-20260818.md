@@ -305,6 +305,96 @@ SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='prod'; -- 90
 
 Mais: `https://bahia.ba/` em 200, uma matéria antiga abrindo, e uma editoria listando.
 
+## 4-A. 🔴 O COMANDO DE RESTAURAÇÃO DA SEÇÃO 4 NÃO FUNCIONA. Corrigido aqui.
+
+**Descoberto em 19/08/2026, ao restaurar o dump no ambiente local** — o primeiro uso real do
+procedimento. Dois defeitos independentes, cada um capaz de arruinar um rollback, e o segundo
+não tem conserto por comando.
+
+### 4-A.1 O `grep -v` do macOS descarta metade do arquivo, em silêncio
+
+O comando da seção 4 filtra a linha do `kubectl` com `grep -v '^pod "mysqldump-prod-'`. Medido:
+
+| | bytes |
+|---|---|
+| `gunzip -c` do dump | 3.269.306.354 |
+| depois do `grep -v` | 1.603.714.402 |
+| **descartado** | **1.665.591.952 — 51% do arquivo** |
+
+O `grep` do BSD (macOS) não lida com as linhas longas deste dump: a linha 143 sozinha tem
+**1.371.246 bytes**. Ele não avisa, não retorna erro, e o `mysql` do outro lado do cano carrega
+o que chegar. **Uma restauração feita assim produziria um banco pela metade e pareceria ter
+dado certo.**
+
+Filtro seguro, que remove exatamente os 66 bytes da linha do pod:
+
+```bash
+gunzip -c dump.sql.gz | python3 -c "
+import sys
+o = sys.stdout.buffer
+for linha in sys.stdin.buffer:
+    if not linha.startswith(b'pod \"mysqldump-prod-'):
+        o.write(linha)
+"
+```
+
+Ou, mais simples, fazendo tudo **dentro do container**, onde as ferramentas são GNU:
+`gunzip -c /tmp/dump.sql.gz | head -n -1 | mysql ...`
+
+### 4-A.2 O dump tem um statement que o MySQL recusa — e ele para a carga
+
+Mesmo com o filtro correto, a carga morre sempre no mesmo ponto:
+
+```
+ERROR at line 143: Unknown command '\"'.
+```
+
+Não é o cliente sendo frágil: executando **a mesma linha por driver** (mysqli, sem o CLI), o
+**servidor** responde erro de sintaxe. A linha é um `INSERT` em `wp_actionscheduler_actions`
+com dados PHP-serializados contendo NUL escapado (`\0*\0scheduled_timestamp`) dentro de JSON
+já escapado. O aspeamento sai de sincronia e o resto da linha vira lixo sintático.
+
+Testado e descartado: `--binary-mode`, importar por arquivo em vez de cano, rodar tudo dentro
+do container, `sql_mode=''`. Nenhum resolve. A origem **não** tem `NO_BACKSLASH_ESCAPES`
+(sql_mode = `NO_ENGINE_SUBSTITUTION`).
+
+**O escopo é o Action Scheduler**, e só ele. Excluindo os dados dessas tabelas, a carga
+completa: 90 tabelas, 411 MB, saída 0, sem um erro. É uma fila de tarefas — perder o histórico
+dela num rollback não custa nada.
+
+### 4-A.3 O comando que FUNCIONA, verificado de ponta a ponta
+
+```bash
+CTX="arn:aws:eks:us-east-1:774710032593:cluster/bahia-eks-prod"
+NS=bahia-wordpress
+POD=$(kubectl --context "$CTX" -n $NS get pods -l app=wordpress \
+        --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')
+
+DBH=$(kubectl --context "$CTX" exec -n $NS $POD -c wordpress -- printenv WORDPRESS_DB_HOST | tr -d '\r\n')
+DBU=$(kubectl --context "$CTX" exec -n $NS $POD -c wordpress -- printenv WORDPRESS_DB_USER | tr -d '\r\n')
+DBP=$(kubectl --context "$CTX" exec -n $NS $POD -c wordpress -- printenv WORDPRESS_DB_PASSWORD | tr -d '\r\n')
+DBN=$(kubectl --context "$CTX" exec -n $NS $POD -c wordpress -- printenv WORDPRESS_DB_NAME | tr -d '\r\n')
+
+gunzip -c ~/BAHIABA-backups/dump-PRODUCAO-20260819-0711.sql.gz \
+  | python3 -c "
+import sys
+o = sys.stdout.buffer
+for l in sys.stdin.buffer:
+    if not l.startswith(b'pod \"mysqldump-prod-') and not l.startswith(b'INSERT INTO \`wp_actionscheduler_'):
+        o.write(l)
+" \
+  | kubectl --context "$CTX" run mysqlrestore-$$ -n $NS --rm -i --restart=Never \
+      --image=mysql:8.0.31 --env="MYSQL_PWD=${DBP}" --command -- \
+      mysql -h "$DBH" -u "$DBU" "$DBN" --default-character-set=utf8mb4 \
+        --init-command="SET SESSION sql_mode=''; SET SESSION innodb_strict_mode=0; SET SESSION foreign_key_checks=0; SET SESSION unique_checks=0"
+```
+
+**O `--init-command` não é enfeite.** Sem `innodb_strict_mode=0` a carga morre na linha 1019
+com `ERROR 1118: Row size too large (> 8126)`. Foi o terceiro obstáculo, depois dos dois acima.
+
+**Conferir DEPOIS**, e não confiar no código de saída: `SELECT COUNT(*)` de tabelas deve dar
+**90**, e o tamanho ~**411 MB**. Um número menor significa carga truncada.
+
 ## 5. Uma armadilha do arquivo: a última linha não é SQL
 
 O `kubectl run --rm` escreve `pod "mysqldump-prod-16226" deleted from bahia-wordpress
