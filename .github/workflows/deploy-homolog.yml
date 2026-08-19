@@ -3,7 +3,7 @@ name: Build e Deploy (homolog)
 on:
   push:
     branches:
-      - staging
+      - develop
 
 env:
   AWS_REGION: us-east-1
