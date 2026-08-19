@@ -26,7 +26,8 @@
 >
 > | Tag | O que é | Quando usar |
 > |---|---|---|
-> | **`prod-cce2320089df02bafaaf8af7e9a241d173646dfb`** | **A que está no ar** (revisão 39, 18/08 11:13). É a 38 mais a guarda de tema do `bahia-remove-dup-featured.php` | **É esta a imagem de rollback da próxima janela.** A virada é banco; só se o *código* falhar é que se volta a imagem |
+> | **`prod-de88838fa1332f1d1ee1a665d95d9750e6267ff9`** | **A que está no ar** (revisão 40, 18/08 22:13). É a 39 mais a correção do `bahia-privacy-link-perf.php` e a omissão das nove editorias no painel | **É esta a imagem de rollback — ver a seção 3-A.** A virada é banco; só se o *código* falhar é que se volta a imagem |
+> | `prod-cce2320089df02bafaaf8af7e9a241d173646dfb` | revisão 39, 18/08 11:13 — a 38 mais a guarda de tema do `bahia-remove-dup-featured.php` | ⚠️ **devolve o defeito do "+ Mais Lidas"**, que só aparece com o Newspaper ativo |
 > | `prod-5bf7a8ed…` | revisão 38, 10:23 — Dendê, a arte do título saindo do repositório para a Biblioteca de Mídia | ⚠️ **devolve o defeito da foto** (ver abaixo) |
 > | `prod-a8def0c4…` | revisão 37, 10:12 — Dendê, o título do archive virando a arte da marca | ⚠️ **devolve o defeito da foto** |
 > | `prod-19d16299…` | revisão 36, 09:32 — tema Newspaper no disco e **inativo**, os 4 mu-plugins de correção de consulta | ⚠️ **devolve o defeito da foto** |
@@ -108,6 +109,48 @@ a análise de colisão. Apagá-lo destruiria a única prova do estado de partida
 
 ## 1. O arquivo
 
+> ### ⚠️ USE O DUMP DE 19/08. O de 18/08 é ANTERIOR À FASE 3.
+>
+> Restaurar o dump de 18/08 hoje **desfaria a Fase 3**: os posts, postmeta, termos, relações e
+> linhas de offload importados de homolog, e o `wpseo_titles` voltaria de 1.115 para 991
+> chaves. Seria preciso reaplicar o payload à mão depois — um passo a mais, no pior momento.
+>
+> O dump de 19/08 **já inclui a Fase 3**: conferido no próprio arquivo (1.207 linhas com ID na
+> faixa 9000xxx, os 13 `tdb_templates`, e os posts 9000142/9000079/9000124 presentes). Com ele,
+> o rollback de banco volta a ser um passo só.
+>
+> O de 18/08 fica no disco como rede de segurança de baixo, não como plano A.
+
+### 1.1 O dump da janela de 19/08 — **este é o de usar**
+
+| Campo | Valor |
+|---|---|
+| Caminho | `~/BAHIABA-backups/dump-PRODUCAO-20260819-0711.sql.gz` |
+| Tamanho | 547,0 MB (**573.512.316 bytes**) |
+| SHA-256 | `64b1878151f209059a830350ad87daeb5c8b83691a6b7468254df934d9afc188` |
+| stderr | `~/BAHIABA-backups/dump-PRODUCAO-20260819-0711.err` (283 B, só avisos do `kubectl`) |
+| Permissão | `444` |
+| Duração | 2 min 26 s (07:11:42 → 07:14:08) |
+| Pod de origem | `wordpress-65f758cd58-tdsmw` |
+| Conferência | `cd ~/BAHIABA-backups && shasum -a 256 -c sha256-dump-PRODUCAO-20260819-0711.sql.gz.txt` |
+
+Estado do banco **dentro deste dump** (é o "antes" da virada, lido do próprio arquivo):
+
+| chave | valor no dump |
+|---|---|
+| `siteurl` | `https://bahia.ba` |
+| `template` / `stylesheet` | `bahia_refactor` / `bahia_refactor` |
+| `show_on_front` | `posts` |
+| `page_on_front` | `0` |
+| `site_icon` | `0` |
+
+> **Nota sobre o roteiro da janela:** ele pede conferir `page_on_front = 9000142` no dump. Não é
+> isso que se pode conferir antes da Fase 1 — quem grava essa opção é a própria Fase 1. O que a
+> Fase 3 deixou no banco, e que **está** no dump, é a **página 9000142 existindo** como post,
+> junto dos templates 9000xxx. Foi isso que se verificou.
+
+### 1.2 O dump de 18/08 — anterior à Fase 3, mantido por segurança
+
 | Campo | Valor |
 |---|---|
 | Caminho | `~/BAHIABA-backups/dump-PRODUCAO-20260818-0707.sql.gz` |
@@ -143,7 +186,47 @@ shasum -a 256 -c sha256-dump-PRODUCAO-20260818-0707.sql.gz.txt
 > O banco de homolog **também** se chama `prod`. O que distingue os dois é o `siteurl`.
 > Toda operação de escrita deve começar pela guarda de identidade.
 
-## 3. Estado do código no momento do backup
+## 3-A. Estado do código na janela de 19/08 — **e o alvo de rollback CORRETO**
+
+> ### 🔴 NÃO reverter para `prod-19d16299` (revisão 36). Isso é regressão, não rollback.
+>
+> O roteiro da janela de 19/08 declara que produção está na revisão **36**, tag
+> `prod-19d16299`. **Não está.** Medido no cluster em 19/08, antes de qualquer ação:
+>
+> | | briefing da janela | medido no cluster |
+> |---|---|---|
+> | revisão | 36 | **40** |
+> | imagem | `prod-19d16299…` | **`prod-de88838f…`** |
+> | initContainer | — | `prod-de88838f…` (o mesmo) |
+>
+> A revisão 40 subiu em 18/08 às 22:13 e contém três coisas que a 36 **não** tem:
+>
+> 1. **a guarda do `bahia-remove-dup-featured.php`** (entrou na revisão 39). Sem ela, com o
+>    `bahia_refactor` ativo, **toda matéria perde a foto** — foi o incidente de 3 horas da manhã
+>    de 18/08;
+> 2. **a correção do `bahia-privacy-link-perf.php`**. Sem ela, o bloco "+ Mais Lidas" some da
+>    home — e isso passa a valer **justamente com o Newspaper ativo**, que é o estado em que a
+>    virada deixa o site;
+> 3. a omissão das nove editorias no menu do painel.
+>
+> Voltar para a 36 no meio de um rollback devolveria os dois defeitos, em cima de um incidente.
+>
+> **O alvo correto é `prod-de88838f` (revisão 40) — que é o que já está rodando.** Como a
+> virada **não troca a imagem** (ela é só banco), o rollback de código normalmente é **um
+> no-op**: não há o que reverter. A linha abaixo existe só para o caso de alguém ter mexido na
+> imagem durante a janela.
+
+```bash
+CTX="arn:aws:eks:us-east-1:774710032593:cluster/bahia-eks-prod"
+IMG=774710032593.dkr.ecr.us-east-1.amazonaws.com/bahia-wordpress:prod-de88838fa1332f1d1ee1a665d95d9750e6267ff9
+
+kubectl --context "$CTX" -n bahia-wordpress set image deploy/wordpress wordpress=$IMG
+kubectl --context "$CTX" -n bahia-wordpress patch deploy wordpress --type=json \
+  -p "[{\"op\":\"replace\",\"path\":\"/spec/template/spec/initContainers/0/image\",\"value\":\"$IMG\"}]"
+kubectl --context "$CTX" -n bahia-wordpress rollout status deploy/wordpress
+```
+
+## 3. Estado do código no momento do backup de 18/08 (histórico)
 
 | Campo | Valor |
 |---|---|
@@ -198,7 +281,8 @@ DBP=$(kubectl --context "$CTX" exec -n $NS $POD -c wordpress -- printenv WORDPRE
 DBN=$(kubectl --context "$CTX" exec -n $NS $POD -c wordpress -- printenv WORDPRESS_DB_NAME | tr -d '\r\n')
 
 # a linha final do arquivo NÃO é SQL — ver seção 5
-gunzip -c ~/BAHIABA-backups/dump-PRODUCAO-20260818-0707.sql.gz \
+# ATENÇÃO: use o dump de 19/08 (seção 1.1). O de 18/08 desfaz a Fase 3.
+gunzip -c ~/BAHIABA-backups/dump-PRODUCAO-20260819-0711.sql.gz \
   | grep -v '^pod "mysqldump-prod-' \
   | kubectl --context "$CTX" run mysqlrestore-$$ -n $NS --rm -i --restart=Never \
       --image=mysql:8.0.31 --env="MYSQL_PWD=${DBP}" --command -- \
