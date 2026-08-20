@@ -1,0 +1,3 @@
+# O COPY do Dockerfile leva o wp-content inteiro para dentro da imagem. O arquivo do GA4
+# legado e' dado historico, nao codigo de runtime: fica versionado no git e fora dos pods.
+scratchpad/ga4-legado-350165492/
