@@ -1,40 +1,12 @@
 <?php
 /**
- * Plugin Name: Bahia.ba - Analytics: tag legada em produção, silêncio fora dela
- * Description: Duas coisas, uma de cada lado da mesma moeda.
+ * Plugin Name: Bahia.ba - Analytics só em produção
+ * Description: Impede que qualquer ambiente que não seja o bahia.ba emita a tag do Google
+ *              Analytics.
  *
- *              1) PRODUÇÃO RECUPERA A TAG G-JBPJTKCCXY. Até a virada de 19/08/2026 o
- *              bahia.ba mandava dados a DUAS propriedades ao mesmo tempo. Uma delas, a
- *              G-JBPJTKCCXY, era emitida à mão pelo tema legado, em
- *              themes/bahia_refactor/header.php (linhas 55-62). Ao trocar o tema ativo para
- *              o Newspaper esse header parou de ser renderizado e a propriedade parou de
- *              receber acesso — sem erro nenhum, porque nada quebrou: só deixou de existir.
- *              A outra propriedade, G-96ZB07C336, continua sendo emitida normalmente pelo
- *              Site Kit e nunca parou; ela é de OUTRA conta do Google (390873476, contra
- *              67237036 da antiga) e foi criada em 10/04/2026, então não tem o histórico.
- *              Este arquivo devolve a tag antiga ao ar para a série histórica não ter um
- *              buraco a partir de 19/08.
- *
- *              POR QUE O SNIPPET INTEIRO E NÃO SÓ UM gtag('config'). Com o gtag.js do Site
- *              Kit já carregado, bastaria acrescentar o destino. Só que aí a tag legada
- *              passaria a depender de o Site Kit estar conectado e carregar primeiro — que é
- *              exatamente o modo de falha que estamos consertando. O snippet completo é o
- *              que estava na página antes da virada, com os dois carregadores dividindo o
- *              mesmo window.dataLayer, e é comprovadamente o que funcionava.
- *
- *              QUEM É CONTADO. A tag legada dispara para TODO MUNDO, inclusive usuário
- *              logado, porque era assim que o tema fazia. O Site Kit, por opção dele
- *              (trackingDisabled = loggedinUsers), não conta quem está logado. A diferença é
- *              proposital: mudar o público agora criaria um degrau nos números da
- *              propriedade antiga que não corresponde a nada do mundo real.
- *
- *              A UA-67237036-1 NÃO VOLTA. O tema legado também tinha o Universal Analytics
- *              (header.php:73-75). O Google parou de processar dados de UA em julho de 2023;
- *              é peso morto.
- *
- *              2) FORA DE PRODUÇÃO, O SITE KIT CALA A BOCA. Homologação apontava para a
- *              MESMA propriedade de produção (G-96ZB07C336, useSnippet ligado), então o
- *              tráfego de teste vinha sendo contado junto com o do site real.
+ *              O PROBLEMA. Homologação apontava para a MESMA propriedade de produção
+ *              (G-96ZB07C336, useSnippet ligado), então tráfego de teste vinha sendo contado
+ *              junto com o do site real.
  *
  *              O Site Kit já prevê isso: Tag_Environment_Type_Guard só deixa a tag sair
  *              quando wp_get_environment_type() está na lista do filtro
@@ -50,10 +22,21 @@
  *              idiomática, mas mexe no comportamento de outros plugins de uma vez só; ficou
  *              de fora de propósito.
  *
- *              O QUE NÃO MUDA. O "Mais Lidas" lê o GA4 pela API do Site Kit, no servidor
- *              (bahia-mais-lidas.php usa $analytics->get_data('report')). Silenciar a tag do
- *              navegador não o afeta.
- * Version: 1.0.0
+ *              HISTÓRICO — A TAG LEGADA QUE ESTEVE AQUI. Entre 19 e 20/08/2026 este arquivo
+ *              também reemitia a G-JBPJTKCCXY. Essa propriedade era escrita à mão pelo tema
+ *              legado (themes/bahia_refactor/header.php:55-62) e morreu quando a virada
+ *              trocou o tema ativo para o Newspaper — sem erro nenhum: o header simplesmente
+ *              deixou de ser renderizado. Ela foi devolvida ao ar para preservar a série
+ *              histórica e removida em seguida, quando ficou claro que NINGUÉM da equipe tem
+ *              acesso a ela: a conta 390873476 (a que a redação usa) tem uma propriedade só,
+ *              a 532492514 = G-96ZB07C336, e a legada nasceu na era de uma agência anterior,
+ *              junto do UA-67237036-1. Alimentar uma propriedade que ninguém consegue abrir
+ *              não servia a nada. Se o acesso for recuperado um dia, o commit ec4e02bc traz
+ *              o snippet pronto.
+ *
+ *              Hoje o site tem UMA marcação: GT-PJWW3WSJ -> G-96ZB07C336, emitida pelo Site
+ *              Kit, e só em produção.
+ * Version: 2.0.0
  * Author: Bahia.ba
  */
 
@@ -64,39 +47,10 @@ if (!defined('ABSPATH')) {
 // Único ambiente que emite tag de analytics. Vários entram separados por vírgula.
 define('BAHIA_ANALYTICS_AMBIENTES_AUTORIZADOS', 'https://bahia.ba');
 
-// A propriedade que o tema legado emitia, conta 67237036.
-define('BAHIA_ANALYTICS_MEDIDA_LEGADA', 'G-JBPJTKCCXY');
-
 function bahia_analytics_ambiente_autorizado() {
     $lista = array_map('trim', explode(',', BAHIA_ANALYTICS_AMBIENTES_AUTORIZADOS));
 
     return in_array(untrailingslashit(get_option('siteurl')), $lista, true);
-}
-
-/**
- * Reemite a tag que morreu junto com o tema legado.
- *
- * Prioridade 20 para sair depois do snippet do Site Kit, reproduzindo a ordem que a página
- * tinha antes da virada.
- */
-add_action('wp_head', 'bahia_analytics_tag_legada', 20);
-
-function bahia_analytics_tag_legada() {
-    if (!bahia_analytics_ambiente_autorizado()) {
-        return;
-    }
-
-    $id = esc_js(BAHIA_ANALYTICS_MEDIDA_LEGADA);
-    ?>
-<!-- Tag legada bahia.ba (era do themes/bahia_refactor/header.php) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=<?php echo esc_attr(BAHIA_ANALYTICS_MEDIDA_LEGADA); ?>"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', '<?php echo $id; ?>');
-</script>
-<?php
 }
 
 /**
