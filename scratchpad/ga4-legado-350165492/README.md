@@ -35,6 +35,7 @@ ela morreu sozinha na virada de 19/08, quando o tema legado saiu do ar levando j
 | `serie-mensal.csv` | O mesmo agregado por mês, para leitura rápida. |
 | `visao-geral-aquisicao-2020-01-01_2026-08-19.csv` | Export cru da "Visão geral da aquisição". Além das séries diárias, traz a quebra por canal de aquisição (primeiro usuário e sessão) do período inteiro. |
 | `paginas-todas-2023-01-19_2026-08-19.csv.gz` | Export cru de "Páginas e telas": **as 100.000 páginas mais vistas** de todo o período, com visualizações, usuários ativos, tempo de engajamento e contagem de eventos. |
+| `paginas-top5000-2023.csv`<br>`paginas-top5000-2024.csv`<br>`paginas-top5000-2025.csv`<br>`paginas-top5000-2026-ate-08-19.csv` | **As 5.000 páginas mais vistas de cada ano.** A tabela de todo o período responde "a mais lida de sempre"; estes respondem "a mais lida de 2024". Recortados dos exports anuais (74.636 / 65.251 / 75.055 / 100.000 linhas), que ficariam em 8 MB cada — a cauda descartada é de páginas com pouquíssimas visualizações. |
 
 ## Ressalvas ao ler estes números
 
