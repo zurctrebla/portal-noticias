@@ -36,9 +36,9 @@ if (!defined('ABSPATH')) {
 }
 
 /** Arte na Biblioteca de Mídia, servida pelo CloudFront compartilhado entre os ambientes. */
-const BAHIA_DTI_URL     = 'https://d1x4bjge7r9nas.cloudfront.net/wp-content/uploads/2026/08/18071751/dende-e-poder-titulo.png';
-const BAHIA_DTI_LARGURA = 667;
-const BAHIA_DTI_ALTURA  = 667;
+const BAHIA_DTI_URL     = 'https://d1x4bjge7r9nas.cloudfront.net/wp-content/uploads/2026/08/24073550/dende-e-poder-titulo-faixa.png';
+const BAHIA_DTI_LARGURA = 1392;
+const BAHIA_DTI_ALTURA  = 220;
 
 /** A URL da arte, filtrável para trocar sem editar este arquivo. */
 function bahia_dti_url() {
@@ -80,17 +80,20 @@ function bahia_dti_css() {
     if (!is_post_type_archive('dende_poder')) {
         return;
     }
-    // A arte é quadrada (667x667); no título ela precisa caber sem empurrar a lista.
+    // A arte é uma faixa larga (1392x220, ~6,3:1): ocupa a coluna inteira, como um cabeçalho
+    // de editoria, em vez de flutuar no canto como fazia o selo quadrado da versão anterior.
     $css = '
     .td-page-title .bahia-dende-titulo{
         display:block;
-        width:auto;
-        max-width:100%;
+        width:100%;
         height:auto;
-        max-height:110px;
     }
     @media (max-width:767px){
-        .td-page-title .bahia-dende-titulo{ max-height:80px; }
+        .td-page-title .bahia-dende-titulo{
+            height:90px;
+            object-fit:cover;
+            object-position:center;
+        }
     }';
     wp_register_style('bahia-dende-titulo', false);
     wp_enqueue_style('bahia-dende-titulo');
