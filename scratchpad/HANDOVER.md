@@ -84,6 +84,48 @@ existir. Quem verificar com `class_exists()` vai concluir que a trava falhou qua
 
 ---
 
+## 0.2 ⚠️ Apagar mídia em homolog apaga arquivo do site no ar
+
+**Homolog e produção compartilham o bucket `static.bahia.ba`, o mesmo prefixo
+`wp-content/uploads/` e a mesma distribuição do CloudFront `d1x4bjge7r9nas.cloudfront.net`.**
+
+Conferido por amostra determinística: **142 de 142 IDs presentes nos dois bancos apontam para o
+MESMO objeto no S3.** O banco de homolog é o retrato de produção de 28/07/2026, e trouxe junto a
+tabela `wp_as3cf_items` inteira — cerca de 155.500 linhas apontando para arquivos que o site no
+ar serve agora.
+
+Como o WP Offload remove o objeto do bucket ao apagar o anexo:
+
+> **APAGAR UM ANEXO ANTERIOR A 28/07/2026 EM HOMOLOG APAGA O ARQUIVO DO SITE NO AR —
+> sem erro, sem aviso e sem backup do bucket.**
+
+O bucket não tem versionamento de objeto nem lifecycle. O arquivo apagado **não volta**.
+
+Vale para tudo que chame `wp_delete_attachment()`: a lixeira da biblioteca de mídia com exclusão
+permanente, a ação em massa "Remove from bucket" do próprio Offload, e qualquer script.
+
+**O pior cenário é rodar plugin de limpeza de mídia órfã em homolog.** Lá **quase toda a mídia
+parece órfã**: o banco é de 28/07 e os posts que referenciam as imagens publicadas desde então não
+existem naquele banco. Uma varredura de "imagens sem uso" marcaria dezenas de milhares de arquivos
+de produção para exclusão, e todos seriam apagados de verdade.
+
+Não é hipótese: em 25/08/2026 apaguei 24 anexos de teste em homolog e os objetos correspondentes
+sumiram do bucket, conferido pasta a pasta. Eram objetos criados pelo próprio teste — se fossem
+anteriores a 28/07, teriam sido imagens do site.
+
+**Decisão consciente de 25/08/2026: não corrigir por ora**, porque homolog serve só para validar
+alterações antes de subirem e ninguém roda limpeza lá. A trava, se um dia for preciso, é uma
+linha num mu-plugin só de homolog:
+
+```php
+add_filter( 'as3cf_remove_source_files_from_provider', '__return_empty_array', 99 );
+```
+
+Levantamento completo, com as alternativas de prefixo e bucket separado e o custo de cada uma,
+em `ISOLAMENTO-BUCKET.md`.
+
+---
+
 ## 1. A regra que evita perder uma rodada de trabalho
 
 `td-composer` registra `template_include` com **prioridade 99** e desvia vários contextos para

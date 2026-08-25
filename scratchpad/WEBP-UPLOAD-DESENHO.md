@@ -348,3 +348,103 @@ bucket voltou ao estado original, conferido pasta a pasta.
 Na prática: qualquer upload de teste em homolog cria objeto no bucket de produção. Não quebra
 nada, porque o caminho tem segmento de versão próprio e nenhum conteúdo de produção o referencia,
 mas suja. Foi por isso que os anexos de teste desta validação foram todos apagados ao final.
+
+---
+
+# Validação 2 — rodada completa em homolog (25/08, fim do dia)
+
+Trava `BAHIA_WEBP_UPLOAD_ATIVO` ligada pelo `bahia-flags.php`, com o compartilhamento do bucket
+aceito como decisão consciente.
+
+> **Não foi upload pelo painel.** Abri `hml.bahia.ba/wp-admin/upload.php` no navegador e caiu na
+> tela de login; não digito credenciais. O caminho usado é `wp_handle_upload()` chamado como o
+> painel chama, com `action` customizado — mesma cadeia de filtros, mesma criação de anexo, mesma
+> geração de derivadas, mesmo Offload. Se você entrar no painel de homolog no seu Chrome, refaço
+> pelo painel de verdade.
+
+## Os dez casos
+
+| caso | entrou | upload | derivadas | TOTAL | saída |
+|---|---|---|---|---|---|
+| foto comum | 408 KB | 297 ms | 3.646 ms | 4.085 ms | **WebP** |
+| captura com texto | 131 KB | 200 ms | 2.583 ms | 2.828 ms | **WebP** |
+| arte com alfa real | 24 KB | 173 ms | 3.983 ms | 4.208 ms | **WebP** |
+| poucas cores | 89 KB | 156 ms | 2.425 ms | 2.629 ms | **WebP** |
+| PNG grande | 834 KB | 818 ms | 4.507 ms | 5.366 ms | **WebP** |
+| **PNG corrompido** | 3 KB | **6 ms** | 349 ms | 395 ms | **PNG, intacto** |
+| **PNG de 26,4 MP** | 349 KB | **5 ms** | 29.423 ms | 29.977 ms | **PNG, intacto** |
+| **GIF** | 1 KB | 3 ms | 2.663 ms | 2.705 ms | **GIF, intacto** |
+| **JPEG** | 13 KB | 3 ms | 2.564 ms | 2.604 ms | **JPEG, intacto** |
+| **WebP existente** | 2 KB | 4 ms | 2.932 ms | 2.974 ms | **WebP, intacto** |
+
+Nenhum upload se perdeu. As saídas antecipadas dispararam em 3 a 6 ms.
+
+## O tempo a mais — o número que faltava
+
+Mesma bateria com a trava desligada, no mesmo pod, mesmos arquivos:
+
+| caso | **com** o plugin | sem o plugin | diferença |
+|---|---|---|---|
+| foto comum | **4.085 ms** | 5.281 ms | **−1.196 ms** |
+| captura com texto | **2.828 ms** | 3.772 ms | **−944 ms** |
+| arte com alfa real | **4.208 ms** | 4.819 ms | **−611 ms** |
+| poucas cores | **2.629 ms** | 3.613 ms | **−984 ms** |
+| PNG grande | **5.366 ms** | 11.406 ms | **−6.040 ms** |
+| corrompido / 26 MP / GIF / JPEG / WebP | — | — | ±1 s (ruído) |
+
+**Não há tempo a mais: todo PNG convertido fica mais rápido, de 0,6 a 6,0 segundos.**
+
+A conversão custa 156–818 ms, mas as dez derivadas passam a ser geradas a partir de um WebP
+pequeno em vez de um PNG pesado, e isso devolve muito mais do que gastou. Para os arquivos que o
+plugin não toca, a diferença fica dentro da variação entre execuções.
+
+Um dado à parte que vale registrar: **o PNG de 26,4 MP leva ~29 s de geração de derivadas**, com
+ou sem o plugin. Não é o plugin (ele sai em 5 ms) — é o WordPress redimensionando 26 megapixels
+dez vezes. Se a redação subir imagem desse porte em fechamento, é aí que ela espera.
+
+## Registro no Offload e originais
+
+Para os cinco convertidos, todos idênticos em forma:
+
+```
+_wp_attached_file : 2026/08/1-foto.webp
+as3cf path        : wp-content/uploads/2026/08/25180105/1-foto.webp
+objects           : __as3cf_primary, medium, thumbnail, td_80x60, td_150x0,
+                    td_218x150, td_300x0, td_324x400, td_485x360, bahia_original
+bahia_original    : 1-foto.png
+```
+
+Medido no CDN, os dez arquivos responderam 200:
+
+```
+servidos (WebP) ............... 265 KB
+originais guardados (PNG) ..... 1.486 KB      -> 82% de reducao no que e servido
+```
+
+## ⚠️ Um problema em aberto: exclusão em LOTE deixa o original para trás
+
+Ao limpar os 20 anexos de teste num laço, **sobrou exatamente um objeto em cada uma das cinco
+pastas dos convertidos: o PNG original.** Os WebP e as derivadas saíram.
+
+Investiguei e **não reproduzi isoladamente**:
+
+- exclusão no mesmo request que criou: pasta zerada ✓
+- exclusão em **request separado**: 9 objetos → 0 ✓, e o espião mostra `bahia_original` presente
+  na lista de remoção que o Offload monta
+
+Ou seja, o filtro funciona — e, na verdade, o `bahia_original` já entra na lista sozinho, porque
+está registrado em `extra_info['objects']`. O que falha é o caso do laço. A pista é o horário: os
+objetos que sobraram têm `LastModified` **do momento da limpeza**, não do upload — como se
+tivessem sido regravados durante a exclusão, provavelmente por etapa assíncrona do Offload que
+terminou depois da remoção.
+
+**Consequência se fosse produção:** exclusão em massa de imagens deixaria originais órfãos no
+bucket, pagando armazenamento sem nada apontando para eles.
+
+**Isto bloqueia a ida para produção** até ser entendido. Os cinco órfãos foram removidos à mão e
+as 19 pastas da rodada conferidas — **0 objetos remanescentes**.
+
+## Limpeza
+
+Anexos criados e removidos nesta rodada: **20** (ids 9000247 a 9000266), mais 2 do diagnóstico
+(9000267 e 9000268). Todos apagados; nenhum sobrou no banco. Bucket conferido pasta a pasta.
