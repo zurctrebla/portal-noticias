@@ -197,6 +197,37 @@ add_action('wp_enqueue_scripts', function () {
     border-radius:3px;
     border:1px solid rgba(255,255,255,.55);
 }
+
+/* ------------------------------------------------------------------
+   RODAPÉ — o degradê vinha como PNG de 271 KB.
+
+   O template do rodapé pinta o fundo com uma camada .td-element-style-before
+   carregando footer-bg-azul.png. Medido: 1366x768, RGB, 271 KB — e é a ÚNICA
+   imagem que o navegador busca de imediato em toda página do site (confirmado
+   no network do Chrome: 4ª requisição, antes da maior parte do JS).
+
+   O arquivo não tem textura nenhuma. Decodificado pixel a pixel:
+     - variação vertical ZERO em todas as colunas amostradas
+     - variação horizontal linear e contínua, 139 cores na amostra
+     - extremos: x=0 -> rgb(7,30,251)   x=1365 -> rgb(87,3,244)
+   É um linear-gradient horizontal puro, gravado como bitmap. Uma linha de CSS
+   entrega o mesmo resultado sem os 271 KB.
+
+   O escopo é .td-footer-template-wrap, o wrapper estrutural, e não os ids
+   tdi_NN — o TagDiv os renumera a cada edição do template. Conferido que dentro
+   do rodapé as ÚNICAS camadas com background-image:url() são as duas do próprio
+   footer-bg-azul (tdi_154 e tdi_162); não há fundo legítimo de seção ali para
+   ser atropelado. Fora do rodapé a classe é usada em fundos que devem ficar,
+   então a regra não pode ser global — mesma razão da textura do cabeçalho acima.
+
+   Especificidade: a regra do TagDiv (.tdi_NN_rand_style > .td-element-style-before)
+   é (0,2,0) e também usa !important, e é impressa inline no corpo, DEPOIS do
+   nosso <head>. Um empate a faria vencer por ordem de origem. Os três seletores
+   de classe abaixo dão (0,3,0) e resolvem sem depender da ordem.
+   ------------------------------------------------------------------ */
+.td-footer-template-wrap .td-element-style > .td-element-style-before{
+    background-image:linear-gradient(90deg,#071efb 0%,#5703f4 100%) !important;
+}
 CSS;
 
     wp_register_style('bahia-cores-ui', false, array(), '1.0.0');
