@@ -200,3 +200,53 @@ O teste de falha foi feito trocando o token por um inválido no pod e restaurand
 - **Token próprio para homolog.** Continua dividindo a cota de 10/min com produção. Vale fazer,
   mas é decisão de configuração, não de código.
 - **Nada em produção.** O transient ruim de lá vence às 19:00:03 UTC e o box volta sozinho.
+
+---
+
+# Correção em PRODUÇÃO — resolvido
+
+Commit `9af9787b`. Deploy e verificação:
+
+| | antes | depois |
+|---|---|---|
+| imagem | `prod-1e62eb0b…` | `prod-9af9787b…` |
+| revisão | 52 | **53** |
+| pods | 3 (`77d99ccb4d`) | 5 (`b85ffbc8b`) |
+
+Passos, na ordem:
+
+1. `git push origin develop:main` — build e rollout (✓)
+2. conferido no runtime que `bahia_fut_trava()` e `bahia_fut_descarta_proximo_vencido()` existem
+3. **`delete_transient('bahia_fut_ecbahia_v1')`** — o transient ruim sobrevive ao rollout porque
+   mora no banco, não na imagem; sem isso o box só voltaria às 19:00:03 UTC
+4. renovado também o do Vitória, para os **dois** clubes já ficarem com o cache de emergência
+   gravado (sem isso, o Vitória ficaria desprotegido até a próxima expiração natural)
+5. `rm -rf /tmp/nginx-cache/*` nos 5 pods — o `fastcgi_cache` é sidecar por pod
+
+## Resultado
+
+Três cargas seguidas **sem cache-buster**, que é o que o visitante recebe:
+
+```
+carga 1: 'Próximo jogo' = 2   'Último jogo' = 2
+carga 2: 'Próximo jogo' = 2   'Último jogo' = 2
+carga 3: 'Próximo jogo' = 2   'Último jogo' = 2
+
+EC Bahia | Último jogo | Vitória 0 x 2 Bahia | 23/08/2026 · Brasileirão Série A
+         | Próximo jogo | Bahia × Internacional | 30/08/2026 às 19:30 · Brasileirão Série A
+```
+
+Estado final dos caches, com a proteção já ativa nos dois clubes:
+
+```
+bahia_fut_ecbahia_v1     transient: proximo=OK | _bom: proximo=OK
+bahia_fut_ecvitoria_v1   transient: proximo=OK | _bom: proximo=OK
+```
+
+Portões: `Threads_running` 3/2/2, `SQL_CALC_FOUND_ROWS` 0.
+
+## Fica pendente
+
+**Token próprio para homolog.** Os dois ambientes continuam dividindo a mesma cota de 10
+requisições por minuto. A correção faz o site sobreviver ao 429 sem sumir com o box, mas não
+elimina o 429. É configuração, não código.
