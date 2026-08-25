@@ -517,6 +517,26 @@ comm -23 /tmp/vps-uploads.txt /tmp/s3-uploads.txt   # o que só existe na VPS
 **A saída do `comm` tem que ser vazia.** Enquanto não for, a VPS não deve ser terminada — parada
 sim, terminada não.
 
+### Fato do inventário: a VPS ainda é o WordPress de produção, com o DNS mudado
+
+Levantado por SSH em 26/08. A VPS roda um WordPress (Docker Swarm) que conecta no **RDS de
+produção** (`WORDPRESS_DB_HOST=rds-bahiaba-2023`, `DB_NAME=prod`) e serve o **mesmo bucket**
+`static.bahia.ba`. Isso não é anomalia: **ela era o ambiente de produção**, e a virada trocou só
+o DNS. Continuar conectada é o estado natural de uma máquina que ainda não foi desligada.
+
+Consequências para o desligamento, sem as quais a terminação perde coisa:
+- **102 originais existem só na VPS** (falhas de offload; 8,33 MB) — copiados para
+  `s3://static.bahia.ba/_resguardo-vps/` em 26/08, então a terminação já não perde mídia. Nenhum
+  deles é referenciado em matéria: 101 são arquivos de trabalho órfãos, 1 é variante de edição
+  cujo arquivo servido já está no S3.
+- **Runner de CI ocioso**: há um GitHub Actions self-hosted registrado para `zurctrebla/portal-noticias`,
+  mas os dois workflows do repo usam `ubuntu-latest`. Terminar a VPS remove um runner sem uso;
+  nenhum workflow quebra. Resta desregistrá-lo (Settings → Actions → Runners), cosmético.
+- **`aws.bahia.ba`** ainda serve o 301 pela VPS (Varnish) — repontar antes de desligar.
+- O MariaDB **local** da VPS não tem dados de WordPress; o WP sempre usou o RDS.
+
+Detalhe da sessão em `VPS-SESSAO-SSH.md`.
+
 ### (c) "O fallback de offload não a referencia mais" — **VERDADEIRO, verificado em runtime**
 
 Como pedido, no runtime de produção e não no código:
