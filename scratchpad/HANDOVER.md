@@ -124,6 +124,82 @@ add_filter( 'as3cf_remove_source_files_from_provider', '__return_empty_array', 9
 Levantamento completo, com as alternativas de prefixo e bucket separado e o custo de cada uma,
 em `ISOLAMENTO-BUCKET.md`.
 
+### E isto já aconteceu — em 25/08/2026, comigo, horas depois de eu escrever esta seção
+
+Ao limpar anexos de teste em homolog usei filtro por título:
+`post_title LIKE 'LOTE %' OR post_title LIKE 'RD %'`. O `LIKE` do MySQL é **insensível a
+maiúsculas**, e dois anexos reais casaram — `lote leião saeb` (id 313723) e
+`rd congo copa do mundo 2026` (id 542264). **Nove objetos de produção apagados**, sem
+versionamento no bucket para restaurar. Relato e recuperação em `INCIDENTE-APAGUEI-2-IMAGENS.md`.
+
+**A regra que fica: exclusão em massa se faz por lista explícita de IDs coletada no momento da
+criação, nunca por padrão de título.** E, neste ambiente, com uma segunda trava antes de qualquer
+`wp_delete_attachment` em homolog:
+
+```php
+if ( $id < 9000001 ) { continue; }   // nasceu em producao: NAO e teste
+```
+
+A faixa 9.000.001+ é a dos registros nascidos em homolog (ver a nota de renumeração no topo).
+Os dois anexos que apaguei têm ID 313723 e 542264 — a trava os teria barrado.
+
+---
+
+## 0.3 Duas mentiras silenciosas em mu-plugin com `namespace`
+
+Custaram dois erros seguidos em 25/08, no `bahia-mais-lidas.php`. As duas **falham sem erro**,
+que é o padrão que mais dói neste projeto.
+
+### `function_exists('nome')` nunca acha função em namespace
+
+```php
+namespace BahiaNews\MaisLidas;
+
+if (!function_exists('minha_funcao')) {   // consulta o espaco GLOBAL: SEMPRE false
+    function minha_funcao() { ... }        // nasce como BahiaNews\MaisLidas\minha_funcao
+}
+```
+
+O guard nunca protege, e um segundo `include` daria "Cannot redeclare". Pior: um teste que
+verifique `function_exists('minha_funcao')` conclui que a função não existe **quando ela existe**.
+
+```php
+if (!function_exists(__NAMESPACE__ . '\\minha_funcao')) {   // este funciona
+```
+
+O mesmo vale para `has_filter`, `do_action` e qualquer callback passado como string: o nome tem
+de ser qualificado. Por isso os `add_action` deste arquivo usam `__NAMESPACE__ . '\\refresh'`.
+
+### Função declarada dentro de outra só existe depois que a outra roda
+
+Vários mu-plugins daqui têm trecho de template no meio de uma função de render — `ob_start()`,
+HTML, `<?php ... ?>`, e o fechamento. **Declarar uma função nesse trecho a torna aninhada:**
+
+```php
+function render() {
+    ob_start(); ?>
+    <div>
+    <?php
+    function ajudante() { ... }   // so passa a existir DEPOIS que render() roda uma vez
+    ?>
+    </div>
+    <?php return ob_get_clean();
+}
+```
+
+Enquanto ninguém chamar `render()`, `ajudante()` não existe — e qualquer outro código que a
+chame morre com "undefined function". Depois que roda, existe para sempre, o que faz o sintoma
+parecer intermitente.
+
+**Função auxiliar vai no nível do arquivo**, antes da que a usa.
+
+### O que as duas têm em comum
+
+Nenhuma acusa erro no lugar onde o erro está. A primeira faz um teste responder "não" para algo
+que é "sim"; a segunda faz existir ou não conforme a ordem de execução. Como a
+[seção 0](#0-a-regra-que-vale-para-tudo-portão-de-contagem), a defesa é **verificar o efeito, não
+a aparência**: conferir se o gancho ficou registrado, se a função responde, se a saída mudou.
+
 ---
 
 ## 1. A regra que evita perder uma rodada de trabalho
