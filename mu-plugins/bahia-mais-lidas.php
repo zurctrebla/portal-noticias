@@ -169,6 +169,51 @@ function resolve_ids($limit) {
 }
 
 /**
+ * URL da miniatura da lista, escolhendo um tamanho que combine com a CAIXA.
+ *
+ * A caixa e `.bahia-ml-thumb{width:56px;height:42px}` com `object-fit:cover` — proporcao
+ * **1,3333**. Pedir `thumbnail` (150x150, QUADRADO) fazia um corte DUPLO: o WordPress cortava
+ * 30% da largura para virar quadrado, e o CSS cortava mais 25% da altura para caber na caixa.
+ * Medido nos sete itens da home em 25/08: **sobrava 50 a 53% da area da foto**.
+ *
+ * A lista de preferencia existe porque o acervo tem duas eras e o tamanho certo nao e o mesmo
+ * nas duas:
+ *
+ *   td_80x60      80x60  -> 1,3333, EXATAMENTE a caixa. So existe em anexo pos-virada.
+ *   destaque_mini 110x76 -> 1,447, o CSS corta 8%. E o que o acervo antigo tem.
+ *   medium               -> proporcao natural, arquivo pequeno. Rede de seguranca.
+ *   thumbnail            -> quadrado, ultimo recurso: ao menos e leve.
+ *
+ * Conferir a existencia em `_wp_attachment_metadata['sizes']` e obrigatorio. Pedir um tamanho
+ * inexistente a `wp_get_attachment_image_src()` **nao falha** — devolve o ORIGINAL em silencio.
+ * Medido: para um anexo antigo de 600x420, pedir `td_80x60` traria o arquivo de 600x420 inteiro
+ * (~184 KB) para uma caixa de 56x42. O enquadramento ate ficaria bom; o peso, nao.
+ */
+// O arquivo declara `namespace BahiaNews\MaisLidas`, entao a funcao nasce namespaced e
+// `function_exists('bahia_ml_miniatura')` — que consulta o espaco GLOBAL — nunca a encontraria.
+if (!function_exists(__NAMESPACE__ . '\\bahia_ml_miniatura')) {
+    function bahia_ml_miniatura($attachment_id) {
+        if (!$attachment_id) {
+            return '';
+        }
+        $meta = wp_get_attachment_metadata($attachment_id);
+        $tem  = (is_array($meta) && !empty($meta['sizes'])) ? $meta['sizes'] : array();
+
+        foreach (array('td_80x60', 'destaque_mini', 'medium', 'thumbnail') as $tamanho) {
+            if (isset($tem[$tamanho])) {
+                $src = wp_get_attachment_image_src($attachment_id, $tamanho);
+                if ($src && !empty($src[0])) {
+                    return $src[0];
+                }
+            }
+        }
+        // Nenhum dos quatro existe (anexo sem derivada alguma, a faixa 2017-2022): o original
+        // e o unico arquivo que ha, e o CSS o recorta para a caixa.
+        return (string) wp_get_attachment_url($attachment_id);
+    }
+}
+
+/**
  * Renderiza a lista "+ Mais Lidas".
  *
  * @param int  $limit     quantos itens.
@@ -221,7 +266,7 @@ function render($limit = 7, $show_head = true) {
   <?php if ($show_head) : ?><div class="bahia-ml-head">+ Mais Lidas</div><?php endif; ?>
   <ol class="bahia-ml-list">
     <?php $i = 0; while ($q->have_posts()) : $q->the_post(); $i++;
-        $thumb = get_the_post_thumbnail_url(get_the_ID(), 'thumbnail'); ?>
+        $thumb = bahia_ml_miniatura(get_post_thumbnail_id(get_the_ID())); ?>
       <li class="bahia-ml-item">
         <span class="bahia-ml-num"><?php echo $i; ?></span>
         <?php if ($thumb) : ?><a class="bahia-ml-thumb" href="<?php the_permalink(); ?>"><img src="<?php echo esc_url($thumb); ?>" alt="" loading="lazy"></a><?php endif; ?>

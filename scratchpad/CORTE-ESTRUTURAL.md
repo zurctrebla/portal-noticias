@@ -105,6 +105,11 @@ servidos:
 **Nenhuma proporção zera o corte, e a melhor delas só ganha 1,1 ponto sobre o export atual** —
 às custas de entregar foto quadrada, que serviria mal a todo o resto do site.
 
+> **Para dizer ao repórter, com todas as letras: o export de 600x420 está praticamente no ótimo.**
+> Ele não está fazendo nada errado. Das proporções possíveis, a dele é a segunda melhor, e a
+> melhor ganharia 1,1 ponto entregando foto quadrada. O corte que ele viu vinha do nosso código,
+> não do arquivo que ele entrega.
+
 O motivo é simples: o único corte grande vem de um tamanho **quadrado**. Não existe proporção
 retangular que satisfaça um quadrado. **Pedir outro export à redação não resolveria o problema —
 e o export de 600x420 já está praticamente no ótimo.**
@@ -120,3 +125,51 @@ e o export de 600x420 já está praticamente no ótimo.**
 acervo imediatamente, sem tocar no tema, sem pedir nada à redação e sem afetar upload.
 
 Não aplicado — aguarda a URL e a descrição do repórter para confirmar que é disto que ele fala.
+
+---
+
+# Aplicado — 25/08
+
+`mu-plugins/bahia-mais-lidas.php`. **Não foi uma linha, foram quatro** — e a medição explica por quê.
+
+## Por que a lista de preferência, e não `td_80x60` direto
+
+Pedir `td_80x60` direto quebraria o acervo antigo. Medido:
+
+```
+ANTIGO  anexo 547277, original 600x420, so tem tamanhos legados
+  td_80x60  ->  80x56   620x400-2026-07-28T144330.514.png   <<< E O ORIGINAL
+```
+
+`wp_get_attachment_image_src()` **não falha** quando o tamanho não existe: devolve o **original
+em silêncio**. Ou seja, um anexo antigo passaria a baixar 600x420 (~184 KB) para uma caixa de
+56x42. O enquadramento até melhoraria; o peso, não.
+
+Por isso a função confere a existência em `_wp_attachment_metadata['sizes']` e percorre:
+
+```
+td_80x60      80x60  -> 1,3333, exatamente a caixa   (anexo pos-virada)
+destaque_mini 110x76 -> 1,447, o CSS corta 8%        (acervo antigo)
+medium               -> proporcao natural, leve      (rede de seguranca)
+thumbnail            -> quadrado, ultimo recurso
+```
+
+## Resultado em homolog
+
+| | antes | depois |
+|---|---|---|
+| arquivos servidos | todos `-150x150` | `-80x60` (novo) e `-110x76` (antigos) |
+| peso da lista | 71 KB | **51 KB (−28%)** |
+| caiu no original? | — | **nenhum** |
+
+Conferido nas duas eras com o filtro `image_downsize` desligado, para simular produção — homolog
+tem o filtro e produção não, e isso mascararia o teste.
+
+## Duas armadilhas do arquivo, para quem mexer depois
+
+1. **O arquivo declara `namespace BahiaNews\MaisLidas`.** `function_exists('nome')` consulta o
+   espaço **global** e nunca encontraria a função — o guard tem de ser
+   `function_exists(__NAMESPACE__ . '\\nome')`.
+2. **A primeira versão caiu dentro da `render()`.** O trecho de template fica no meio da função,
+   então declarar ali cria uma **função aninhada**, que só passa a existir depois que a `render()`
+   roda pela primeira vez. A função vive no nível do arquivo.
