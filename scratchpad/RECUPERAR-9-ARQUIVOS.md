@@ -1,5 +1,18 @@
 # Recuperar os 9 arquivos apagados — comandos prontos
 
+> **EU NÃO ALCANÇO A VPS — a recuperação é sua.** Testado em 25/08: a porta 22 está aberta
+> (OpenSSH 9.2 Debian) e a VPS está no meu `known_hosts`, mas ela **só aceita `publickey`** e
+> nenhuma das minhas chaves autentica (`Permission denied (publickey)` com id_ed25519, do_mt25519,
+> application, github_pessoal, nos usuários ubuntu/admin/debian/root/bitnami/albert/bahia). SSM
+> está negado à credencial de pipeline. E a VPS **não serve `/wp-content/uploads/` por HTTP** —
+> devolve 404 até para arquivos que sabidamente existem (offload), então baixar pela web também
+> não funciona. Um pod de produção alcança o IP privado 172.31.0.178:80 pelo peering, mas esbarra
+> no mesmo 404.
+>
+> **Só o acesso ao filesystem da VPS resolve, e ele exige a sua chave.** Os comandos abaixo são
+> para você rodar por SSH.
+
+
 Para rodar **na VPS antiga** (`i-067a9df3e888a90f6`, `54.243.117.103`) quando você entrar por SSH.
 Contexto do incidente em `INCIDENTE-APAGUEI-2-IMAGENS.md`.
 
