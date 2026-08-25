@@ -3,7 +3,8 @@
  * Plugin Name: Bahia Futebol Display
  * Description: Shortcode [bahia_brasileirao] que renderiza, no topo, dois boxes de destaque
  *   com o último/próximo jogo do EC Bahia (id 1777) e do EC Vitória (id 1782) — fonte
- *   api.football-data.org v4, /teams/{id}/matches, cache transient 30min — e, abaixo, a tabela
+ *   api.football-data.org v4, /teams/{id}/matches, cache transient 30min (2min em caso de
+ *   falha, servindo o ultimo valor bom — ver bahia_fut_clube_jogos_dados) — e, abaixo, a tabela
  *   de classificação + jogos por rodada do Brasileirão Série A, consumindo o endpoint
  *   /bahia-api/brasileirao (mu-plugin api_brasileirao.php, mesma fonte football-data.org).
  *   Autossuficiente: CSS próprio (sem Semantic UI) e JS vanilla (fetch). Responsivo (desktop + mobile).
@@ -30,29 +31,122 @@ if (!defined('ABSPATH')) {
  * @param string $cache_key chave do transient
  * @return array{ultimo: ?array, proximo: ?array}
  */
+/**
+ * Trava de renovacao. Sem ela, TODO request que chega ao PHP no instante em que o
+ * transient expira dispara o proprio conjunto de chamadas — com 5 pods em producao
+ * isso passa de 10 por minuto e a API devolve 429.
+ *
+ * add_option() e a parte atomica: falha se a chave ja existir (indice unico em
+ * option_name). A leitura anterior serve so para soltar trava presa por processo
+ * que morreu no meio.
+ *
+ * @return bool true se ESTE processo ficou com a trava.
+ */
+if (!function_exists('bahia_fut_trava')) {
+    function bahia_fut_trava($nome) {
+        $agora = time();
+        $existente = get_option($nome);
+        if ($existente !== false) {
+            if (($agora - (int) $existente) < 60) {
+                return false;
+            }
+            delete_option($nome); // presa ha mais de 60s: assume
+        }
+        return add_option($nome, $agora, '', 'no');
+    }
+}
+
+if (!function_exists('bahia_fut_destrava')) {
+    function bahia_fut_destrava($nome) {
+        delete_option($nome);
+    }
+}
+
+/**
+ * Descarta um "proximo jogo" que ja aconteceu.
+ *
+ * Como agora servimos o ultimo valor bom quando a API falha, esse valor pode estar
+ * velho o bastante para o "proximo" ja ter sido disputado — mostrar jogo passado
+ * como futuro seria pior que nao mostrar nada. Margem de 3h para nao apagar o box
+ * durante a partida.
+ *
+ * Valores gravados antes desta versao nao tem 'ts'; nesse caso nao ha como julgar
+ * e o dado e mantido, que e o comportamento antigo.
+ */
+if (!function_exists('bahia_fut_descarta_proximo_vencido')) {
+    function bahia_fut_descarta_proximo_vencido($dados) {
+        if (!is_array($dados) || empty($dados['proximo']) || !is_array($dados['proximo'])) {
+            return $dados;
+        }
+        $ts = isset($dados['proximo']['ts']) ? (int) $dados['proximo']['ts'] : 0;
+        if ($ts > 0 && $ts < (time() - 3 * HOUR_IN_SECONDS)) {
+            $dados['proximo'] = null;
+        }
+        return $dados;
+    }
+}
+
 if (!function_exists('bahia_fut_clube_jogos_dados')) {
     function bahia_fut_clube_jogos_dados($team_id, $cache_key) {
         $cached = get_transient($cache_key);
         if ($cached !== false) {
-            return $cached;
+            return bahia_fut_descarta_proximo_vencido($cached);
+        }
+
+        // Ultimo resultado BOM, sem expiracao. E o que salva o box quando a API cai.
+        $opt_bom = $cache_key . '_bom';
+        $lock    = $cache_key . '_lock';
+
+        // Quem nao pegou a trava serve o ultimo bom em vez de chamar a API.
+        if (!bahia_fut_trava($lock)) {
+            $bom = get_option($opt_bom);
+            if (is_array($bom)) {
+                return bahia_fut_descarta_proximo_vencido($bom);
+            }
         }
 
         $api_token = 'f5c2e920e49b4657b44ff0ef77c87350';
 
+        /*
+         * Tres retornos distintos, e a distincao e o ponto de toda esta correcao:
+         *   array -> a API devolveu um jogo
+         *   null  -> a API respondeu 200 e disse que NAO ha jogo
+         *   false -> a CHAMADA FALHOU (rede, 429, corpo inesperado)
+         *
+         * Antes, falha e ausencia eram os dois `null`, e o null ia para um transient
+         * de 30 min. Uma unica resposta 429 apagava o "proximo jogo" do site por meia
+         * hora, sem erro em log e sem como distinguir de um clube sem jogo marcado.
+         */
         $fetch = function ($status) use ($api_token, $team_id) {
             $resp = wp_remote_get(
                 "https://api.football-data.org/v4/teams/{$team_id}/matches?status={$status}&limit=1",
                 array('headers' => array('X-Auth-Token' => $api_token), 'timeout' => 10)
             );
             if (is_wp_error($resp) || wp_remote_retrieve_response_code($resp) !== 200) {
-                return null;
+                return false;
             }
             $body = json_decode(wp_remote_retrieve_body($resp), true);
+            if (!is_array($body) || !isset($body['matches']) || !is_array($body['matches'])) {
+                return false; // 200 com corpo inesperado tambem e falha, nao ausencia
+            }
             return isset($body['matches'][0]) ? $body['matches'][0] : null;
         };
 
         $ultimo_raw  = $fetch('FINISHED');
         $proximo_raw = $fetch('SCHEDULED');
+
+        if ($ultimo_raw === false || $proximo_raw === false) {
+            bahia_fut_destrava($lock);
+            $bom = get_option($opt_bom);
+            // TTL curto: tenta de novo em 2 min em vez de congelar a falha por 30.
+            if (is_array($bom)) {
+                set_transient($cache_key, $bom, 2 * MINUTE_IN_SECONDS);
+                return bahia_fut_descarta_proximo_vencido($bom);
+            }
+            $vazio = array('ultimo' => null, 'proximo' => null);
+            set_transient($cache_key, $vazio, 2 * MINUTE_IN_SECONDS);
+            return $vazio;
+        }
 
         $format = function ($match) use ($team_id) {
             if (!$match) return null;
@@ -68,6 +162,9 @@ if (!function_exists('bahia_fut_clube_jogos_dados')) {
                               : (isset($match['homeTeam']) ? $match['homeTeam'] : array());
 
             return array(
+                // 'ts' permite descartar um "proximo" que ja aconteceu, quando o valor
+                // vem do cache de emergencia. Ver bahia_fut_descarta_proximo_vencido().
+                'ts'           => $dt->getTimestamp(),
                 'data'         => $dt->format('d/m/Y'),
                 'horario'      => $dt->format('H:i'),
                 'clube_nome'   => isset($clube['shortName']) ? $clube['shortName'] : (isset($clube['name']) ? $clube['name'] : ''),
@@ -88,6 +185,13 @@ if (!function_exists('bahia_fut_clube_jogos_dados')) {
         );
 
         set_transient($cache_key, $dados, 30 * MINUTE_IN_SECONDS);
+
+        // So aqui, com as duas chamadas confirmadas, o resultado vira "o ultimo bom".
+        // autoload 'no': sao dois registros que nao precisam entrar em toda requisicao.
+        update_option($opt_bom, $dados, false);
+
+        bahia_fut_destrava($lock);
+
         return $dados;
     }
 }
