@@ -736,3 +736,56 @@ Geometria da home, antes e depois: mesmos 9 cards com resumo, mesmos 8 blocos, t
 `margin-bottom: 48px` — inalterado. As alturas de três cards caíram (415→395, 412→391,
 374→353) porque a chamada é mais curta que o parágrafo truncado; a página inteira ficou
 42px mais baixa. É o efeito pretendido, não regressão.
+
+---
+
+## 16. Instrumentos que descartam dado em silêncio
+
+Duas medições desta sessão só se salvaram porque o número saiu estranho e foi refeito. As duas
+falharam do jeito pior possível: **sem erro, sem aviso, devolvendo um resultado plausível.**
+
+### 16.1 `xargs -I{}` do BSD/macOS engole linhas longas
+
+Ao medir 180 pares de URL do CloudFront (derivada contra original), isto devolveu **15** linhas:
+
+```bash
+xargs -P 12 -I{} ./medir.sh {} < pares.txt > medidos.txt
+```
+
+Sem erro, sem código de saída diferente de zero. O `xargs` do BSD tem limite de comprimento por
+linha quando se usa `-I` — duas URLs completas do CloudFront passam de 250 caracteres e as linhas
+maiores são **descartadas caladas**. Sobraram exatamente as 15 mais curtas, e a amostra
+enviesada ainda dava um número coerente (88,6%), que passaria despercebido.
+
+O sintoma é sempre o mesmo: **o arquivo de saída tem menos linhas que o de entrada.** Conferir
+isso é obrigatório.
+
+```bash
+# em vez de xargs -I{}, laço próprio com paralelismo controlado
+n=0
+while IFS='|' read -r a b c; do
+  { ...; printf '%s|%s\n' "$x" "$y" >> saida.txt; } &
+  n=$((n+1)); [ $((n % 8)) -eq 0 ] && wait
+done < entrada.txt
+wait
+echo "medidos: $(wc -l < saida.txt) de $(wc -l < entrada.txt)"   # <- o portão
+```
+
+### 16.2 Amostragem por ID aleatório em espaço esparso colapsa
+
+Para estimar o estado do acervo, sortear 500 IDs entre `MIN(ID)` e `MAX(ID)` e pegar o anexo
+seguinte devolveu **31 anexos distintos**, não 500. Os IDs de anexo ocupam uma fração pequena de
+um espaço que vai a 9 milhões, com grandes vazios; centenas de sorteios caem no mesmo vazio e
+resolvem para o mesmo "próximo" anexo. A amostra vira um punhado de registros repetidos, e a
+estatística sai com aparência normal.
+
+O que funcionou: **estratificar por ano** (`post_date` é indexado junto com `post_type`) e, dentro
+de cada ano, pegar em cinco `OFFSET` distintos — início, 25%, 50%, 75%, 95% — ponderando depois
+pela contagem real de cada ano.
+
+### A regra que fica
+
+Toda medição precisa de um **portão de contagem**: quantas linhas entraram, quantas saíram, e
+quantas foram descartadas e por quê. Sem isso, o instrumento silencioso vira o resultado.
+Isto vale também para `grep -o` com regex de contexto largo (`.{0,150}`), que em arquivo de
+centenas de KB entra em backtracking e estoura o tempo em vez de responder — usar Python.
