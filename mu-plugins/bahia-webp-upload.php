@@ -72,6 +72,11 @@ final class Bahia_WebP_Upload {
         add_filter('wp_handle_upload', array(__CLASS__, 'converter'), 10, 2);
         add_action('add_attachment', array(__CLASS__, 'registrar_original'));
         add_filter('as3cf_attachment_file_paths', array(__CLASS__, 'incluir_original_no_offload'), 10, 3);
+        // O envio e a remocao usam filtros DIFERENTES no Offload. Sem este segundo, apagar o
+        // anexo apagava o WebP e as derivadas e deixava o PNG original orfao no S3, pagando
+        // armazenamento para sempre. Descoberto na validacao em homolog: sobrou exatamente
+        // um objeto por pasta, e era sempre o original.
+        add_filter('as3cf_remove_source_files_from_provider', array(__CLASS__, 'incluir_original_na_remocao'), 10, 3);
     }
 
     /**
@@ -339,6 +344,43 @@ final class Bahia_WebP_Upload {
             } elseif ($paths) {
                 $ref = reset($paths);
             }
+            if (!$ref) {
+                return $paths;
+            }
+            $paths['bahia_original'] = dirname($ref) . '/' . $nome;
+            return $paths;
+
+        } catch (\Throwable $e) {
+            return $paths;
+        }
+    }
+
+    /**
+     * Manda o PNG original embora junto com o resto, quando o anexo e apagado.
+     *
+     * Contraparte de incluir_original_no_offload(). O Offload usa um filtro para montar a
+     * lista do que SOBE e outro para montar a lista do que SAI — quem so implementa o
+     * primeiro deixa o original orfao no bucket.
+     *
+     * A meta ainda existe aqui: o Offload engancha em `delete_attachment` na prioridade 20, e
+     * o WordPress so apaga os metadados depois de rodar essa acao.
+     */
+    public static function incluir_original_na_remocao($paths, $as3cf_item, $item_source) {
+        try {
+            $id = 0;
+            if (is_array($item_source) && !empty($item_source['id'])) {
+                $id = (int) $item_source['id'];
+            } elseif (is_object($as3cf_item) && method_exists($as3cf_item, 'source_id')) {
+                $id = (int) $as3cf_item->source_id();
+            }
+            if (!$id || !is_array($paths)) {
+                return $paths;
+            }
+            $nome = get_post_meta($id, '_bahia_webp_original', true);
+            if (!$nome) {
+                return $paths;
+            }
+            $ref = isset($paths['file']) ? $paths['file'] : reset($paths);
             if (!$ref) {
                 return $paths;
             }

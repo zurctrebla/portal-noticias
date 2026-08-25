@@ -47,6 +47,43 @@ O detalhe de cada caso está na **seção 16**.
 
 ---
 
+## 0.1 Em `mu-plugins/`, commitar É instalar
+
+**A `develop` reconstrói homolog e a `main` reconstrói produção. Tudo que está em
+`mu-plugins/` entra em vigor no instante em que o pod sobe. Não existe versionar sem ativar
+naquele diretório.**
+
+Aconteceu em 25/08: commitei um plugin de conversão de imagem "só para versionar", empurrei para
+`develop`, e o build instalou em homolog um código que estava explicitamente combinado para não
+entrar ainda. `gh run cancel` exigiu permissão de admin que a credencial não tem, então a
+correção foi empurrar a trava e deixar o build seguinte anular o anterior — o plugin ficou ativo
+por cerca de dois minutos.
+
+**Código que não deve rodar precisa de trava por constante**, logo depois da checagem de
+`ABSPATH`:
+
+```php
+if (!defined('BAHIA_MEU_PLUGIN_ATIVO') || !BAHIA_MEU_PLUGIN_ATIVO) {
+    return;
+}
+```
+
+Assim ele viaja versionado e inerte; ligar é definir a constante, desligar é removê-la, e não há
+estado a desfazer porque nada roda antes disso.
+
+### E a verificação é `has_filter()`, nunca `class_exists()`
+
+```php
+class_exists('Bahia_Meu_Plugin')                                  // true MESMO com a trava!
+has_filter('wp_handle_upload', array('Bahia_Meu_Plugin','x'))     // false — este é o teste
+```
+
+O PHP declara classes de nível superior **ao compilar o arquivo**, independentemente do fluxo de
+execução: o `return` da trava impede que o `::init()` do final rode, mas não impede a classe de
+existir. Quem verificar com `class_exists()` vai concluir que a trava falhou quando ela funcionou.
+
+---
+
 ## 1. A regra que evita perder uma rodada de trabalho
 
 `td-composer` registra `template_include` com **prioridade 99** e desvia vários contextos para

@@ -257,3 +257,94 @@ as3cf_attachment_file_paths registrado ....... nao
 Código que deve ficar pronto **sem** entrar em vigor não pode ser só "commitado": em
 `mu-plugins/`, commit e instalação são o mesmo ato. Ou nasce atrás de uma trava como esta, ou
 fica fora da pasta até a hora de ligar.
+
+---
+
+# Validação em homolog — 25/08
+
+Instalado com a chave ligada por `mu-plugins/bahia-flags.php`, que liga a constante **só quando
+o `siteurl` é `hml.bahia.ba`**. Em produção o arquivo viaja junto e a condição não bate, então o
+plugin continua inerte lá mesmo depois do próximo deploy.
+
+Exercitado por `wp_handle_upload()` chamado como o painel chama, com `action` customizado —
+mesma cadeia de filtros, mesma criação de anexo, mesma geração de derivadas, mesmo Offload. Não
+foi clique no wp-admin porque isso exigiria credencial; o caminho de código é o mesmo.
+
+## Os dez casos
+
+| caso | entrou | saiu | ms | resultado |
+|---|---|---|---|---|
+| foto comum 600×420 | 408 KB | **55 KB** | 290 | WebP |
+| captura com texto | 131 KB | **22 KB** | 211 | WebP |
+| arte com alfa real | 24 KB | **12 KB** | 184 | WebP sem perdas |
+| poucas cores | 89 KB | **9 KB** | 160 | WebP |
+| PNG grande 1200×800 | 834 KB | **52 KB** | 815 | WebP |
+| **PNG corrompido** | 3 KB | 3 KB | 8 | **PNG, intacto** |
+| **PNG de 26,4 MP** | 349 KB | 349 KB | 5 | **PNG, intacto** |
+| **GIF** | 1 KB | 1 KB | 4 | **GIF, intacto** |
+| **JPEG** | 13 KB | 13 KB | 3 | **JPEG, intacto** |
+| **WebP já existente** | 2 KB | 2 KB | 3 | **WebP, intacto** |
+
+Nenhum upload se perdeu. As saídas antecipadas dispararam em 3 a 8 ms — o PNG corrompido passa
+pelo `getimagesize` (o cabeçalho está íntegro) e é barrado depois, na decodificação, que é
+exatamente o caminho de reserva que se queria testar.
+
+## O anexo nasce WebP e o Offload registra certo de primeira
+
+```
+_wp_attached_file  : 2026/08/1-foto.webp
+as3cf path         : wp-content/uploads/2026/08/25164337/1-foto.webp
+objects            : __as3cf_primary, medium, thumbnail, td_80x60, td_150x0,
+                     td_218x150, td_300x0, td_324x400, td_485x360, bahia_original
+meta original      : 1-foto.png
+```
+
+E os dois arquivos respondem no CDN, sob o mesmo segmento de versão:
+
+```
+1-foto.webp   200   55.982 B   image/webp     <- servido
+1-foto.png    200  417.470 B   image/png      <- original guardado
+```
+
+## O tempo: o upload fica MAIS RÁPIDO, não mais lento
+
+Era a preocupação — repórter esperando em fechamento. Medindo o ciclo inteiro, não só a conversão:
+
+| caso | | upload | derivadas | **TOTAL** |
+|---|---|---|---|---|
+| foto 600×420 | **com** o plugin | 265 ms | 3.500 ms | **3.870 ms** |
+| | sem o plugin | 11 ms | 5.043 ms | **5.102 ms** |
+| PNG 1200×800 | **com** o plugin | 824 ms | 5.477 ms | **6.344 ms** |
+| | sem o plugin | 8 ms | 10.181 ms | **10.222 ms** |
+
+A conversão custa 250 a 820 ms, mas **as dez derivadas passam a ser geradas a partir de um WebP
+pequeno em vez de um PNG pesado** — e isso economiza muito mais do que a conversão gastou.
+
+**Saldo: 1,2 s mais rápido no caso típico e 3,9 s mais rápido no PNG grande.**
+
+## Um defeito encontrado na validação — e corrigido
+
+Depois de apagar os anexos de teste, **sobrou exatamente um objeto por pasta no S3: sempre o
+PNG original.**
+
+Causa: o Offload usa **filtros diferentes** para montar a lista do que sobe
+(`as3cf_attachment_file_paths`) e a lista do que sai
+(`as3cf_remove_source_files_from_provider`). Eu havia implementado só o primeiro. Consequência
+em produção: cada imagem apagada pela redação deixaria o original órfão, pagando armazenamento
+para sempre e sem nada que apontasse para ele.
+
+Corrigido com o segundo filtro. Reteste do ciclo completo — subir três, apagar três — deixou as
+**três pastas em zero objetos**. Os cinco órfãos do teste anterior foram removidos à mão; o
+bucket voltou ao estado original, conferido pasta a pasta.
+
+> Isto só apareceu porque a validação incluiu **apagar** o que foi criado. Testar só o caminho
+> feliz teria deixado o vazamento para a produção descobrir.
+
+## Um achado lateral que vale registrar
+
+**Homolog escreve no mesmo bucket de produção** — `static.bahia.ba`, em sa-east-1, com
+`copy-to-s3: true` e `remove-local-file: true`. Não há bucket separado por ambiente.
+
+Na prática: qualquer upload de teste em homolog cria objeto no bucket de produção. Não quebra
+nada, porque o caminho tem segmento de versão próprio e nenhum conteúdo de produção o referencia,
+mas suja. Foi por isso que os anexos de teste desta validação foram todos apagados ao final.
