@@ -219,6 +219,42 @@ Qualquer 404 aborta o projeto até entender a causa.
 
 ---
 
+## 6.5 O acervo antigo em PNG entra NESTA passada — não é projeto separado
+
+Decidido em 25/08. O `DIAGNOSTICO-PNG.md` mostrou que 91% dos PNGs são fotografias sem
+transparência alguma, e que convertê-los para WebP q85 rende ~9× de redução. Para o material
+**novo**, isso é resolvido no upload (`bahia-webp-upload.php`). Para o **acervo**, a conversão
+entra aqui.
+
+**Por que na mesma passada:** o job já vai, para cada anexo, (1) baixar o original do S3,
+(2) decodificar, (3) redimensionar e (4) subir. Converter o formato usa exatamente o mesmo
+download, o mesmo decode e o mesmo upload. **O custo marginal é a codificação — e o WebP
+codifica mais rápido que o PNG que ele substitui.**
+
+Tratar isso como projeto à parte significaria baixar e decodificar 153.842 imagens duas vezes,
+pelo mesmo resultado.
+
+### O que muda no desenho do job
+
+- ao gerar cada derivada, gravar em **WebP** em vez do formato de origem, aplicando a mesma
+  regra do mu-plugin: codificar com perdas (q85) e sem perdas, ficar com o menor, e manter o
+  original se a economia for menor que 15%;
+- a checagem de **alfa real** (varrer pixels, não confiar no tipo RGBA) vale igual aqui;
+- o **original permanece intocado** no S3. A regeneração só acrescenta derivadas; em nenhum
+  momento apaga ou reescreve o arquivo que veio da redação;
+- `_wp_attachment_metadata['sizes'][*]['mime-type']` passa a ser `image/webp` nessas entradas —
+  é o campo que o WordPress usa para montar a URL, então precisa estar correto;
+- a verificação nº 2 do piloto (cada tamanho novo responde 200 no CDN) já cobre isso sem
+  alteração.
+
+### Efeito somado
+
+Os 48,3% do acervo que hoje não têm derivada nenhuma passariam de originais de ~184 KB para
+derivadas WebP de **10 a 30 KB**, em vez dos 10–60 KB estimados na seção 7. É o mesmo trabalho,
+com resultado consideravelmente melhor.
+
+---
+
 ## 7. Sequência proposta
 
 | # | passo | duração |
