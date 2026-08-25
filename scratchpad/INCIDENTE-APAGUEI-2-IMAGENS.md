@@ -35,8 +35,9 @@ seção 0.2 do HANDOVER — o `wp_delete_attachment` removeu os objetos do S3 qu
 
 1. **313722** — "Secretaria da Administração leiloa 316 bens no próximo dia 6"
    https://bahia.ba/bahia/secretaria-da-administracao-leiloa-316-bens-no-proximo-dia-6/
-   A imagem era anexo do post, **não é imagem destacada nem aparece no conteúdo**. Impacto visual
-   provavelmente nulo.
+   **CORREÇÃO (26/08):** eu havia dito que não aparecia no conteúdo. Aparece — há um
+   `<img class="size-full wp-image-313723">` no corpo do artigo, quebrado (403). Não é imagem
+   destacada, mas está visível no texto. Precisa de reposição, não só remoção do registro.
 
 2. **542263** — "RD Congo vence Uzbequistão e conquista classificação inédita na Copa"
    https://bahia.ba/esporte/rd-congo-vence-uzbequistao-e-conquista-classificacao-inedita-na-copa/
