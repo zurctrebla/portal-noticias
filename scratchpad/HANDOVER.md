@@ -20,6 +20,33 @@ nem no código, nem no histórico do git. Documentos irmãos:
 
 ---
 
+## 0. A regra que vale para tudo: portão de contagem
+
+**Toda medição precisa dizer quantas linhas entraram, quantas saíram e quantas foram
+descartadas.** Sem isso, um instrumento que perde dado em silêncio vira o resultado — e a
+conclusão errada chega com aparência de número certo.
+
+Aconteceu duas vezes numa sessão só, e nas duas o erro era invisível:
+
+- `xargs -I{}` do BSD/macOS **descartou 165 de 180 linhas** por comprimento, sem erro e com
+  código de saída zero. Sobraram as 15 mais curtas — uma amostra enviesada que ainda devolvia
+  um percentual plausível.
+- Sorteio de 500 IDs num espaço esparso **colapsou em 31 registros distintos**, porque centenas
+  de sorteios caíam no mesmo vazio e resolviam para o mesmo "próximo".
+
+Nos dois casos, uma linha de conferência teria pego na hora:
+
+```bash
+echo "medidos: $(wc -l < saida.txt) de $(wc -l < entrada.txt)"
+```
+
+Vale para consulta em banco, varredura de arquivo, chamada de API em lote e amostragem
+estatística. Se o número de saída não é conferido contra o de entrada, a medição não terminou.
+
+O detalhe de cada caso está na **seção 16**.
+
+---
+
 ## 1. A regra que evita perder uma rodada de trabalho
 
 `td-composer` registra `template_include` com **prioridade 99** e desvia vários contextos para
