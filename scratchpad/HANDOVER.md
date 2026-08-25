@@ -202,6 +202,29 @@ a aparência**: conferir se o gancho ficou registrado, se a função responde, s
 
 ---
 
+## 0.4 Decisões de risco recusadas — registro
+
+Quando uma correção de risco é medida, proposta e **recusada**, o desacordo fica aqui, com a
+medição e a data. Não é para cobrar ninguém: é para que a próxima pessoa saiba que foi
+**decisão**, não descuido — e para que, se o risco se realizar, o caminho de volta já esteja
+escrito.
+
+### 25/08/2026 — trava de remoção no bucket compartilhado
+
+| | |
+|---|---|
+| **risco medido** | homolog e produção compartilham `static.bahia.ba`; 142 de 142 IDs conferidos apontam para o mesmo objeto. Apagar anexo anterior a 28/07 em homolog apaga arquivo do site no ar. |
+| **correção proposta** | `add_filter('as3cf_remove_source_files_from_provider','__return_empty_array',99)` — uma linha, custo zero |
+| **decisão** | não aplicar, por ora. Argumento: homolog serve só para validar alterações e ninguém roda limpeza lá |
+| **desfecho** | **o risco se realizou na mesma tarde.** Limpar anexos de teste É limpeza em homolog, e estava no roteiro do dia. Nove objetos de produção apagados, sem versionamento para restaurar |
+| **estado** | trava **aplicada** em 25/08, junto com a guarda por faixa de ID. Ver `bahia-homolog-guardas.php` |
+
+A lição que o caso deixa não é sobre esta trava específica. É que **"ninguém faz isso" não é
+controle** — é previsão de comportamento, e previsão de comportamento falha no dia em que a
+rotina muda. Controle é o que impede, não o que se espera.
+
+---
+
 ## 1. A regra que evita perder uma rodada de trabalho
 
 `td-composer` registra `template_include` com **prioridade 99** e desvia vários contextos para
