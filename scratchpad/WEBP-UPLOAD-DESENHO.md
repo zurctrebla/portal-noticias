@@ -206,3 +206,54 @@ de 0,49 a 1,59 em 255, com no máximo 0,7% dos pixels desviando mais de 8. Abaix
 **Não decidido de propósito:** se vale converter também os **JPEG** no upload. O ganho existe
 (WebP costuma render 25–35% sobre JPEG), mas é bem menor que os 87% do PNG, e cada formato a mais
 aumenta a superfície de risco. Melhor medir o efeito do PNG primeiro.
+
+---
+
+## 8. Erro de percurso: `mu-plugins/` não tem "commitar sem instalar"
+
+Registrado porque a lição é geral e vale para qualquer rodada futura.
+
+Eu commitei o plugin em `mu-plugins/` e empurrei para `develop` achando que estava apenas
+versionando. **Não estava:** `develop` reconstrói a imagem de homolog, e tudo em `mu-plugins/`
+entra em vigor no instante em que o pod sobe. Na prática o push instalou o plugin em homolog —
+exatamente o que estava combinado para não acontecer antes da conversa com a redação.
+
+Tentei cancelar o build (`gh run cancel`) e não tenho permissão de admin no repositório, então a
+correção foi empurrar a trava e deixar o build seguinte anular o anterior. O plugin ficou ativo
+em homolog por cerca de dois minutos. Como ele só age em upload de PNG e ninguém publicou nesse
+intervalo, não houve efeito — mas isso é sorte, não desenho.
+
+### A correção
+
+O plugin sai pela porta logo depois da checagem de `ABSPATH`:
+
+```php
+if (!defined('BAHIA_WEBP_UPLOAD_ATIVO') || !BAHIA_WEBP_UPLOAD_ATIVO) {
+    return;
+}
+```
+
+Fica versionado e inerte. Ligar é definir a constante; desligar é removê-la; e não há estado a
+desfazer, porque nada roda antes disso.
+
+### Verificado em homolog
+
+```
+arquivo presente ............................. SIM
+constante definida ........................... nao
+wp_handle_upload  registrado por nos ......... nao
+add_attachment    registrado por nos ......... nao
+as3cf_attachment_file_paths registrado ....... nao
+```
+
+> Uma sutileza que quase me fez ler errado a própria verificação: `class_exists('Bahia_WebP_Upload')`
+> devolve **true** mesmo com o `return` antes da classe. O PHP declara classes de nível superior
+> ao compilar o arquivo, independentemente do fluxo de execução. O que não roda é o
+> `Bahia_WebP_Upload::init()` do final — e é ele que registra os ganchos. **O teste certo é
+> `has_filter()`, não `class_exists()`.** A classe existir é um símbolo sem efeito.
+
+### A regra para a próxima vez
+
+Código que deve ficar pronto **sem** entrar em vigor não pode ser só "commitado": em
+`mu-plugins/`, commit e instalação são o mesmo ato. Ou nasce atrás de uma trava como esta, ou
+fica fora da pasta até a hora de ligar.
