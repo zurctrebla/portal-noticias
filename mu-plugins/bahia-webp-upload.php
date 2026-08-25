@@ -25,6 +25,25 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/*
+ * DESLIGADO POR PADRAO.
+ *
+ * Qualquer arquivo em mu-plugins/ entra em vigor no instante em que a imagem e reconstruida —
+ * nao ha "commitar sem instalar" nesta pasta. Como este plugin so deve entrar depois da
+ * conversa com a redacao, ele fica versionado e inerte ate alguem ligar a chave.
+ *
+ * Para ligar, defina a constante antes do WordPress carregar os mu-plugins (wp-config.php ou
+ * um mu-plugin de nome anterior a este na ordem alfabetica):
+ *
+ *     define( 'BAHIA_WEBP_UPLOAD_ATIVO', true );
+ *
+ * Desligar e remover a constante: nao ha estado a desfazer, porque nada roda enquanto ela
+ * estiver ausente.
+ */
+if (!defined('BAHIA_WEBP_UPLOAD_ATIVO') || !BAHIA_WEBP_UPLOAD_ATIVO) {
+    return;
+}
+
 final class Bahia_WebP_Upload {
 
     /** Qualidade do WebP com perdas. Medida: q85 = ~9x menor que PNG e mais fiel que JPEG q82. */
