@@ -68,3 +68,72 @@ archive (caminho 1) — se ele for 11, a correção é trocar por 10 e o passo p
 
 Método de verificação do fix (o mesmo deste diagnóstico): render das páginas 1–4, mapa slug →
 posição do banco, e conferir que **nenhuma posição some** entre as emendas.
+
+---
+
+# CAUSA CONFIRMADA (corrige a hipótese acima)
+
+A hipótese do `td_flex_block_1` estava **errada** — aquela injeção só roda em `/ultimas-noticias`,
+não nos archives de editoria. Medi a query real de `/esporte/page/2/` e o culpado é outro:
+
+**`mu-plugins/bahia-archive-count-perf.php`.**
+
+## posts_per_page: o real é 10, mas o plugin o infla para 11
+
+Esse plugin existe para tirar o `SQL_CALC_FOUND_ROWS` dos archives (era a 2ª causa do 504 da
+virada — contar 78 mil linhas de /politica/ só para o rodapé de paginação). A técnica: em vez de
+contar, **pede um post a mais** para saber se há próxima página:
+
+```php
+$q->set('no_found_rows', true);
+$q->set('posts_per_page', $por_pagina + 1);   // 10 vira 11
+```
+
+O problema é que o WordPress calcula o **offset** do `LIMIT` a partir do `posts_per_page`:
+
+```
+offset = posts_per_page × (paged − 1)
+```
+
+Com `posts_per_page = 11` e `paged = 2`, o offset vira **11**, não 10. Medido na query real:
+
+```
+is_post_type_archive: sim   posts_per_page(pos-loop): 10   found_posts: 21
+página 2 devolve: 9001373 (posição 12), 9001361 (13)...  — começa na 12, não na 11
+```
+
+Passo a passo do que some:
+- **Página 1**: offset 0, limit 11 → posições 1–11. O `array_pop` joga fora a 11ª (o "extra") →
+  exibe 1–10. **A posição 11 foi buscada e descartada.**
+- **Página 2**: offset 11 → posições 12–22, descarta a 22ª → exibe 12–21. **A posição 11 nunca é
+  buscada de novo.**
+- Cai na fresta. Mesma coisa em 22, 33, 44…
+
+O `+1` inflou o `posts_per_page`, e o WordPress usa esse mesmo número para o offset — então cada
+página "anda" 11, mas exibe 10, e a diferença de 1 é a matéria perdida na emenda.
+
+## O fix — 2 linhas, a decidir e validar em homolog
+
+O `+1` tem de esticar só o **limite**, não o **offset**. Fixar o offset explicitamente com o
+per_page REAL resolve — quando `offset` é setado, o WordPress o usa literal e não recalcula de
+`paged × posts_per_page`:
+
+```php
+$q->set('no_found_rows', true);
+$q->set('posts_per_page', $por_pagina + 1);
+$pagina = max(1, (int) $q->get('paged'));
+$q->set('offset', ($pagina - 1) * $por_pagina);   // <<< a linha que falta: offset com o per_page real
+$q->set(BAHIA_ACP_FLAG, $por_pagina);
+```
+
+Efeito:
+- Página 1: offset 0, limit 11 → 1–11, descarta 11 → exibe 1–10.
+- Página 2: offset **10**, limit 11 → **11**–21, descarta 21 → exibe 11–20 (a posição 11 volta).
+- Página 3: offset 20 → 21–31 → exibe 21–30. Sem buracos.
+
+A lógica de `array_pop`/`found_posts`/`max_num_pages` do `the_posts` continua valendo (limit 11:
+11 posts quando há próxima, ≤10 na última). E `found_posts`/`max_num_pages` já são preenchidos à
+mão pelo plugin, então os links de paginação não dependem do offset nativo.
+
+**Validação (a mesma deste diagnóstico):** render das páginas 1–4, mapa slug → posição do banco,
+conferir que nenhuma posição some. Fazer em homolog antes de produção.
