@@ -137,3 +137,25 @@ mão pelo plugin, então os links de paginação não dependem do offset nativo.
 
 **Validação (a mesma deste diagnóstico):** render das páginas 1–4, mapa slug → posição do banco,
 conferir que nenhuma posição some. Fazer em homolog antes de produção.
+
+---
+
+# VALIDADO EM HOMOLOG — 26/08
+
+Fix aplicado (a linha do `offset` explícito). Resultado do cruzamento banco × render:
+
+| teste | antes | depois |
+|---|---|---|
+| esporte, posições 1–31 que somem (pgs 1–4) | **11 e 22 faltavam** | **0** |
+| esporte, página 2 começa na posição | 12 | **11** |
+| politica, posições 1–21 que somem | (bug) | **0** |
+| duplicata entre pág 1 e pág 2 | — | **0** (10 + 10 itens, sem repetição) |
+| gente (11 posts, 2 pgs) — inclui a ÚLTIMA página | — | **11/11, 0 somem** |
+| mobile (mesma paginação server-side) | posição 11 sumia | **aparece** |
+
+**Performance intacta** (o motivo do plugin): `no_found_rows` continua ligado (sem
+`SQL_CALC_FOUND_ROWS`), `found_posts=21`/`max_num_pages=3` seguem preenchidos pelo post extra, o
+botão "Ver mais" continua aparecendo, e a página exibe 10 posts. A lógica de `array_pop` do
+`the_posts` não foi tocada e continua correta na última página (else branch).
+
+**Pendente:** aprovação para ir a produção (rodada própria, protocolo de sempre).
