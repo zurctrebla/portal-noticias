@@ -83,6 +83,16 @@ function bahia_acp_pede_um_a_mais($q) {
 
     $q->set('no_found_rows', true);
     $q->set('posts_per_page', $por_pagina + 1);
+
+    // O `+1` deve esticar so o LIMITE, nunca o OFFSET. Sem esta linha, o WordPress calcula
+    // o offset como posts_per_page * (paged-1) = 11 * (paged-1), andando de 11 em 11 enquanto
+    // cada pagina exibe 10 — e a materia da posicao 11, 22, 33... cai na emenda e some da
+    // listagem (a da posicao 11 e buscada na pagina 1 como o "extra" e descartada, e nunca
+    // buscada de novo). Fixar o offset com o per_page REAL faz o `+1` valer so como espiada.
+    // Quando `offset` e setado explicitamente, o WordPress o usa literal e nao recalcula.
+    $pagina = max(1, (int) $q->get('paged'));
+    $q->set('offset', ($pagina - 1) * $por_pagina);
+
     $q->set(BAHIA_ACP_FLAG, $por_pagina);
 }
 
