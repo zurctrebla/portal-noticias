@@ -769,3 +769,135 @@ O que os números mostram:
    economiza nada; deixar passar essa data custa 111,69 USD/mês.
 5. **`aws.bahia.ba` ainda aponta para a VPS**, então a premissa de que nada aponta para ela
    não se sustenta — e o inventário de uploads continua por fazer.
+
+---
+
+# CHECKLIST DE DESLIGAMENTO DA VPS — para executar pelo console
+
+Consolidado em 26/08/2026. IDs conferidos na AWS nesta data. **Executar na ordem.** Cada passo
+diz onde no console, como identificar por **ID** (nunca por nome — ver o aviso abaixo), e o que
+conferir depois.
+
+> ⚠️ **A instância a desligar chama-se "PRODUÇÃO".** É a VPS antiga. Confira SEMPRE pelo ID
+> **`i-067a9df3e888a90f6`**. As instâncias que realmente servem o site (nós do EKS) não têm nome.
+
+## O que NÃO é tocado por esta lista — ler antes
+
+- **O RDS `rds-bahiaba-2023` FICA.** É ele que serve o EKS de produção. Nenhum passo aqui o toca.
+  Ele vive no ENI `eni-07b2a97c5bd5c34bf` (IP 172.31.70.197), no VPC default. O passo 7 mexe num
+  SG que ele compartilha — por isso o SG é **desanexado da instância, não apagado**.
+- **Quando a economia começa:** só em **01/10/2026**, quando vence a RI `c6a.xlarge`. A RI é
+  cobrada exista ou não a instância, então **parar antes de outubro não rende nada.** O que importa
+  é **não renovar a RI** e ter a instância **terminada até 01/10**. Depois dessa data, instância
+  ligada volta a custar 111,69 USD/mês sob demanda.
+
+---
+
+## Passo 1 — Desregistrar o runner de CI
+
+- **O que é:** um GitHub Actions self-hosted registrado para `zurctrebla/portal-noticias`. Está
+  **ocioso** (os dois workflows do repo usam `ubuntu-latest`); desligar a VPS não quebra CI. Isto
+  é só para ele não ficar listado como *offline* para sempre.
+- **Onde:** GitHub → repositório `zurctrebla/portal-noticias` → **Settings → Actions → Runners**.
+- **Identificar:** o runner `ip-172-31-0-178` (ou o único self-hosted da lista).
+- **Ação:** botão **Remove** (ou **⋯ → Remove**), confirmar.
+- **Conferir depois:** a lista de Runners não mostra mais o self-hosted.
+- **Reversível?** Sim — reinstala-se o runner na máquina a qualquer momento. Cosmético.
+
+## Passo 2 — Remover `aws.bahia.ba` no Route 53 (ANTES do ALB)
+
+- **Por que antes do ALB:** hoje `aws.bahia.ba` → `54.243.117.103` (a VPS). Se o ALB for apagado
+  antes e o subdomínio for repontado para ele, apontaria para um balanceador inexistente. Removendo
+  o registro primeiro, nada fica pendurado.
+- **Onde:** Route 53 → **Hosted zones → `bahia.ba`** (zona `Z1893FF3C31FZC`).
+- **Identificar com certeza:** registro **`aws.bahia.ba`**, tipo **A**, valor **`54.243.117.103`**,
+  TTL 300. É o único A com esse valor na zona.
+- **Ação:** selecionar o registro → **Delete record** → confirmar. (Se quiser preservar o
+  redirecionamento que ele fazia, criar antes um registro novo apontando para outra origem; se não,
+  apagar resolve — é só um 301 de baixo tráfego.)
+- **Conferir depois:** `dig aws.bahia.ba +short` deixa de retornar `54.243.117.103` (após o TTL de
+  5 min); `curl -I http://aws.bahia.ba/` passa a falhar em DNS.
+
+## Passo 3 — Criar a AMI da instância (ANTES de parar)
+
+- **Por que agora:** terminar a instância **apaga o volume raiz** — confirmado
+  `vol-06c7441a163797b82` (64 GB, /dev/xvda) com **DeleteOnTermination = true**. A AMI é a única
+  volta.
+- **Onde:** EC2 → **Instances** → selecionar **`i-067a9df3e888a90f6`** → **Actions → Image and
+  templates → Create image**.
+- **Identificar:** confira o ID `i-067a9df3e888a90f6` no topo do painel de detalhes antes de
+  clicar. (Nome "PRODUÇÃO" — é a VPS, é esta mesmo.)
+- **Ação:** nome sugerido `vps-swarm-final-20260826`. Deixar *No reboot* **desmarcado** para a
+  imagem sair consistente (a instância reinicia; aceitável, ela não serve nada crítico).
+- **Conferir depois:** EC2 → **AMIs** → a imagem aparece e fica **`available`** (leva alguns
+  minutos). Só prosseguir quando estiver `available`.
+- **Custo:** ~64 GB de snapshot ≈ 3,20 USD/mês enquanto a AMI existir. É o seguro mais barato da
+  operação.
+
+## Passo 4 — Parar a instância e observar
+
+- **Onde:** EC2 → Instances → **`i-067a9df3e888a90f6`** → **Instance state → Stop instance**.
+- **Confirmação da AWS:** avisa que dados em *instance store* se perdem — o volume raiz é **EBS**
+  (`vol-06c7441a163797b82`) e **sobrevive**.
+- **Manter o Elastic IP alocado** durante a observação (passo 6 só depois).
+- **Observar por alguns dias:** `bahia.ba` normal (não depende da VPS), imagens antigas carregando,
+  e qualquer reclamação sobre `aws.bahia.ba` ou integração externa que só apareça com a máquina fora.
+- **Custo parada:** a RI cobre o compute de qualquer jeito até 01/10; o EBS de 64 GB segue (~5 USD/mês)
+  e o EIP passa a ser cobrado como ocioso (3,65 USD/mês) até o passo 6. **Parar não economiza — o
+  objetivo aqui é observar antes de terminar.**
+
+## Passo 5 — Terminar a instância
+
+- **Só após:** a AMI estar `available` (passo 3) e a observação (passo 4) sem incidente. E, sobre
+  a data: idealmente **até 01/10**, para não renovar a RI com a máquina ainda de pé.
+- **Onde:** EC2 → Instances → **`i-067a9df3e888a90f6`** → **Instance state → Terminate instance**.
+- **Confirmar:** o ID de novo, e que o volume `vol-06c7441a163797b82` some junto (esperado).
+- **Conferir depois:** a instância vai a `terminated`; o volume desaparece de **Volumes**.
+
+## Passo 6 — Liberar o Elastic IP
+
+- **O que é:** o IP público da VPS, que passa a ser cobrado como ocioso assim que a instância sai.
+- **Onde:** EC2 → **Network & Security → Elastic IPs**.
+- **Identificar com certeza:** IP **`54.243.117.103`**, alocação **`eipalloc-0e6f8adf7907e7a62`**.
+  (Após a terminação, a coluna *Associated instance* fica vazia.)
+- **Ação:** selecionar → **Actions → Release Elastic IP addresses** → **Release**.
+- **Conferir depois:** o IP some da lista. **Irreversível** — o IP volta ao pool da AWS.
+
+## Passo 7 — Desanexar o SG `AcessoRestrito` da instância — NÃO APAGAR
+
+- **O ponto mais delicado da lista.** O SG **`AcessoRestrito` (`sg-0e96076df475b4843`)** está na
+  VPS **e** no ENI do RDS de produção (`eni-07b2a97c5bd5c34bf`, confirmado). **Apagá-lo derruba o
+  RDS.** Com a instância terminada, o vínculo do SG com ela já deixou de existir — não há o que
+  desanexar manualmente. O que **não** se faz é ir aos SGs da VPS e apagar `AcessoRestrito`.
+- **Onde (se quiser confirmar):** EC2 → **Security Groups** → `sg-0e96076df475b4843`.
+- **Ação:** **nenhuma exclusão.** Deixá-lo existir. Idem para o SG `EC2` (`sg-0614f9d2cf0b6c697`),
+  que é a origem nomeada na regra 3306 do SG `MySQL`.
+- **Conferir depois:** `sg-0e96076df475b4843` continua listado e anexado a `eni-07b2a97c5bd5c34bf`
+  (o RDS). Se em algum momento a intenção for limpar a regra `0.0.0.0/0` de SSH/9000 desse SG, é o
+  **item de segurança à parte** — não faz parte deste desligamento.
+
+## Passo 8 — Apagar o ALB antigo e o target group
+
+- **Só depois** de o Route 53 (passo 2) já não apontar para lá, e da VPS terminada.
+- **Onde:** EC2 → **Load Balancing → Load balancers**.
+- **Identificar com certeza:** **`load-balancer-bahiaba-2023`**, criado em 2023-01-06, VPC
+  `vpc-4c49202b` (o default). **Não confundir** com os dois `k8s-bahiawor-bahiaing-…`, que servem
+  o site — esses ficam.
+- **Ação:** selecionar `load-balancer-bahiaba-2023` → **Actions → Delete load balancer** → digitar
+  `confirm`.
+- **Depois, o target group:** EC2 → **Target Groups** → apagar **`target-group-http-bahiaba`**
+  (ficava ligado a este ALB) e, se ainda não foi no Grupo 1, **`target-group-https-bahiaba`** (órfão).
+- **Efeito colateral bom:** os IPv4 do ALB antigo são liberados junto (~22 USD/mês).
+- **Conferir depois:** só os dois ALBs `k8s-…` permanecem; `bahia.ba` e as editorias continuam 200.
+
+---
+
+## Depois de tudo — encerramento
+
+- **Prefixo `s3://static.bahia.ba/_resguardo-vps/`** (8,33 MB, 102 objetos): guarda os originais
+  que só existiam na VPS. **Pode ser apagado quando você confirmar que o assunto está encerrado** —
+  `aws s3 rm s3://static.bahia.ba/_resguardo-vps/ --recursive`. Não antes.
+- **AMI `vps-swarm-final-20260826`**: manter enquanto houver qualquer dúvida; é o único retrato da
+  máquina. Quando decidir que não volta, apagar a AMI e o snapshot dela encerra o custo de ~3 USD/mês.
+- **As duas imagens apagadas** (RD Congo, leilão): tratadas à parte, pela redação. O
+  `REDACAO-2-imagens.md` fica arquivado, sem encaminhamento agora.
