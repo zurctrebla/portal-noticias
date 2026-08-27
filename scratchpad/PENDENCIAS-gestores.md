@@ -428,3 +428,50 @@ não ser assunto da janela de migração do tema.
 
 **Fica para depois da virada**, com o site novo já estabilizado, para que qualquer efeito
 seja atribuível a uma coisa só.
+
+---
+
+## 10. Segurança: a tela de entrada do painel está aberta e visível
+
+**Levantado em 27/08/2026, durante a limpeza do banco. Observação, sem ação tomada.**
+
+### O que é
+
+A tela onde os jornalistas entram para publicar — o painel do WordPress — fica no endereço
+padrão, `https://bahia.ba/wp-login.php`, e responde normalmente a qualquer pessoa da internet.
+Não há nada escondendo esse endereço.
+
+Isso não é uma invasão nem um problema em curso. É a configuração padrão do WordPress, e é assim
+que a maioria dos sites funciona. Registramos porque **alguém já tentou mudar isso e a mudança
+foi desfeita pela metade.**
+
+### O que encontramos
+
+Existe instalado no site um programa chamado **WPS Hide Login**, cuja função é exatamente
+esconder esse endereço — trocá-lo por outro, conhecido só pela equipe. Ele está **desligado**.
+Mas a configuração que ele deixou continua gravada no banco: o endereço secreto seria
+`/acesso/`.
+
+O efeito visível hoje: quem digita `bahia.ba/acesso/` **não** chega a lugar nenhum útil. O
+WordPress não encontra a página, e o próprio WordPress "adivinha" o endereço mais parecido,
+levando o visitante para uma **matéria de política** cujo endereço começa com a mesma palavra.
+
+Ou seja: alguém instalou a proteção um dia, removeu depois, e não limpou a configuração. Ficou
+uma instrução órfã no banco e um endereço que leva a lugar errado.
+
+### Por que contamos isso
+
+Não é decisão nossa e não é urgente. Mas quem cuidar de segurança do portal precisa saber de
+duas coisas:
+
+1. **A porta de entrada do painel está no endereço que todo robô da internet testa primeiro.**
+   Quem quiser proteger melhor tem caminhos: reativar o WPS Hide Login, exigir segundo fator de
+   autenticação, ou restringir por endereço de rede.
+2. **Se alguém religar o WPS Hide Login sem revisar a configuração**, o painel passa a atender em
+   `/acesso/` e o endereço antigo `/wp-admin/` passa a devolver "página não encontrada" — está
+   assim gravado. Uma reativação distraída deixaria a redação sem saber por onde entrar.
+
+### O que precisa ser decidido
+
+Se vale investir em proteger a entrada do painel, e por qual caminho. **Nada foi alterado.**
+

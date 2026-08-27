@@ -145,6 +145,87 @@ Os dois anexos que apaguei têm ID 313723 e 542264 — a trava os teria barrado.
 
 ---
 
+## 0.2.1 ⚠️ As guardas de 0.2 se desligam sozinhas se o banco for trocado
+
+**Descoberto em 27/08/2026**, no levantamento da subida do MySQL para 8.4. Vale para **qualquer
+restauração de banco de produção em homolog**, hoje e no futuro — não é um detalhe daquele
+projeto.
+
+`bahia-flags.php` decide o ambiente **lendo o `siteurl` do banco**:
+
+```php
+$url = get_option('siteurl');
+if (strpos($url, 'hml.bahia.ba') !== false)   $amb = 'homolog';
+elseif (strpos($url, 'bahia.ba') !== false)   $amb = 'producao';
+```
+
+E `bahia-homolog-guardas.php`, que é o código da seção 0.2, começa assim:
+
+```php
+if (!function_exists('bahia_ambiente') || 'homolog' !== bahia_ambiente()) {
+    return;
+}
+```
+
+**Junte as duas coisas.** Restaure o banco de produção em homolog e o `siteurl` passa a ser
+`https://bahia.ba`. `bahia_ambiente()` devolve `producao`. As duas guardas da seção 0.2 —
+a que impede o Offload de remover objeto do bucket e a que barra exclusão de anexo abaixo de
+9.000.001 — **retornam antes de registrar qualquer filtro**. Desligam-se sozinhas, sem erro,
+sem aviso, sem nada no log.
+
+E desligam-se **no pior momento possível**: logo depois de homolog receber a `wp_as3cf_items`
+de produção inteira e recente, apontando para os mesmos objetos que o site no ar serve, no mesmo
+bucket sem versionamento que já custou nove arquivos.
+
+### A ironia, que é o que torna isto perigoso
+
+O comentário do próprio `bahia-flags.php` diz:
+
+> *"Usamos o siteurl e nao variavel de ambiente porque … um pod de homolog apontado por engano
+> para o banco de producao seria detectado aqui — que e exatamente o acidente que se quer
+> evitar."*
+
+**A detecção funciona.** O que falha é o que se faz com o resultado: detectar "produção" e
+desligar as proteções de homolog é o oposto do que a frase promete. A função é honesta; o uso
+que as guardas fazem dela inverte a garantia.
+
+### A regra, para qualquer restauração futura
+
+**Nenhum pod de homolog pode servir com `siteurl` de produção no banco. Nem por um minuto.**
+
+1. **Zerar as réplicas antes de restaurar** — `kubectl scale deployment/wordpress --replicas=0`.
+2. **Corrigir o `siteurl` no mesmo passo da restauração**, conectando direto ao banco, antes de
+   qualquer pod subir:
+   ```sql
+   UPDATE wp_options SET option_value='https://hml.bahia.ba'
+    WHERE option_name IN ('siteurl','home');
+   ```
+3. **Conferir antes de escalar de volta.** Portão de saída, duas linhas:
+   ```sql
+   SELECT option_name, option_value FROM wp_options
+    WHERE option_name IN ('siteurl','home');
+   ```
+4. **Conferir que as guardas voltaram**, e pelo teste da seção 0.1 — `has_filter()`, nunca
+   `class_exists()`:
+   ```php
+   var_dump(has_filter('as3cf_remove_source_files_from_provider', '__return_empty_array'));
+   // esperado: int(99) — a prioridade. false significa guarda DESLIGADA.
+   ```
+
+Isto vale igualmente para **apontar um pod de homolog para uma instância de banco restaurada de
+produção**: a cópia é writável e traz o `siteurl` de produção junto. Corrija o `siteurl`
+**na cópia**, antes de apontar qualquer pod para ela.
+
+### E há uma porta aberta na rede, que só piora isto
+
+Medido em 27/08/2026, de dentro do pod de homolog: o banco de **produção** responde em
+`172.31.70.197:3306` em **1 ms**. As duas instâncias RDS vivem na mesma VPC `172.31.0.0/16` e o
+*security group* não separa os ambientes. Hoje, uma variável de ambiente trocada em homolog
+aponta para produção e **conecta**. É pré-existente, não foi criado por nenhuma rodada, e fica
+registrado aqui porque multiplica a consequência de tudo nesta seção.
+
+---
+
 ## 0.3 Duas mentiras silenciosas em mu-plugin com `namespace`
 
 Custaram dois erros seguidos em 25/08, no `bahia-mais-lidas.php`. As duas **falham sem erro**,
@@ -987,6 +1068,139 @@ estatística sai com aparência normal.
 O que funcionou: **estratificar por ano** (`post_date` é indexado junto com `post_type`) e, dentro
 de cada ano, pegar em cinco `OFFSET` distintos — início, 25%, 50%, 75%, 95% — ponderando depois
 pela contagem real de cada ano.
+
+### 16.3 O `carga.sh` media e não gravava — e o pico saía 45% menor
+
+**Descoberto e corrigido em 27/08/2026**, no levantamento da subida do MySQL. Dois defeitos no
+mesmo arquivo, e os dois são do padrão desta seção.
+
+**Defeito 1 — escrevia num diretório que não existia mais.** A linha 5 fixava
+
+```bash
+S=/private/tmp/claude-501/…/076a2b37-27dc-4ecf-b4d4-8764bd6b55c8/scratchpad
+```
+
+que é o diretório de **uma sessão específica**, apagado quando a sessão terminou. Com ele
+ausente: o `rm -f` de limpeza passava calado, os `>>` das 30 respostas falhavam um a um, e a
+carga **rodava inteira** — 30 requisições concorrentes num t3.micro — sem que uma linha fosse
+gravada. O resumo em Python só quebrava **no fim**, depois de todo o custo já ter sido pago.
+
+Pior que quebrar: se o diretório de outra sessão ainda existisse, ele gravaria lá, o `rm -f` não
+limparia o que interessa, e a leitura sairia **de uma execução anterior** — número plausível, da
+medição errada.
+
+**Defeito 2, o mais grave — o pico de `Threads_running` era tirado de 3 amostras.** O monitor
+fazia 24 `kubectl exec` separados, cada um com `require_once wp-load.php`. O bootstrap do
+WordPress custa ~5 s, e a carga terminava em ~16 s: **colhiam-se 3 amostras**, não 24. Medido
+lado a lado depois do conserto, na mesma homologação, com minutos de intervalo:
+
+| Execução | Amostras | `Threads_running` pico | `SQL_CALC` pico |
+|---|---|---|---|
+| monitor antigo | **3** | **6** | 2 |
+| monitor novo | **31** | **11** | 5 |
+
+**O critério de aceitação em uso desde a virada abortada de 18/08 é "`Threads_running` abaixo de
+10 no pico".** Com 3 amostras o número era 6 e **passava**. Com 31 é 11 e **reprova**. O
+instrumento não errava por pouco: ele decidia o portão ao contrário.
+
+O conserto do monitor é um `kubectl exec` só, com laço PHP dentro e conexão `mysqli` direta
+(sem `wp-load.php`), amostrando a cada 0,5 s.
+
+**O que o script faz agora, e é o que importa levar para qualquer outro instrumento:**
+
+1. **Testa a escrita ANTES de gastar a medição** — `mkdir -p` e um toque no diretório de saída.
+   Falhar aqui custa nada; falhar depois custa a carga inteira.
+2. **Portão de contagem explícito**, impresso e com código de saída:
+   ```
+   URLs disparadas: 30   respostas gravadas: 30   amostras do banco: 31
+   ```
+   Se `gravadas ≠ disparadas`, ou se as amostras forem menos de 10, imprime `*** FALHOU`,
+   avisa que os números estão incompletos e **sai com código 1**.
+3. **Saída ao lado do próprio script** (`./carga-saida/`), com `CARGA_OUT` para sobrescrever —
+   nunca mais um caminho de sessão embutido.
+4. Alvo parametrizável por `CARGA_CTX` / `CARGA_BASE`, para medir outro ambiente sem editar o
+   arquivo.
+
+O original ficou em `carga.sh.orig-20260827`.
+
+**A lição comum às três subseções:** um instrumento que perde dado em silêncio **vira** o
+resultado. Aqui ele quase inverteu uma decisão de virada.
+
+### 16.4 A probe que mediria o cache, não o banco
+
+**Levantado em 27/08/2026.** Ainda não existe — é um erro que **quase** foi cometido, e fica
+aqui porque é da mesma família das três subseções acima.
+
+O Deployment de produção não tem nenhuma probe (nem `readiness`, nem `liveness`, nem `startup`,
+nos dois contêineres). Ao desenhar a correção, o reflexo é o mais óbvio:
+
+```yaml
+readinessProbe:
+  httpGet: { path: /, port: 80 }     # <- ERRADO, e o erro é invisível
+```
+
+**Essa probe passaria com o banco fora do ar.** O nginx serve `/` a partir do `fastcgi_cache`:
+a resposta sai do disco, sem tocar em PHP e sem tocar em MySQL. A probe ficaria verde, o pod
+seria declarado pronto, o Deployment encerraria o pod antigo — e o pod novo, incapaz de falar com
+o banco, receberia tráfego.
+
+O instrumento devolveria **200, rápido e plausível**, medindo exatamente aquilo que não
+interessa. É o `xargs` que descarta linhas, é a amostragem que colapsa, é o `carga.sh` gravando
+em diretório inexistente: **resultado convincente, medição ausente.**
+
+**O que uma probe correta precisa ter aqui**, e nenhum dos quatro é opcional:
+
+1. **Endpoint próprio** (`/bahia-saude`), com um `SELECT 1` pelo `$wpdb`, devolvendo `200 ok` ou
+   `503 db-fail`. Sem tema, sem `WP_Query`.
+2. **Fora do `fastcgi_cache`**, por regra explícita de bypass — senão volta ao problema de cima.
+3. **Fora do buffer de saída** (`bahia-html-saida.php`), dos contadores e do analytics.
+4. **Sem vazar** a mensagem de erro do MySQL.
+
+O levantamento completo, incluindo por que `livenessProbe` é perigosa aqui (ela **mata** o
+contêiner: um soluço do RDS viraria reinício simultâneo de todos os pods) e por que a probe
+compete com o tráfego pelos mesmos 12 workers do PHP-FPM, está em
+`scratchpad/UPGRADE-MYSQL.md`, Anexo D. **Não implementar junto com a subida do MySQL.**
+
+**A pergunta que generaliza as quatro subseções:** *o que este instrumento responderia se a coisa
+que ele deveria detectar estivesse acontecendo agora?* Se a resposta for "a mesma coisa", ele não
+é um instrumento.
+
+### 16.5 Ler a opção não prova que o plugin que a interpreta está ligado
+
+**Errei isto em 27/08/2026**, e o erro chegou a virar instrução escrita para o Albert.
+
+Ao apontar onde ficava a tela de login de produção, li a opção `whl_page` do banco, que vale
+`'acesso'`, e afirmei: *"o login está em `https://bahia.ba/acesso/`, atrás do
+`wps-hide-login`"*.
+
+**O `wps-hide-login` não está em `active_plugins`.** O diretório existe em `plugins/`, a opção
+existe em `wp_options`, e nada disso significa que o código roda. Medido depois:
+
+| URL | Resposta |
+|---|---|
+| `/acesso/` e `/acesso` | **301**, e o `redirect_guess_404_permalink` do núcleo leva para `/politica/acesso-a-alba-so-com-comprovante-de-vacina/` |
+| `/wp-login.php` | **200** — é aqui que se entra, e não está escondido |
+
+A opção é resto de quando o plugin esteve ativo. **O dado estava lá, era plausível, e não
+significava o que parecia.**
+
+**A regra:** uma linha em `wp_options` é uma *intenção registrada*, não um *comportamento
+vigente*. Antes de concluir qualquer coisa a partir de uma opção de plugin, confirmar que o
+plugin está ativo:
+
+```php
+in_array('wps-hide-login/wps-hide-login.php', get_option('active_plugins', array()))
+```
+
+E, quando o que interessa é o comportamento e não a configuração, **medir o comportamento**: um
+`curl` no endereço responde a pergunta que a opção só sugere.
+
+Vale para toda chave de plugin removido. Este banco tem várias: 36 opções `rank_math*` de um
+plugin que saiu em junho de 2026, e duas `schema-ActionScheduler*` de uma biblioteca que não
+está instalada. Nenhuma delas descreve o que o site faz hoje.
+
+**É a mesma família do §16.4** — instrumento devolvendo resultado plausível sem medir o que
+interessa —, com a diferença de que aqui o instrumento é uma consulta ao banco.
 
 ### A regra que fica
 
