@@ -1277,171 +1277,289 @@ de incidente.
 
 ---
 
-# FASE 1 — Instância de teste — **ROTEIRO FECHADO**
+# FASE 1 — Instância de teste — **ROTEIRO PARA APROVAÇÃO (rev. 4)**
 
-Aprovado por você em 27/08. **Nada aqui foi executado.** Todos os identificadores abaixo são
-reais, lidos da conta.
+**Nada foi criado.** Todos os identificadores abaixo foram lidos da conta em 27/08/2026.
+Revisão 4 corrige três pontos da revisão 3 com dado autoritativo da própria AWS.
 
-## 1.1 Passo 1 — copiar o parameter group
+## 1.0 O que mudou desde a revisão 3
+
+| # | Ponto | Revisão 3 dizia | **Medido agora** |
+|---|---|---|---|
+| 1 | `mysql_native_password` no 8.4 | "há um parâmetro, é a rede de segurança" | **Já vem `ON` por padrão e é `IsModifiable: false`.** Não há o que configurar, e não há como desligar |
+| 2 | Storage initialization | "ligar" | **Não é interruptor.** Não existe opção na API; é processo automático, e só se *observa* por `StorageOperationStatus` |
+| 3 | Snapshot de origem | "o automático mais recente" | O mais recente é de **04:11 UTC de hoje — anterior às limpezas**. Restaurá-lo testa um banco que já não existe |
+
+## 1.1 Snapshot de origem — **há uma decisão aqui**
+
+O automático mais recente é `rds:rds-bahiaba-2023-2026-08-27-04-10` (27/08 04:11 UTC, 20 GiB,
+8.0.42). **Ele é anterior às limpezas de hoje**, que rodaram entre 13:20 e 13:41 UTC. Restaurá-lo
+produz uma instância de teste com **9,56 GB** de dado — o banco de ontem — quando o que vai subir
+na janela tem **3,589 GB**.
+
+| Opção | Prós | Contras |
+|---|---|---|
+| **A. Esperar o automático de amanhã, 04:10 UTC** | pós-limpeza, **custo zero**, e **nenhum evento de E/S novo** — esse snapshot já acontece todo dia | atrasa o teste em ~14 h |
+| **B. Snapshot manual agora** | testa hoje | numa instância **Single-AZ**, o snapshot pode causar **breve suspensão de E/S**. É o mesmo evento que já ocorre às 04:10, mas seria um a mais, e você pediu "sem indisponibilidade" |
+| C. Usar o de hoje 04:11 | imediato e sem evento novo | **testa o banco errado** — 2,7× maior, com tabelas que já não existem |
+
+**Recomendo A.** O ganho de testar o banco certo é grande, o custo é esperar uma noite, e a
+janela ainda não tem data. **C está descartado**: um `PrePatchCompatibility.log` gerado sobre
+tabelas que já foram apagadas não responde a pergunta que queremos fazer.
+
+## 1.2 Parameter group de destino — quatro linhas, e uma que não é preciso escrever
+
+Família **`mysql8.4`**, nome proposto **`bahia-mysql84`**.
+
+| Parâmetro | Valor | Por quê |
+|---|---|---|
+| `innodb_strict_mode` | **0** | **o único parâmetro que `mysql80-edit` altera à mão** |
+| `innodb_adaptive_hash_index` | **1** | padrão do 8.4 é `OFF`; fixar mantém o comportamento de hoje |
+| `innodb_change_buffering` | **all** | padrão do 8.4 é `none` |
+| `innodb_io_capacity` | **200** | padrão do 8.4 é `10000` |
+
+**`mysql_native_password` não entra, e isto corrige o que ficou combinado.** Lido da AWS:
+
+```
+mysql_native_password
+    padrao=ON   tipo=static   modificavel=false   valores=OFF,ON
+```
+
+**O RDS entrega o plugin já ligado na família 8.4 e não deixa mexer.** O
+`loose_mysql_native_password=ON` que a pré-verificação de 2025 sugeria é a sintaxe de linha de
+comando do MySQL, não um parâmetro do RDS. **Nada a fazer — e o assunto autenticação está
+fechado por construção.**
+
+`authentication_policy` fica no padrão `*:caching_sha2_password`, que rege **usuários novos**.
+Não criamos usuário nenhum, e os existentes mantêm o plugin que já têm.
+
+`restrict_fk_on_non_standard_key` fica no padrão (`ON`): as 5 chaves estrangeiras já foram
+conferidas e todas apontam para `PRIMARY`.
+
+## 1.3 Isolamento — e dois achados de segurança que apareceram ao desenhá-lo
+
+### O que a instância de teste terá
+
+**Security group próprio e novo**, nome proposto `bahia-mysql84-teste`, com **uma única regra de
+entrada**:
+
+```
+porta 3306/tcp  ←  10.2.0.0/16   (apenas a VPC dos pods de produção, de onde eu opero)
+```
+
+E, diferente de produção, **`--no-publicly-accessible`**.
+
+**O que fica de fora, de propósito:** `10.1.0.0/16` (homolog), o IP público
+`131.196.124.36/32`, e a referência ao `sg-0614f9d2cf0b6c697`. A instância tem dado real de
+produção e não pode herdar a superfície de exposição da original.
+
+### ⚠️ Achado 1 — o banco de produção é acessível pela internet
+
+```
+rds-bahiaba-2023   PubliclyAccessible = True   StorageEncrypted = True
+```
+
+E o security group `AcessoRestrito` (`sg-0e96076df475b4843`), que está anexado à interface de
+rede do RDS, permite:
+
+```
+porta 3306/tcp  ←  131.196.124.36/32
+```
+
+**Somados, isso significa que um endereço de IP público específico consegue abrir conexão com o
+banco de produção pela internet** — com o usuário mestre `rootbahiaba`, que autentica por
+`mysql_native_password`.
+
+Não é uma invasão e não há indício de uso indevido: é uma regra deliberada, de um IP só,
+provavelmente de escritório. Mas é a superfície mais sensível que este projeto encontrou, e quem
+cuidar de segurança precisa decidir se ela continua.
+
+### ⚠️ Achado 2 — o mesmo SG tem duas regras abertas para o mundo
+
+```
+porta 22/tcp    ←  0.0.0.0/0
+porta 9000/tcp  ←  0.0.0.0/0
+```
+
+**Hoje são inertes**: o SG está anexado **somente** à interface do RDS, e o RDS não escuta em 22
+nem em 9000 — conferido por `describe-network-interfaces`, que devolve apenas
+`RDSNetworkInterface 172.31.70.197`.
+
+**O risco é futuro, não presente:** um SG chamado "AcessoRestrito" que na verdade abre SSH e
+PHP-FPM para a internet inteira é uma armadilha esperando alguém anexá-lo a uma EC2. **Não
+mexi.** Vai para o `PENDENCIAS-gestores.md` junto com o achado 1, se você aprovar o texto.
+
+## 1.4 Os comandos, na ordem
+
+**Nenhum foi executado.**
 
 ```bash
-aws rds copy-db-parameter-group \
+REG="--region us-east-1"
+
+# 1. security group dedicado, com uma regra só
+aws ec2 create-security-group $REG \
+  --group-name bahia-mysql84-teste \
+  --description "Instancia de teste do upgrade 8.4 — acesso so dos pods de prod" \
+  --vpc-id vpc-4c49202b
+# (guardar o sg-xxxx devolvido)
+aws ec2 authorize-security-group-ingress $REG --group-id <sg-novo> \
+  --protocol tcp --port 3306 --cidr 10.2.0.0/16
+
+# 2. parameter group da familia 8.4
+aws rds create-db-parameter-group $REG \
+  --db-parameter-group-name bahia-mysql84 \
+  --db-parameter-group-family mysql8.4 \
+  --description "MySQL 8.4 espelhando mysql80-edit, com 3 parametros de desempenho fixados"
+aws rds modify-db-parameter-group $REG --db-parameter-group-name bahia-mysql84 --parameters \
+  "ParameterName=innodb_strict_mode,ParameterValue=0,ApplyMethod=immediate" \
+  "ParameterName=innodb_adaptive_hash_index,ParameterValue=1,ApplyMethod=immediate" \
+  "ParameterName=innodb_change_buffering,ParameterValue=all,ApplyMethod=immediate" \
+  "ParameterName=innodb_io_capacity,ParameterValue=200,ApplyMethod=immediate"
+
+# 3. restaurar (parameter group 8.0 primeiro — a subida vem depois, em separado)
+aws rds copy-db-parameter-group $REG \
   --source-db-parameter-group-identifier mysql80-edit \
   --target-db-parameter-group-identifier bahia-mysql80-teste \
-  --target-db-parameter-group-description "Copia de mysql80-edit para a instancia de teste 8.4" \
-  --region us-east-1
-```
+  --target-db-parameter-group-description "Copia de mysql80-edit para a instancia de teste"
 
-**Copiar, nunca apontar para o mesmo.** Um parameter group serve várias instâncias: se a de teste
-usasse `mysql80-edit` e alguém mexesse num parâmetro para experimentar, **a mudança valeria em
-produção**. A cópia elimina isso por construção. Conteúdo a copiar: um parâmetro,
-`innodb_strict_mode = 0`.
-
-## 1.2 Passo 2 — restaurar o snapshot
-
-**Snapshot de origem: um manual, tirado depois de T0/T3/T2/T4.** Assim a instância de teste tem
-o banco que vai realmente subir (~3,6 GB de dados, ~10 GiB livres), e não o de hoje.
-
-```bash
-# snapshot próprio, para o teste ser reproduzível e não depender da rotação de 7 dias
-aws rds create-db-snapshot \
-  --db-instance-identifier rds-bahiaba-2023 \
-  --db-snapshot-identifier bahia-prod-pos-limpeza-para-teste84 \
-  --region us-east-1
-aws rds wait db-snapshot-available \
-  --db-snapshot-identifier bahia-prod-pos-limpeza-para-teste84 --region us-east-1
-```
-
-> Se preferir não criar snapshot manual, o automático mais recente serve — hoje seria
-> `rds:rds-bahiaba-2023-2026-08-27-04-10` (27/08 04:11 UTC, 20 GiB, mysql 8.0.42). Mas ele
-> **rotaciona em 7 dias**, e um teste que dura dias é melhor ancorado num snapshot que não some.
-
-```bash
-aws rds restore-db-instance-from-db-snapshot \
+aws rds restore-db-instance-from-db-snapshot $REG \
   --db-instance-identifier rds-bahiaba-teste84 \
-  --db-snapshot-identifier bahia-prod-pos-limpeza-para-teste84 \
+  --db-snapshot-identifier <o snapshot da opcao A> \
   --db-instance-class db.m5.xlarge \
   --availability-zone us-east-1c \
   --db-subnet-group-name default-vpc-4c49202b \
-  --vpc-security-group-ids sg-0234245542eb43738 sg-0e96076df475b4843 \
+  --vpc-security-group-ids <sg-novo> \
   --db-parameter-group-name bahia-mysql80-teste \
   --option-group-name default:mysql-8-0 \
   --storage-type gp2 \
-  --no-multi-az \
-  --no-publicly-accessible \
-  --no-auto-minor-version-upgrade \
-  --no-deletion-protection \
-  --tags Key=projeto,Value=upgrade-mysql84 \
-         Key=temporaria,Value=sim \
-         Key=criada-por,Value=roteiro-UPGRADE-MYSQL \
-  --region us-east-1
+  --no-multi-az --no-publicly-accessible \
+  --no-auto-minor-version-upgrade --no-deletion-protection \
+  --tags Key=projeto,Value=upgrade-mysql84 Key=temporaria,Value=sim \
+         Key=apagar-apos,Value=<data+2dias>
+
+aws rds wait db-instance-available $REG --db-instance-identifier rds-bahiaba-teste84
+aws rds modify-db-instance $REG --db-instance-identifier rds-bahiaba-teste84 \
+  --backup-retention-period 1 --apply-immediately   # sem isto a AWS nao tira o snapshot pre-subida
+
+# 4. corrigir o siteurl NA COPIA, antes de qualquer pod apontar para ela (HANDOVER 0.2.1)
+#    UPDATE wp_options SET option_value='https://hml.bahia.ba'
+#     WHERE option_name IN ('siteurl','home');
+
+# 5. linha de base em 8.0 (secao 1.6), e SO ENTAO a subida para 8.4.9
 ```
 
-Justificativa de cada valor que não é óbvio:
+**Copiar `mysql80-edit`, nunca apontar para ele:** um parameter group serve várias instâncias, e
+mexer nele para experimentar valeria em produção.
 
-| Opção | Valor | Por quê |
+## 1.5 Storage initialization — o que é possível, honestamente
+
+**Não existe opção para ligar.** Conferido: nem em `restore-db-instance-from-db-snapshot`, nem em
+`modify-db-instance`, nem como comando próprio. O que existe é o **estado**, reportado em
+`StorageOperationStatus` (`Initializing`) e `StorageOperationPercentProgress` — a AWS documenta
+o mecanismo para Blue/Green e "vários fluxos", e pode ou não reportá-lo numa restauração simples.
+
+**O plano fica em dois níveis:**
+
+1. **Se o campo aparecer:** portão é `StorageOperationPercentProgress = 100` antes de medir
+   qualquer coisa.
+2. **Se não aparecer:** o portão passa a ser empírico, e é o mesmo do §3.3 — rodar a passada de
+   aquecimento (`SELECT COUNT(*)` nas tabelas grandes, que força o EBS a puxar os blocos do S3) e
+   observar `ReadIOPS` cair e `BurstBalance` parar de descer. **A assinatura de "quente" está
+   medida em produção: `ReadIOPS` médio de 0,28/s com `BurstBalance` parado em 99%.**
+
+**Sem um desses dois portões, qualquer número de desempenho é lixo** — a instância fica
+`available` muito antes de o volume estar carregado.
+
+## 1.6 A tensão entre isolamento e o teste de carga — e como resolvo
+
+Você pediu duas coisas que se empurram: **isolamento total** ("sem acesso de nada além da sua
+sessão") e **`carga.sh` contra o banco 8.4**. O `carga.sh` dispara HTTP contra
+`https://hml.bahia.ba` — ele precisa de um front-end web, e o único disponível seria apontar os
+pods de homolog para a instância de teste, o que abriria `10.1.0.0/16` no security group.
+
+**Proposta: uma sonda de carga em nível de SQL, e ela é melhor para esta pergunta.**
+
+N conexões concorrentes repetindo as consultas reais — os blocos da home, o archive de editoria,
+e o `MATCH ... AGAINST` nos 10 termos do `carga.sh` — medindo mediana, p90, máximo e
+`Threads_running`, exatamente como o `carga.sh` faz, mas sem PHP, sem nginx e sem FastCGI cache
+no meio.
+
+| | `carga.sh` por HTTP | **sonda SQL** |
 |---|---|---|
-| `--db-instance-class` | **`db.m5.xlarge`** | **igual à de produção.** É o ponto do desenho: qualquer classe menor devolve o problema do t3.micro |
-| `--availability-zone` | `us-east-1c` | a mesma de produção |
-| `--db-subnet-group-name` | `default-vpc-4c49202b` | o mesmo das duas instâncias |
-| `--vpc-security-group-ids` | os **dois** de produção | fidelidade. Para o acesso dos pods basta `sg-0234245542eb43738` (o "MySQL", que homolog também usa); regras de SG são aditivas, então incluir o "AcessoRestrito" não restringe nada |
-| `--no-auto-minor-version-upgrade` | | a instância não pode mudar de versão sozinha no meio do teste. Note que produção também está assim, e homolog **não** |
-| `--no-deletion-protection` | | é descartável; proteção só atrapalharia no fim. Produção tem proteção **ligada** |
-| `--no-multi-az` | | produção é Single-AZ; Multi-AZ dobraria o custo e mudaria o que se mede |
+| Mede | a pilha inteira | **só o banco** |
+| Ruído | PHP-FPM, cache, rede, ALB | nenhum |
+| Comparar 8.0 × 8.4 | o sinal do motor fica diluído | **isola a variável que mudou** |
+| Isolamento | exige abrir homolog no SG | **mantém a regra única** |
 
-## 1.3 Passo 3 — backup automático e espera
+**Para comparar duas versões de MySQL, tirar PHP e cache do caminho não é limitação: é método.**
+E o "antes" fica gravado no mesmo formato, rodando a sonda contra a instância de teste **ainda em
+8.0**, antes da subida — comparação na mesma máquina, mesmo dado, mesmo parameter group.
 
-```bash
-aws rds wait db-instance-available --db-instance-identifier rds-bahiaba-teste84 --region us-east-1
+**Se você quiser também o número de ponta a ponta**, existe a opção B: abrir `10.1.0.0/16` no
+security group por uma janela, apontar homolog para a instância de teste, rodar o `carga.sh` de
+verdade e reverter as duas coisas. **Precisa da sua palavra** — é exatamente o isolamento que
+você pediu para não abrir.
 
-aws rds modify-db-instance --db-instance-identifier rds-bahiaba-teste84 \
-  --backup-retention-period 1 --apply-immediately --region us-east-1
-```
-
-**Por que ligar backup num ambiente descartável.** A AWS **só tira os snapshots pré-subida se a
-retenção for maior que zero**. Com 0, o teste não reproduz o comportamento que produção terá, e
-perde-se o rollback barato da própria instância de teste. Produção está em 7 dias; 1 basta aqui.
-
-## 1.4 Passo 4 — esperar de verdade, e não pelo status `available`
-
-Uma instância restaurada de snapshot fica `available` **antes** de os dados estarem no volume —
-é o *lazy loading* do §3.3. **Medir desempenho antes disso produz número errado, e errado para
-pior.**
-
-```bash
-aws rds describe-db-instances --db-instance-identifier rds-bahiaba-teste84 --region us-east-1 \
-  --query 'DBInstances[0].[DBInstanceStatus,StorageOperationStatus,StorageOperationPercentProgress]' \
-  --output text
-```
-
-**Portão: `StorageOperationPercentProgress` = 100.**
-
-> Se o campo não vier preenchido para este fluxo (a AWS documenta a inicialização de
-> armazenamento para Blue/Green e "vários fluxos"; para restauração simples pode não ser
-> reportada), o portão passa a ser empírico, e é o mesmo do §3.3:
-> - rodar a **passada A** de aquecimento (os `COUNT(*)`) e ver `ReadIOPS` cair de volta ao chão;
-> - conferir `BurstBalance` no CloudWatch: se estiver a despencar, o volume ainda está a puxar
->   blocos do S3. Produção, em regime, tem `BurstBalance` em **99%** e `ReadIOPS` médio de
->   **0,28/s** — é essa a assinatura de "quente".
-
-## 1.5 Passo 5 — o `siteurl`, antes de qualquer pod
-
-**Obrigatório.** A cópia traz o `siteurl` de produção, e `bahia_ambiente()` lê o `siteurl` para
-decidir o ambiente. Um pod de homolog apontado para esta cópia acha que é produção, e **as
-guardas do bucket compartilhado desligam sozinhas** — `HANDOVER.md` §0.2.1.
-
-```sql
--- conectado DIRETAMENTE a rds-bahiaba-teste84, com nenhum pod apontado para ela
-UPDATE wp_options SET option_value='https://hml.bahia.ba'
- WHERE option_name IN ('siteurl','home');
-
--- portão de saída
-SELECT option_name, option_value FROM wp_options
- WHERE option_name IN ('siteurl','home');
-```
-
-Só então trocar **uma linha** em `kubernetes/homolog/wordpress/configmap.yaml` para o endpoint da
-instância de teste, deixar o pipeline reiniciar, e confirmar as guardas pelo teste do
-`HANDOVER.md` §0.1 — `has_filter()`, nunca `class_exists()`:
-
-```php
-var_dump(bahia_ambiente());                                                    // 'homolog'
-var_dump(has_filter('as3cf_remove_source_files_from_provider', '__return_empty_array'));
-// esperado: int(99). false = guarda DESLIGADA, pare tudo.
-```
-
-**Ao fim do teste, reverter a linha do ConfigMap de homolog.**
-
-## 1.6 Passo 6 — a linha de base em 8.0
-
-**Sem "antes" não há comparação, e "antes" não se reconstrói depois.**
-
-| # | Medida | Como |
-|---|---|---|
-| 1 | Contagem do `MATCH` nos 10 termos | `SELECT COUNT(*) … AGAINST ('<termo>' IN BOOLEAN MODE)` |
-| 2 | `EXPLAIN` da busca | mesmo termo |
-| 3 | `EXPLAIN` do archive de editoria e da página de autor | a do Co-Authors Plus, que já custou 39 s |
-| 4 | Tamanho de cada tabela | `information_schema.TABLES` |
-| 5 | `SHOW INDEX FROM wp_bahia_search_idx` | `PRIMARY`, `date_idx`, `ft` |
-| 6 | **`carga.sh` duas vezes** | `CARGA_BASE=https://hml.bahia.ba ./carga.sh antes-84-a` (com homolog já apontado para a instância de teste) |
-| 7 | `SHOW GLOBAL VARIABLES` inteiro | o "antes" do parameter group |
-| 8 | `SHOW GLOBAL STATUS` de buffer pool | a assinatura de "quente" para comparar depois |
-
-O `carga.sh` já está consertado e validado (§T-1), e agora aceita `CARGA_BASE`/`CARGA_CTX` — foi
-para isto.
-
-## 1.7 Custo e prazo
+## 1.7 Custo e destruição
 
 | Item | Valor |
 |---|---|
-| `db.m5.xlarge`, RDS MySQL Single-AZ, us-east-1, **sob demanda** (não há reserva na conta) | **~US$ 0,342/h ≈ US$ 8,20/dia** |
-| Armazenamento: 20 GiB gp2 | ~US$ 2,30/mês → **~US$ 0,08/dia** |
-| Snapshot manual | custo de storage de snapshot, desprezível |
-| Restauração até `available` | **~20-40 min** |
-| Vida útil prevista | **2 a 4 dias** |
-| **Total previsto** | **~US$ 17 a 34** |
+| `db.m5.xlarge`, MySQL Single-AZ, us-east-1, **sob demanda** (não há reserva na conta) | **~US$ 0,342/hora** (preço de tabela — a API de preços está negada para esta credencial) |
+| Armazenamento 20 GiB gp2 | ~US$ 2,30/mês ≈ US$ 0,077/dia |
+| **Total** | **~US$ 8,29 por dia** |
+
+**Destruição:** etiqueta `apagar-apos` na criação, e remoção **assim que o portão de saída da
+Fase 2 fechar** — previsto 2 dias, teto de 4. Com `--no-deletion-protection`, apagar é um
+comando. **Custo total previsto: US$ 17 a 34.**
+
+O que sobrevive à instância, de propósito: o parameter group `bahia-mysql84` (é o que vai ser
+usado no verde do Blue/Green) e os logs baixados. O `bahia-mysql80-teste` e o security group
+podem ir junto.
+
+## 1.9 Limites desta fase — definidos pelo Albert em 27/08/2026
+
+**"Fase pré-janela. A janela ainda não tem data. Tudo aqui roda com produção no ar e sem
+indisponibilidade."**
+
+### Está nesta fase
+
+| | |
+|---|---|
+| Correção do `PENDENCIAS-gestores` §3 | ✅ feito |
+| Commits na `develop`, **sem push** | ✅ feito — o push reconstrói homolog e troca os pods, e não vale disparar rollout por documento; vai junto com a próxima mudança que precise de deploy |
+| **Instância de teste** | ⏸ **aguardando aprovação deste roteiro** |
+
+### NÃO está nesta fase
+
+| Item | Onde fica |
+|---|---|
+| **T0** (`OPTIMIZE wp_adrotate_tracker`) | **na janela**, com `lock_wait_timeout=5` — ou logo depois das 21:05 UTC, se coincidir |
+| Subida do homolog | janela |
+| Troca do Blue/Green em produção | janela |
+| Autoscaling de disco | **o Albert faz pelo console** |
+| Teste do painel | **do Albert**, quando tiver sessão |
+
+### O portão do verde do Blue/Green
+
+> **"Só depois que a instância de teste passar. Não crie antes. Se o teste revelar
+> incompatibilidade, o verde não deve existir."**
+
+Registrado como regra, não como preferência. O verde **não é criado** enquanto o portão de saída
+da Fase 2 (§2.4) não fechar, e a criação depende de autorização explícita à parte.
+
+Nota técnica que sustenta a regra: o verde **acompanha produção por replicação**, então pode
+nascer poucas horas antes da janela sem ficar desatualizado. Não há vantagem nenhuma em criá-lo
+cedo — só custo de instância e uma cópia a mais dos dados de produção existindo no mundo.
 
 ---
+
+## 1.8 Portões antes de eu criar qualquer coisa
+
+- [ ] Você escolhe entre **A** (esperar o automático de amanhã) e **B** (snapshot manual agora)
+- [ ] Você aprova a regra única do security group, e o que fica de fora
+- [ ] Você decide sobre a **sonda SQL** (recomendada) ou também o `carga.sh` HTTP com abertura
+      temporária
+- [ ] Você diz se quer os dois achados de segurança do §1.3 no `PENDENCIAS-gestores.md`
 
 # FASE 2 — Subida da instância de teste e validação
 
