@@ -901,3 +901,71 @@ conferir depois.
   máquina. Quando decidir que não volta, apagar a AMI e o snapshot dela encerra o custo de ~3 USD/mês.
 - **As duas imagens apagadas** (RD Congo, leilão): tratadas à parte, pela redação. O
   `REDACAO-2-imagens.md` fica arquivado, sem encaminhamento agora.
+
+---
+
+# Security groups — inventário de 27/08/2026, para o levantamento de EC2 adiado
+
+Levantado ao desenhar o isolamento da instância de teste do upgrade, e depois de o Albert remover
+as quatro regras de entrada do `AcessoRestrito`. **Nada foi apagado.**
+
+## O que existe hoje, e o que está anexado a quê
+
+| Security group | ID | Entrada | Anexado a |
+|---|---|---|---|
+| `MySQL` | `sg-0234245542eb43738` | 1 regra: `3306 ← 10.1.0.0/16, 10.2.0.0/16, sg-0614f9d2cf0b6c697` | **ENI dos dois RDS** (`172.31.70.197` e `172.31.50.61`) |
+| `AcessoRestrito` | `sg-0e96076df475b4843` | **0 regras** | **ENI do RDS de prod** (`172.31.70.197`) |
+| `rds-ec2-1` | `sg-06a8e5bcd98765b27` | 1 regra | **nenhum ENI — órfão** |
+| `ec2-rds-1` | `sg-05713cea6b755e67b` | 0 regras | **nenhum ENI — órfão** |
+| `mysql-bahiaba-2023` | `sg-0bb13629c7fd663f8` | 1 regra | **nenhum ENI — órfão** |
+
+Mais três grupos `default`, um por VPC (`sg-5bdf2021`, `sg-0ed6a2885344114d4`,
+`sg-090d94591e6f93e20`) — são criados pela AWS junto com a VPC e não são resíduo.
+
+## Os três órfãos, e por que dois deles são certeza
+
+As descrições dizem o que são:
+
+```
+rds-ec2-1   "Security group attached to rds-bahiaba-restore-temp to allow EC2 instances
+             with specific security groups attached to connect to the database."
+ec2-rds-1   "Security group attached to instances to securely connect to
+             rds-bahiaba-restore-temp."
+```
+
+São o par que o console da AWS cria sozinho quando alguém usa o assistente "conectar EC2 ao RDS".
+Foram feitos para uma instância chamada **`rds-bahiaba-restore-temp`**.
+
+**Essa instância não existe.** Conferido: as únicas instâncias RDS da conta são `rds-bahiaba-2023`
+e `rds-bahiaba-hml`. Os dois grupos referenciam um recurso apagado, não estão em nenhum ENI, e não
+protegem nada.
+
+O terceiro, `mysql-bahiaba-2023`, tem nome de quando o banco de produção foi criado (2023) e
+também não está anexado a nada — **candidato, mas conferir antes**: nome parecido com o do banco
+não é prova de que seja resto.
+
+## O `AcessoRestrito` sai quando o banco tiver grupo próprio
+
+Com **zero regras de entrada**, ele não faz mais nada. **Só continua existindo porque está
+anexado ao ENI do RDS de produção** — e um security group anexado não pode ser apagado.
+
+Quando o banco de produção ganhar um grupo próprio e enxuto (o que faz sentido fazer junto com a
+subida para o MySQL 8.4, que já vai mexer na instância), o `AcessoRestrito` fica desanexado e pode
+ser removido.
+
+## Um a conferir que não estava na lista
+
+`sg-0614f9d2cf0b6c697` — **é referenciado pela regra do grupo `MySQL`** e não foi inspecionado.
+Vale saber o que é antes de mexer no grupo `MySQL`: se for um grupo de EC2 que já não existe, a
+referência é resíduo; se for algo em uso, não é.
+
+## O padrão que estes cinco casos repetem
+
+Todos os órfãos vieram de recurso **desligado sem limpar a volta**: as três regras removidas do
+`AcessoRestrito` apontavam para serviços da VPS terminada na véspera (SSH, Portainer,
+OpenLiteSpeed), e os dois `*-rds-1` apontam para uma instância que não existe mais.
+
+**Configuração órfã não avisa que ficou órfã** — ela continua parecendo intencional, e é por isso
+que uma regra de firewall para o IP de assinante de alguém sobreviveu cerca de um ano sem que
+ninguém soubesse de quem era.
+
