@@ -71,46 +71,70 @@ assim que existir a peça no tamanho certo. **A decisão é comercial.**
 
 ---
 
-## 3. Contagem de visualizações dos anúncios está desligada
+## 3. Contagem de visualizações dos anúncios — **CORRIGIDO em 27/08/2026**
 
-### O que é
+> ### ⚠️ A versão anterior deste item estava errada, e a correção muda a decisão
+>
+> Até 27/08/2026 este item afirmava que a contagem de anúncios estava **desligada** e que o
+> último registro era de **28 de junho de 2026**. **Não é verdade em produção.**
+>
+> Aquele levantamento foi feito no **ambiente de homologação**, em 11/08. Homologação é uma cópia
+> de teste do site, e o estado dela **não vale como retrato do site no ar**. A conferência foi
+> feita no lugar errado e a conclusão viajou para este documento como se valesse para produção.
+>
+> **Se alguém do comercial deixou de cobrar relatório, ou negociou renovação sem número, com base
+> na versão anterior deste item, a informação que tinha estava errada.**
 
-O sistema de anúncios do site (AdRotate) tem um contador de exibições e cliques. Esse contador
-está **desligado nos anúncios que estão no ar**, nos dois ambientes.
+### O que está acontecendo de verdade, medido no site no ar
 
-Números levantados em 11/08/2026, no ambiente de homologação:
+A contagem **está ligada e funcionando**. Medido em 27/08/2026, no meio da tarde:
 
-- **151 anúncios** cadastrados no total
-- **3 anúncios ativos** no momento — e **nenhum dos três** tem a contagem ligada
-- **104 anúncios expirados** (campanhas encerradas)
-- **O último registro de estatística é de 28 de junho de 2026** — de lá para cá, nada foi
-  contabilizado
+| | |
+|---|---|
+| Configuração geral do sistema | **ligada** |
+| Exibições registradas **só no dia 27/08** | **20.825** |
+| Ritmo medido ao vivo | **cerca de 70 registros por minuto**, ou ~4.200 por hora |
+| Cliques registrados nas últimas 24 horas | 8 |
 
-### Por que importa
+### Quais anúncios estão sendo contados
 
-Sem esse dado, não há como comprovar entrega ao anunciante nem embasar preço de renovação. Se
-algum contrato prevê relatório de exibições, esse relatório hoje não pode ser emitido a partir
-do sistema.
+Dos **3 anúncios ativos**, **2 têm a contagem ligada** e 1 não tem:
 
-### O que é preciso decidir e saber
+| Anúncio | Exibições em 27/08 | Cliques |
+|---|---|---|
+| AGOSTO — FILME — MUITO PRAZER (peça 1) | **13.583** | 4 |
+| AGOSTO — FILME — MUITO PRAZER (peça 2) | **7.951** | 4 |
+| O terceiro anúncio ativo | **não é contado** | — |
 
-Três pontos, e o terceiro é o mais importante:
+No cadastro completo há 160 anúncios: 3 ativos, 4 programados, 2 expirados, 150 arquivados.
 
-1. **Como se liga:** é uma caixa de seleção na tela de edição de cada anúncio. Não é uma
-   configuração geral do site — é **um a um**.
-2. **Não é retroativo.** Ligar hoje começa a contar de hoje. O período de 28/06 até a data em
-   que for ligado **não é recuperável** por essa via.
-3. **O volume de trabalho:** para passar a medir tudo, seriam os anúncios ativos (hoje 3, e os
-   que entrarem daqui em diante). Se a intenção for também deixar os 104 expirados prontos para
-   futuras reativações, é ajuste individual em cada um.
+### ⚠️ O limite que importa para contrato: **os dados duram cerca de um dia**
 
-**Recomendação prática:** ligar a contagem nos 3 ativos agora (leva poucos minutos) e adotar
-como regra que todo anúncio novo já entre com a opção marcada. Os expirados só quando forem
-reaproveitados.
+Este é o ponto que não estava em nenhuma versão anterior deste documento.
 
-> Nota: existem 3 anúncios ativos no ambiente de homologação que foram reativados **apenas
-> como material de teste**, para validar o layout. Eles não devem ir para o site de produção,
-> e a equipe técnica já registrou como desfazer isso.
+O próprio sistema de anúncios roda uma **limpeza automática diária** que apaga os registros
+antigos. Conferido: neste momento a base guarda de **26/08 às 10h48** até **27/08 às 11h30** — ou
+seja, **pouco mais de 24 horas**. A próxima limpeza está agendada para hoje às 18h05 (horário de
+Brasília).
+
+**Consequência prática, em uma frase: dá para emitir relatório do dia; não dá para emitir
+relatório do mês nem da campanha inteira.** O número de ontem já não existe mais no sistema.
+
+### O que precisa ser decidido
+
+1. **O terceiro anúncio ativo deve passar a ser contado?** É uma caixa de seleção na tela de
+   edição daquele anúncio. Enquanto estiver desmarcada, aquela campanha não tem número nenhum.
+2. **O histórico precisa ser guardado?** Se algum contrato prevê relatório mensal ou de campanha,
+   **alguém precisa anotar o número todo dia antes da limpeza automática** — ou o site precisa
+   passar a guardar esse total em outro lugar. Hoje, o dado nasce e some em 24 horas.
+3. **A partir de quando vale.** A contagem que existe hoje começou a valer quando foi ligada em
+   cada anúncio; não é retroativa. Não sabemos dizer a data exata de cada peça sem abrir uma a
+   uma — se isso for necessário para uma renovação, avisem e levantamos.
+
+### O que foi feito, e o que não foi
+
+**Nada foi alterado.** Nenhuma configuração de anúncio foi ligada, desligada ou mexida. Este item
+apenas corrige a informação.
 
 ---
 
@@ -292,7 +316,7 @@ campo ficar vazio. Está aqui para não se perder.
 |---|-----------|-----------------|----------|
 | 1 | Conteúdo largo em celular estreito | Abrir frente de trabalho (problema **pré-existente**) | Baixa |
 | 2 | Publicidade no topo em celular | **Comercial** — criar peça 320x100 ou não vender | Média (receita) |
-| 3 | Contagem de exibição de anúncios | **Operacional** — ligar nos ativos, virar rotina | **Alta** (comprovação ao anunciante) |
+| 3 | Contagem de exibição de anúncios — **item corrigido em 27/08** | **Operacional** — a contagem **já está ligada** em 2 dos 3 ativos; o que falta é o 3º anúncio e **guardar o histórico, que hoje some em 24h** | **Alta** (comprovação ao anunciante) |
 | 4 | Logotipo branco vetorial | Solicitar arquivo ao designer | Baixa (acabamento) |
 | 5 | Limite de 70/160 caracteres | Nenhuma — só conferir após atualizar o tema | Informativa |
 | 6 | Anúncio novo demora 3h para aparecer | **Operacional** — deixar a data de início em branco | Média (perda de exibição paga) |

@@ -1202,6 +1202,39 @@ está instalada. Nenhuma delas descreve o que o site faz hoje.
 **É a mesma família do §16.4** — instrumento devolvendo resultado plausível sem medir o que
 interessa —, com a diferença de que aqui o instrumento é uma consulta ao banco.
 
+### 16.6 Medir em homolog e afirmar sobre produção
+
+**Descoberto em 27/08/2026**, e é irmão direto do §16.5: o dado estava certo, o ambiente é que
+era o errado.
+
+O `PENDENCIAS-gestores.md` §3 afirmava, desde 11/08, que a contagem de exibição de anúncios
+estava **desligada** e que o último registro era de **28/06/2026**. **A afirmação foi do Albert**,
+e o levantamento que a originou foi feito **em homologação** — o próprio texto dizia
+*"números levantados em 11/08/2026, no ambiente de homologação"*, e mesmo assim a conclusão
+viajou como se valesse para o site no ar.
+
+Medido em produção em 27/08:
+
+| | Homologação (11/08) | **Produção (27/08)** |
+|---|---|---|
+| Contagem | desligada | **ligada** (`adrotate_config[stats] = '1'`) |
+| Último registro | 28/06/2026 | **agora**, ~70 por minuto |
+| Anúncios ativos contados | 0 de 3 | **2 de 3** |
+| Exibições no dia | — | **20.825** |
+
+**Por que dói mais que um erro técnico:** este item foi para um documento de gestão, com
+prioridade "Alta (comprovação ao anunciante)". Alguém do comercial podia ter deixado de cobrar
+relatório, ou negociado renovação sem número, com base nele.
+
+**A regra:** homologação é uma cópia de teste, e **nada nela é evidência sobre produção** —
+nem configuração de plugin, nem volume, nem estado de dado. Os dois ambientes divergem de
+propósito e por acidente: nesta mesma sessão descobrimos que rodam versões diferentes do MySQL
+(8.0.45 contra 8.0.42), parameter groups diferentes (`default.mysql8.0` contra `mysql80-edit`),
+e homolog tem um índice FULLTEXT que produção não tem.
+
+**Antes de escrever qualquer afirmação sobre produção, medir em produção** — e, quando a medição
+tiver de ser em homolog por segurança, **dizer isso na própria frase**, não só no rodapé.
+
 ### A regra que fica
 
 Toda medição precisa de um **portão de contagem**: quantas linhas entraram, quantas saíram, e
