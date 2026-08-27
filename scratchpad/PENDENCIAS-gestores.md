@@ -10,6 +10,17 @@ custo, contrato com terceiros ou escolha editorial.
 
 Cada item segue a mesma estrutura: o que é, por que importa, e o que precisa ser decidido.
 
+> ### 🔴 Acrescentado em 27/08/2026 — leia o item 11 primeiro
+>
+> **O banco de dados de produção está publicado na internet.** O que impede o mundo de conectar
+> é uma regra de firewall liberando **um único endereço de IP**, mais a senha do administrador.
+> Esse endereço é de um provedor de internet comum, **não está documentado em lugar nenhum**, e
+> endereços assim mudam de dono.
+>
+> Não é falha acidental — alguém abriu de propósito, provavelmente por necessidade legítima. Mas
+> é a superfície mais sensível que este trabalho encontrou. **Nada foi alterado.** Detalhe e
+> caminho de solução no **item 11**.
+
 ---
 
 ## 1. Conteúdo mais largo que a tela em celulares estreitos
@@ -498,4 +509,114 @@ duas coisas:
 ### O que precisa ser decidido
 
 Se vale investir em proteger a entrada do painel, e por qual caminho. **Nada foi alterado.**
+
+---
+
+# ⚠️ SEGURANÇA — dois pontos levantados em 27/08/2026
+
+Os dois apareceram por acaso, ao desenhar o isolamento de uma instância de teste do banco.
+**Nada foi alterado em nenhum dos dois.** O primeiro é o mais sério que este trabalho encontrou
+até hoje.
+
+---
+
+## 11. 🔴 O banco de dados de produção tem endereço na internet
+
+### O que é, sem rodeio
+
+O banco de dados do portal — onde estão todas as matérias, todos os usuários e todo o histórico —
+**está publicado na internet**. Ele tem endereço acessível de fora da rede da empresa.
+
+O que impede o mundo inteiro de se conectar são **duas coisas, e só duas**:
+
+1. uma regra de firewall que libera **um único endereço de IP**;
+2. a senha do usuário administrador do banco.
+
+### Isto não é descuido de configuração
+
+**Alguém abriu de propósito.** A regra é específica, aponta para um endereço só, e foi escrita à
+mão. Provavelmente para permitir que uma pessoa acessasse o banco direto do computador dela, o
+que é uma necessidade legítima e comum.
+
+Registramos não porque está errado por si só, mas porque **é a superfície mais sensível que
+encontramos** e ninguém no material que temos sabia que existia.
+
+### De quem é esse endereço — o que conseguimos apurar
+
+| Pergunta | Resposta |
+|---|---|
+| Nome reverso | `36.124.196.131.jectix.net.br` — nome automático, do tipo que a operadora gera sozinha |
+| Dono do bloco | **JECTIX TELECOM** (CNPJ 24.029.566/0001-04), um provedor de internet brasileiro |
+| Aparece na documentação da infraestrutura? | **Não.** Procuramos nos três repositórios do projeto: nenhuma menção |
+| Está em uso hoje? | **Não conseguimos saber** — o registro de conexões do banco está desligado |
+
+**Ou seja: é um endereço residencial ou comercial de provedor, não documentado em lugar nenhum.**
+Pode ser o escritório. Pode ser o computador de alguém que trabalha lá. Pode ser de alguém que
+saiu da empresa.
+
+### E há um agravante que muda a urgência
+
+Endereços de provedor **mudam de dono**. Se aquela linha foi cancelada, ou se o provedor
+reatribuiu o endereço, **quem estiver com ele hoje tem exatamente o mesmo acesso de rede ao banco
+de produção** — sem que ninguém tenha mexido em nada.
+
+A senha continuaria protegendo. Mas a barreira de rede, que é a primeira das duas, teria trocado
+de lado sem aviso.
+
+### O que seria o desenho correto
+
+**O banco não deveria ter endereço na internet.** O padrão em uso hoje na indústria é:
+
+1. **O banco só responde de dentro da rede privada da empresa na nuvem.** Nenhum endereço
+   público, nenhuma regra de firewall para IP de casa ou de escritório.
+2. **Quando uma pessoa precisa acessar o banco direto**, ela entra por um caminho controlado —
+   um servidor de passagem (*bastion*) ou o serviço de acesso da própria AWS (*Session Manager*).
+
+A diferença prática é grande: esse caminho **registra quem entrou, quando e de onde**, não depende
+de o endereço da pessoa continuar o mesmo, e some quando a pessoa sai da empresa — basta remover o
+acesso dela, sem precisar caçar regras de firewall antigas.
+
+### O que precisa ser decidido
+
+1. **De quem é aquele endereço?** É a pergunta que muda tudo. Se for o escritório e alguém usa
+   todo dia, é uma coisa; se ninguém reconhece, é outra.
+2. **Se ninguém reclamar do acesso, ele deve ser fechado?**
+3. **Vale investir no desenho correto** (rede privada + caminho controlado), que resolve o
+   problema de forma permanente em vez de fechar uma regra por vez?
+
+**Não implementamos nada** — a decisão envolve quem usa aquele acesso, e fechá-lo sem avisar
+deixaria alguém sem trabalhar.
+
+---
+
+## 12. O grupo de firewall chamado "AcessoRestrito" não é restrito
+
+### O que é
+
+Existe um grupo de regras de firewall na AWS com o nome **"AcessoRestrito"**. Apesar do nome, ele
+contém duas regras abertas para **a internet inteira**:
+
+- a porta **22**, que é a de acesso remoto a servidores (SSH);
+- a porta **9000**, usada internamente pelo site.
+
+### Hoje isso não causa problema — e é importante entender por quê
+
+Conferimos: esse grupo está aplicado **somente ao banco de dados**, e o banco **não atende** nas
+portas 22 e 9000. As duas regras existem no papel e não têm nada do outro lado. **Não há
+exposição em curso.**
+
+### O risco é futuro, e é o nome que o cria
+
+O dia em que alguém precisar liberar acesso a um servidor novo e escolher um grupo chamado
+"AcessoRestrito", confiando no nome, **esse servidor nasce com o acesso remoto aberto para o
+mundo** — sem que a pessoa tenha feito nada errado além de acreditar na etiqueta.
+
+É o tipo de armadilha que só cobra quando ninguém está olhando.
+
+### O que precisa ser decidido
+
+Limpar as duas regras que não servem para nada hoje, **ou** renomear o grupo para algo que
+descreva o que ele realmente faz. As duas coisas custam minutos.
+
+**Nada foi alterado.**
 

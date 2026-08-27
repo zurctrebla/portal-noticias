@@ -1370,9 +1370,32 @@ porta 3306/tcp  ←  131.196.124.36/32
 banco de produção pela internet** — com o usuário mestre `rootbahiaba`, que autentica por
 `mysql_native_password`.
 
-Não é uma invasão e não há indício de uso indevido: é uma regra deliberada, de um IP só,
-provavelmente de escritório. Mas é a superfície mais sensível que este projeto encontrou, e quem
-cuidar de segurança precisa decidir se ela continua.
+Não é uma invasão e não há indício de uso indevido: é uma regra deliberada, de um IP só. Mas é a
+superfície mais sensível que este projeto encontrou.
+
+**De quem é o IP — levantado em 27/08, sem alterar nada:**
+
+| Pergunta | Resposta |
+|---|---|
+| Reverso | `36.124.196.131.jectix.net.br` — nome **gerado automaticamente** pela operadora, não um servidor nomeado |
+| Dono do bloco (`131.196.124.0/22`, LACNIC) | **JECTIX TELECOM**, CNPJ 24.029.566/0001-04 — provedor de internet brasileiro |
+| Consta em `wp-content/`, `infra-bahiaba/` ou `documentacao/`? | **Não.** Nenhuma menção em nenhum dos três |
+| Está em uso? | **Impossível determinar daqui.** O `general_log` está desligado e o Performance Insights também. `PROCESSLIST` mostra só os pods e o `rdsadmin` — mas isso é uma foto, não histórico |
+
+**É um endereço de assinante de provedor, não documentado em lugar nenhum.** Pode ser o
+escritório, pode ser a máquina de alguém, pode ser de quem já saiu.
+
+**O agravante:** endereço de provedor **muda de dono**. Se a linha foi cancelada ou reatribuída,
+quem estiver com ele hoje tem **a mesma permissão de rede** ao banco de produção, sem que ninguém
+tenha mexido em nada. A senha continuaria protegendo; a primeira das duas barreiras, não.
+
+**O desenho correto**, para quando houver decisão — *não implementado, porque envolve quem usa
+aquele acesso*:
+
+1. **Sem endereço público.** O banco responde só de dentro da VPC.
+2. **Acesso humano por caminho controlado** — *bastion* ou **AWS Session Manager**. Registra quem
+   entrou, quando e de onde; não depende de o IP da pessoa continuar o mesmo; e sai junto com o
+   desligamento dela, sem caçar regra antiga de firewall.
 
 ### ⚠️ Achado 2 — o mesmo SG tem duas regras abertas para o mundo
 
