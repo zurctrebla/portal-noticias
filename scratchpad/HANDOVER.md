@@ -1273,6 +1273,61 @@ concordarem entre si é prova, e concordarem com a `TABLES` não seria.
 sai **de fora do banco**. `ANALYZE TABLE` traz a `TABLES` para a realidade depois — mas só se
 alguém lembrar de rodá-lo, e é justamente isso que não se pode assumir.
 
+### 16.8 A API do RDS diz `available` quase 5 minutos depois de o banco já responder
+
+**Medido em 29/08/2026**, na subida da instância de teste para 8.4.9.
+
+| | Hora (UTC) |
+|---|---|
+| Último `SELECT` que respondeu | **03:39:00** |
+| Primeiro `SELECT` que voltou | **03:41:01** |
+| **Indisponibilidade real** | **121 s** |
+| A API/console diz `available` | **03:45:57** |
+| **Erro se cronometrar pelo status** | **+4 min 56 s — mais que o dobro** |
+
+O status `available` é sobre o **ciclo de vida da instância** (tarefas pós-subida, snapshot,
+reconfiguração), não sobre o banco aceitar consulta. As duas coisas terminam em momentos
+diferentes, e a diferença não é ruído: é maior que a queda inteira.
+
+**Por que isto importa mais do que parece:** na Fase D o número da indisponibilidade **vai para
+os gestores**. Relatar 7,5 minutos onde houve 2 é errar por 3,7×, e errar para o lado que faz a
+operação parecer pior do que foi.
+
+**A regra:** cronometrar do **último `SELECT` que respondeu ao primeiro que voltou**, com sonda
+externa de 1 em 1 segundo que **reconecta a cada tentativa** — a conexão morre na subida, e uma
+sonda que só reusa a conexão mede o próprio soquete morto, não o banco.
+Script: `scratchpad/indisponibilidade.php`.
+
+### 16.9 `StorageOperationPercentProgress` aparece — e fica parado em 0%
+
+**Medido em 29/08/2026.** O `UPGRADE-MYSQL.md` §1.5 previa dois casos para o portão de
+aquecimento: **o campo aparece** (esperar 100%) ou **não aparece** (portão empírico).
+
+O real é um **terceiro caso, e é o pior dos três**: o campo aparece, informa
+`StorageOperationStatus=Initializing`, e **não sai de 0%** — 12 minutos depois, com a instância
+já `available` e servindo consultas. Esperar os 100% seria esperar para sempre.
+
+**Um campo que existe e não anda é pior que um campo ausente:** a ausência manda procurar outro
+instrumento; a presença convida a confiar e esperar.
+
+**A medição que o campo deveria dar, e que o portão empírico dá de fato** — mesma consulta,
+primeira leitura contra segunda, na instância recém-restaurada:
+
+| tabela | frio | quente | razão |
+|---|---|---|---|
+| `wp_postmeta` | **74.400 ms** | 1.233 ms | **60×** |
+| `wp_yoast_indexable` | 3.034 ms | 50 ms | 60× |
+| `wp_bahia_search_idx` | 1.451 ms | 37 ms | 39× |
+| `wp_posts` | 1.986 ms | 62 ms | 32× |
+
+E na busca, a mediana caiu de **818,8 ms para 15,4 ms** depois de aquecida.
+
+**A regra, e vale para o verde do Blue/Green:** o portão de aquecimento é **empírico**, nunca o
+`StorageOperationPercentProgress`. O sinal confiável é `Innodb_buffer_pool_reads` **parar de
+crescer** entre passadas — foi o que sustentou a comparação 8.0 × 8.4 (congelado em 35.208 de um
+lado e 126.757 do outro), não o total de bytes no pool, que diferia 6× entre as duas medições
+por razão irrelevante.
+
 ### A regra que fica
 
 Toda medição precisa de um **portão de contagem**: quantas linhas entraram, quantas saíram, e
