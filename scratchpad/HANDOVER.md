@@ -1235,6 +1235,44 @@ e homolog tem um índice FULLTEXT que produção não tem.
 **Antes de escrever qualquer afirmação sobre produção, medir em produção** — e, quando a medição
 tiver de ser em homolog por segurança, **dizer isso na própria frase**, não só no rodapé.
 
+### 16.7 `information_schema.TABLES` devolve o valor de ANTES depois do `OPTIMIZE`
+
+**Aconteceu em 29/08/2026, na janela de manutenção**, no T0 (`OPTIMIZE TABLE wp_adrotate_tracker`,
+produção). É o §16.4 na forma mais pura que este projeto encontrou: **o instrumento responde a
+mesma coisa independentemente do que aconteceu.**
+
+O comando devolveu em 0,612 s, com a nota esperada e `status OK`. A conferência imediata:
+
+```sql
+SELECT ROUND(DATA_FREE/1024/1024,1) FROM information_schema.TABLES
+ WHERE TABLE_SCHEMA='prod' AND TABLE_NAME='wp_adrotate_tracker';
+-- 2056.0   <- o MESMO numero de antes, ate a casa decimal
+```
+
+**A tabela tinha acabado de encolher de ~2.062 MB para 11,0 MB.** A estatística do
+`information_schema` é cacheada, e `innodb_stats_on_metadata=OFF` é o **padrão** no MySQL 8.0 —
+a leitura não a atualiza. O número não estava errado por arredondamento nem por atraso de
+segundos: era **literalmente o valor anterior, preservado**.
+
+**Por que é o modo de falha pior:** um `OPTIMIZE` que não fez nada e um `OPTIMIZE` que devolveu
+2 GB **produzem a mesma leitura**. Quem confere só por aí conclui que a operação falhou — e a
+reação natural é repetir uma reescrita de tabela em produção, sem necessidade.
+
+**A leitura confiável veio de dois caminhos independentes**, e é isso que fecha o item:
+
+| Instrumento | Natureza | Leu |
+|---|---|---|
+| `information_schema.TABLES.DATA_FREE` | **estatística cacheada** | 2.056 MB — **o valor de antes** |
+| `information_schema.INNODB_TABLESPACES.FILE_SIZE` | **dicionário de dados**, não estatística | **11,0 MB** |
+| `FreeStorageSpace` (CloudWatch) | métrica do volume, **fora do banco** | 9,432 → **11,464 GiB** |
+
+Dicionário e CloudWatch não compartilham mecanismo com a estatística cacheada — por isso
+concordarem entre si é prova, e concordarem com a `TABLES` não seria.
+
+**A regra:** ao medir espaço em InnoDB, `INNODB_TABLESPACES.FILE_SIZE` é a fonte, e a confirmação
+sai **de fora do banco**. `ANALYZE TABLE` traz a `TABLES` para a realidade depois — mas só se
+alguém lembrar de rodá-lo, e é justamente isso que não se pode assumir.
+
 ### A regra que fica
 
 Toda medição precisa de um **portão de contagem**: quantas linhas entraram, quantas saíram, e

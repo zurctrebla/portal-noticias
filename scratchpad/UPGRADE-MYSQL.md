@@ -2191,10 +2191,44 @@ suspeitos precisa ser um.
 
 # Anexo C — Pendências
 
+> ## 🔴 ITEM DE FECHAMENTO OBRIGATÓRIO — a política de escrita sai
+>
+> **`RdsEscritaUpgrade84` foi anexada ao usuário `bahia-pipeline` na janela de 29/08/2026,
+> exclusivamente para executá-la. Ela sai INTEIRA no fechamento — seja qual for o resultado.**
+>
+> Vale igual nos três desfechos: virada concluída, janela fechada sem virada por reprovação no
+> portão, ou parada no meio. **Não há desfecho em que ela fique.**
+>
+> ```bash
+> aws iam delete-user-policy --user-name bahia-pipeline --policy-name RdsEscritaUpgrade84
+> # conferencia: tem que sobrar so a de leitura
+> aws iam list-user-policies --user-name bahia-pipeline
+> # esperado: bahia-pipeline-cloudformation, bahia-pipeline-eks-iam,
+> #           EFSMinimalAccess, RdsSomenteLeituraParaUpgrade84
+> ```
+>
+> **Portão de conferência**, porque remover sem verificar é o mesmo erro do §16:
+>
+> ```bash
+> aws iam simulate-principal-policy \
+>   --policy-source-arn arn:aws:iam::774710032593:user/bahia-pipeline \
+>   --action-names rds:DeleteDBInstance rds:ModifyDBInstance rds:RestoreDBInstanceFromDBSnapshot \
+>   --query 'EvaluationResults[].[EvalActionName,EvalDecision]' --output text
+> # esperado: implicitDeny nas tres
+> ```
+>
+> **Também saem** (temporários da Fase 1, §1.7): a instância `rds-bahiaba-teste84`, o parameter
+> group `bahia-mysql80-teste` e o security group `bahia-mysql84-teste`
+> (`sg-045aed7cf5c92b6c5`). **Fica** o `bahia-mysql84`, que é o do verde.
+>
+> *O Albert pediu para ser lembrado disto no fechamento. Está aqui para não depender de memória
+> de ninguém.*
+
 | # | Item | Depende de |
 |---|---|---|
+| 0 | 🔴 **Remover `RdsEscritaUpgrade84`** — ver o quadro acima. Vale em qualquer desfecho | **fechamento da janela** |
 | 1 | **T1 concluído** ✅. Falta só publicar uma matéria **pelo painel** para fechar a verificação | **você** |
-| 1b | T0 adiado para o vale de tráfego (reescreve `wp_adrotate_tracker` e bloqueia escrita nela) | **você** |
+| 1b | **T0 concluído** ✅ em 29/08, 03:10 UTC — **+2,032 GiB**, bloqueio ≤ 0,129 s | — |
 | 2 | Ligar autoscaling de armazenamento (`--max-allocated-storage`) — fora do projeto, AWS pede desde 2025 | **você** |
 | 3 | Confirmar no Cost Explorer se homolog está inscrita no Extended Support | **você** |
 | 3b | **Probes do Deployment de produção** — levantamento no Anexo D, não implementado | **você** |
