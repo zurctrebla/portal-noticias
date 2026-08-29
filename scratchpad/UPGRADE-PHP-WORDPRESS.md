@@ -29,6 +29,27 @@ imagem de teste que não foi publicada em lugar nenhum.
 escalonamento do HPA**, e ela some sozinha sem deixar rastro. São 5 versões de correção de
 distância — 6.8.3 → 6.8.8 — e releases de patch do WordPress são majoritariamente de segurança.
 
+### ✅ NÃO É HIPÓTESE — foi observado em 29/08/2026, num rollout medido
+
+Ao fixar o SHA no manifesto de homolog (commit `89c6d6b`), o pod foi recriado às 06:48:50 UTC.
+Leitura no pod novo, imediatamente depois:
+
+```
+antes do rollout:  $wp_version = '6.8.8'
+depois do rollout: $wp_version = '6.8.3'
+```
+
+**O core regrediu cinco versões de correção num rollout de rotina**, disparado por uma mudança
+que não tinha nada a ver com o WordPress — era só a troca de uma tag de imagem por um SHA
+equivalente.
+
+**Nada no cluster registrou isso.** Não há evento, não há aviso, e o painel do WordPress vai
+mostrar "atualização disponível" até o WP-Cron rodar. Se ninguém tivesse lido o `version.php` nos
+dois momentos, a regressão teria passado.
+
+**Isto eleva o peso da Tarefa B:** ela deixa de ser "arrumar um desenho estranho" e passa a ser
+"fechar uma regressão de segurança que já acontece, medida, a cada rollout".
+
 **Isto não é um bug a consertar antes de atualizar: é o motivo pelo qual "atualizar o WordPress"
 tem de ser feito pela imagem.** Enquanto o core vier de `6.8-php8.2-fpm`, o número que a gente
 "atualiza" pelo painel dura até o próximo rollout.
