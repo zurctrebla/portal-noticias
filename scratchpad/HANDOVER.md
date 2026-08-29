@@ -1677,3 +1677,50 @@ contíguos. **Se o script imprimisse só o total, eu teria reportado 79 s e ning
 
 Vale para tudo que este projeto mede: pico de `Threads_running` (um pico de 3 s e um platô de
 3 min dão o mesmo "pico"), mediana de tempo de resposta, e contagem de erro em janela.
+
+---
+
+## 23. Aviso em ambiente novo não significa nada sem contrafactual
+
+**Método aplicado em 29/08/2026**, validando o PHP 8.3 em homolog.
+
+Depois da subida, o log do pod acusou **6 `PHP Warning`** em 25 minutos:
+
+```
+PHP Warning: Attempt to read property "user_nicename" on false
+  em co-authors-plus/php/class-coauthors-plus.php:1193
+PHP Warning: Cannot modify header information - headers already sent
+  em puredevs-gdpr-compliance/public/class-pd-gdpr-public.php:356
+```
+
+**Sozinhos, esses seis avisos são indistinguíveis de regressão.** Apareceram *depois* da mudança,
+citam plugins reais, e o PHP 8.3 é exatamente o tipo de coisa que produz aviso novo. A conclusão
+"o 8.3 quebrou o Co-Authors Plus" é a leitura natural — e está errada.
+
+**O que resolveu foi olhar o mesmo aviso em PRODUÇÃO, que ainda estava em PHP 8.2:**
+
+| Origem | Homolog (PHP **8.3**, 25 min) | **Produção (PHP 8.2, 60 min)** |
+|---|---|---|
+| `co-authors-plus:1193` | 2 | **90** |
+| `puredevs-gdpr:356` | 2 | **5** |
+| `wp-smushit:171` | 0 | 3 |
+| **Fatais / depreciações** | 0 / 0 | 0 / 0 |
+
+**Produção, na versão ANTIGA do PHP, tem mais avisos que homolog na nova** — proporcional ao
+tráfego. Os avisos são pré-existentes, e o 8.3 não introduziu um único novo.
+
+### A regra
+
+> **Um aviso em ambiente novo só significa alguma coisa comparado com o mesmo ambiente ANTES, ou
+> com o outro ambiente AGORA.** Sem um dos dois, ele é ruído com aparência de sinal.
+
+**O contrafactual mais barato é o ambiente que ainda não mudou.** Numa subida faseada — homolog
+primeiro, produção depois — o ambiente atrasado *é* o grupo de controle, e ele existe de graça
+por algumas horas. **Colher a linha de base dele antes de subir custa um comando.**
+
+### O caso simétrico, que é pior
+
+Se o ambiente antigo tem **muitos** avisos e o novo tem **poucos**, a leitura ingênua é "melhorou".
+Pode ser só que o novo recebeu menos tráfego. **Normalizar por volume** — aqui, 90 em 60 min de
+produção contra 2 em 25 min de homolog, com ordens de grandeza de tráfego diferentes — é o que
+impede a conclusão fácil nos dois sentidos.
