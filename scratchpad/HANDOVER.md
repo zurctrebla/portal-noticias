@@ -1558,3 +1558,67 @@ e não depende de o relógio da operação bater com o relógio de quem mede.
 
 E a sonda contínua é barata: um laço de `SELECT 1` com reconexão, um pod, um arquivo TSV.
 `scratchpad/indisponibilidade.php`.
+
+---
+
+## 21. `imagePullPolicy: Always` com tag flutuante torna a troca de código invisível ao Kubernetes
+
+**Descoberto em 29/08/2026**, ao preparar a subida do PHP — e é o achado mais importante da
+rodada.
+
+> **`imagePullPolicy: Always` com tag flutuante não significa apenas que o pod pode puxar código
+> novo — significa que o CONTEÚDO pode trocar sem o Kubernetes registrar nada. Sem `generation`,
+> sem `ReplicaSet` novo, sem histórico de rollout. A mudança é invisível para o próprio
+> orquestrador, e é por isso que fixar SHA obriga a um rollout: é a primeira vez que o cluster
+> está sendo informado de que o conteúdo mudou.**
+
+### Como isso apareceu
+
+O `Deployment` de produção declarava `bahia-wordpress:prod-latest` nos dois contêineres, com
+`imagePullPolicy: Always`. Ao propor trocar para o SHA imutável equivalente
+(`prod-804c68f0…`, que é **exatamente a mesma imagem**, resolvida por digest no ECR), eu afirmei
+que não haveria rollout, "porque a imagem resultante é idêntica à que já está no ar".
+
+**Errado.** `kubectl diff` contra os dois clusters, antes de qualquer push:
+
+```
+homolog:  generation 121  -> 122
+prod:     generation 3697 -> 3698
+```
+
+**O Kubernetes não compara conteúdo — compara a string da imagem.** Mesma imagem, string
+diferente, `podTemplate` diferente, `pod-template-hash` diferente, `ReplicaSet` novo, rollout.
+
+### E a inversão é o que assusta
+
+| | Muda o conteúdo? | O Kubernetes registra? |
+|---|---|---|
+| Novo build empurrado para `prod-latest`, pod reinicia | **SIM** | **NÃO** — nenhum evento, nenhuma `generation` |
+| Trocar a tag para o SHA da **mesma** imagem | **NÃO** | **SIM** — rollout completo |
+
+**O orquestrador registra exatamente o caso errado.** A troca real de código passa sem rastro; a
+troca cosmética gera evento. Quem auditar `kubectl rollout history` para saber "o que mudou e
+quando" vai ler a lista errada.
+
+### A regra
+
+**Tag mutável em produção não é conveniência, é perda de rastreabilidade.** Com ela:
+
+- `kubectl rollout history` não sabe o que rodou;
+- `kubectl rollout undo` volta para um `ReplicaSet` cuja tag pode apontar para outra coisa hoje;
+- e um `kubectl apply` desfaz em silêncio qualquer `set image` por SHA.
+
+**Endereçar por SHA — ou por digest — é o que faz o cluster saber o que está rodando.** O preço é
+um rollout na transição, e ele se paga uma vez só.
+
+### O corolário operacional que ficou
+
+**Fixar o SHA no manifesto obriga a escolher a hora.** Em 29/08 a mudança foi feita **só em
+homolog**: produção tinha acabado de virar o banco para o MySQL 8.4.9, as cinco réplicas estavam
+com `fastcgi_cache` quente (`emptyDir`, perdido em qualquer rollout), e jogá-las em cache frio
+pela família do modo de falha de 18/08 não se pagava por uma proteção que só age se alguém
+empurrar em `kubernetes/**`.
+
+**Produção é fixada no momento do deploy do PHP — que vai rolar os pods de qualquer jeito — e com
+o SHA ANTERIOR ao PHP**, para que um `apply` acidental durante a validação seja um caminho de
+volta, e não de ida.
