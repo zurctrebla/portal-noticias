@@ -80,6 +80,19 @@ jobs:
 
           kubectl rollout status deployment/wordpress -n ${{ env.NAMESPACE }} --timeout=600s || true
 
+      # NAO HA passo de purga do fastcgi_cache aqui, e a ausencia e DELIBERADA.
+      # Nao "corrija" esta divergencia com o deploy-prod.yml.
+      #
+      # O cache do nginx vive num `emptyDir` (volume `nginx-cache`), que morre com
+      # o pod. Homolog tem UMA replica e `maxSurge: 0` / `maxUnavailable: 1`: o pod
+      # antigo cai antes de o novo subir, entao nao sobra nenhum pod servindo cache
+      # velho. A purga acontece sozinha, e um passo explicito seria codigo que nao
+      # faz nada -- pior que ausente, porque engana quem le depois.
+      #
+      # EM PRODUCAO E DIFERENTE, e por isso la o passo existe: `maxSurge: 1` /
+      # `maxUnavailable: 0` mantem os pods antigos no ar ate os novos ficarem
+      # prontos, entao o cache antigo continuaria sendo servido pelos pods que
+      # ainda nao trocaram. La a purga e necessaria; aqui nao.
       - name: Como reverter
         if: always()
         run: |
