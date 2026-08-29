@@ -1622,3 +1622,58 @@ empurrar em `kubernetes/**`.
 **Produção é fixada no momento do deploy do PHP — que vai rolar os pods de qualquer jeito — e com
 o SHA ANTERIOR ao PHP**, para que um `apply` acidental durante a validação seja um caminho de
 volta, e não de ida.
+
+---
+
+## 22. Agregação que apaga a estrutura — o total mente quando a informação está na distribuição
+
+**Errei isto em 29/08/2026**, medindo a indisponibilidade de um rollout em homolog. Variante
+própria do §16, com mecanismo novo: o instrumento **não descarta dado** — ele **resume** dado, e
+o resumo apaga a estrutura que continha a resposta.
+
+O script pegava o primeiro erro e o último restabelecimento e chamava a diferença de
+indisponibilidade:
+
+```
+ultima resposta boa: 06:59:59
+primeira que voltou: 07:01:18
+INDISPONIBILIDADE REAL DO ROLLOUT: 79s     <- ERRADO
+```
+
+**79 s é um número perfeitamente plausível** para um rollout com `maxSurge: 0`. Nada nele chama
+atenção. A verdade estava na distribuição:
+
+| | janela | duração |
+|---|---|---|
+| Queda 1 | 07:00:04 → 07:00:04 | **1 s** |
+| *(serviço normal)* | | *44 s* |
+| Queda 2 | 07:00:49 → 07:01:13 | **25 s** |
+| **Soma real** | | **26 s** |
+
+**Foram duas quedas, com 44 segundos de serviço normal entre elas.** O "79 s" somava o intervalo
+em que o site estava no ar.
+
+E a diferença não é acadêmica: 26 s de queda em dois blocos e 79 s de queda contínua são
+**eventos operacionais diferentes**. Um deles indica que a queda de 1 s às 07:00:04 é anterior ao
+deploy e não faz parte dele — informação que o total destrói.
+
+### Por que escapou, e o que salvou
+
+**Escapou** porque o cálculo `primeiro_erro → último_restabelecimento` está certo *quando há uma
+queda só*, que é o caso comum. Ele só mente quando há mais de uma — e ninguém testa o caso raro.
+
+**Salvou** porque a saída também listava os blocos, e dava para ver que os dois não eram
+contíguos. **Se o script imprimisse só o total, eu teria reportado 79 s e ninguém saberia.**
+
+### A regra
+
+> **Antes de somar, mostre a distribuição.** Toda métrica agregada — total, média, "tempo até" —
+> precisa vir acompanhada da estrutura que a gerou: quantos blocos, de que tamanho, com que
+> intervalo entre eles.
+>
+> A pergunta do §16 era *"o que este instrumento responderia se a coisa que ele deveria detectar
+> estivesse acontecendo agora?"*. A desta seção é outra: **"que estruturas diferentes produzem
+> este mesmo número?"** Se mais de uma, o número sozinho não é resposta.
+
+Vale para tudo que este projeto mede: pico de `Threads_running` (um pico de 3 s e um platô de
+3 min dão o mesmo "pico"), mediana de tempo de resposta, e contagem de erro em janela.
