@@ -1450,6 +1450,52 @@ tabelas que já foram apagadas não responde a pergunta que queremos fazer.
 > **A lição geral:** parameter group não é configuração portável entre ambientes — é
 > configuração **acoplada ao tamanho da máquina**. Copiar "por consistência" transporta uma
 > premissa de hardware junto, e ela pode não valer do outro lado.
+>
+> ---
+>
+> ## 🔴 E o outro lado: `bahia-mysql84` está AMARRADO à `db.m5.xlarge`
+>
+> O grupo fixa **`innodb_buffer_pool_size = 11811160064`** — um valor absoluto em bytes, não a
+> fórmula `{DBInstanceClassMemory*3/4}` que a AWS usa por padrão. **Ele não acompanha a classe.**
+>
+> **Se a produção mudar de classe, este parâmetro tem de mudar junto.** Para uma máquina menor,
+> o banco tentaria subir com um pool **maior que a RAM**.
+>
+> **Agora o grupo tem os dois riscos, um em cada direção:**
+>
+> | Direção | O que acontece |
+> |---|---|
+> | **Máquina menor** (ex.: a `t3.micro` do homolog) | `instances=8` força pool mínimo de 1 GiB, e o pool fixo de 11 GiB é maior que a RAM inteira |
+> | **Máquina maior** | o pool fica preso em 11 GiB e **desperdiça** a memória nova, sem aviso nenhum |
+>
+> ### A regra para recalcular, se a classe mudar
+>
+> ```
+> pool = 75% da RAM da instância,
+>        arredondado PARA BAIXO até um múltiplo de (chunk_size × instances)
+>
+> com chunk_size = 128 MiB e instances = 8  ->  múltiplo de 1 GiB
+> ```
+>
+> **Arredondar para baixo é obrigatório.** Se o valor não for múltiplo, o MySQL **arredonda para
+> cima sozinho** e o pool fica maior do que se pediu — foi exatamente assim que 11,25 GiB virou
+> 12,00 GiB nesta instância, em 29/08/2026.
+>
+> Conferência para o valor atual, medida no binário real depois do reboot:
+>
+> ```
+> 11.811.160.064 / (128 MiB × 8)  =  11,0  ->  resto 0  ->  assentou EXATO
+> ```
+>
+> | Classe | RAM | 75% | **Valor a fixar (múltiplo de 1 GiB)** |
+> |---|---|---|---|
+> | **db.m5.xlarge (atual)** | 16 GiB | 12 GiB | **11 GiB = `11811160064`** ¹ |
+> | db.m5.2xlarge | 32 GiB | 24 GiB | 24 GiB = `25769803776` |
+> | db.m5.large | 8 GiB | 6 GiB | 6 GiB = `6442450944` |
+>
+> ¹ 11 e não 12 porque **o valor tem de ser o que a produção já usa hoje** — subir o pool junto
+> com a versão faria a comparação dizer respeito ao cache, não ao 8.4. Produção opera com
+> **1,97 GiB de memória livre** e sem swap; +1 GiB de pool comeria metade dessa folga.
 
 ## 1.2 Parameter group de destino — quatro linhas, e uma que não é preciso escrever
 

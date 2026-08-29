@@ -1368,3 +1368,63 @@ Toda medição precisa de um **portão de contagem**: quantas linhas entraram, q
 quantas foram descartadas e por quê. Sem isso, o instrumento silencioso vira o resultado.
 Isto vale também para `grep -o` com regex de contexto largo (`.{0,150}`), que em arquivo de
 centenas de KB entra em backtracking e estoura o tempo em vez de responder — usar Python.
+
+---
+
+## 17. Fixar configuração para controlar um risco pode criar outro
+
+**Aprendido em 29/08/2026, no encadeamento que quase entrou em produção sem ser visto.**
+
+A sequência, em quatro passos, cada um defensável sozinho:
+
+1. A instância de teste subiu para 8.4.9 e mediu **empate** com o 8.0.42. Bom resultado.
+2. Só que quatro padrões tinham mudado e o parameter group de 4 linhas não cobria. O mais sério:
+   **`innodb_buffer_pool_instances` caiu de 8 para 1** — disputa de mutex sob concorrência alta,
+   que a sonda de 10 conexões não pegaria.
+3. **Fixamos `instances=8`.** Decisão certa e pelo motivo certo: as 4 linhas existiam para deixar
+   **só a versão** como variável, e deixar esse parâmetro mudar seria testar duas coisas ao mesmo
+   tempo.
+4. **E foi aí que a fixação criou um risco novo.** O MySQL exige que `buffer_pool_size` seja
+   múltiplo de `chunk_size × instances`. Com `instances=8` isso vira 1 GiB, e o pool de
+   **11,25 GiB não é múltiplo de 1 GiB** — então o MySQL **arredondou para cima, sozinho, até
+   12,00 GiB**.
+
+**O verde nasceria com 1 GiB de buffer pool a mais que a produção** — numa instância que opera
+com **1,97 GiB de memória livre**. O parâmetro posto para *remover* uma variável teria comido
+**metade da folga de memória de produção**, e a comparação 8.0 × 8.4 passaria a falar de cache,
+não de motor.
+
+### O que fez a diferença: medir o efeito, não presumir a intenção
+
+O `+0,75 GiB` **não aparece em lugar nenhum da API**. `describe-db-parameters` mostra
+`innodb_buffer_pool_instances = 8`, que foi o que se pediu, e nada mais. O
+`ParameterApplyStatus` diz `in-sync`. **Tudo indica sucesso.**
+
+Só apareceu porque a instância foi **reiniciada e o valor em execução foi lido**:
+
+```
+antes  (instances=1):  12.079.595.520 = 11,25 GiB
+depois (instances=8):  12.884.901.888 = 12,00 GiB   <- ninguem pediu isto
+```
+
+E o motivo de haver reboot foi outro: verificar se o parâmetro **estático** aplicava mesmo. A
+descoberta veio de uma verificação feita por desconfiança de outra coisa.
+
+### A regra
+
+> **Fixar configuração não é automaticamente conservador.** Um parâmetro fixado interage com
+> outros, e o motor pode ajustar um terceiro valor **sem erro, sem aviso e sem aparecer na API**
+> para satisfazer a restrição nova.
+>
+> **Toda fixação de parâmetro precisa do seu próprio "depois":** reiniciar e ler os valores **em
+> execução**, não os declarados. `in-sync` responde "o grupo foi aplicado", que é uma pergunta
+> diferente de "o motor está rodando com os valores que eu quis" — é o §16 outra vez, agora em
+> configuração em vez de medição.
+
+A correção foi fixar também `innodb_buffer_pool_size = 11811160064` (11,00 GiB, o valor exato da
+produção — e múltiplo de 1 GiB, então não arredonda). **Verificada do mesmo jeito:** reboot, e
+leitura do valor em execução. Assentou exato.
+
+**E a correção trouxe a sua própria contrapartida**, registrada em destaque no §1.2 do
+`UPGRADE-MYSQL.md`: um valor absoluto em bytes **amarra o parameter group à `db.m5.xlarge`**.
+Três passos, três riscos, cada correção com o seu. O que não se pode é parar de medir no meio.
