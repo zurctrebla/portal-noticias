@@ -1990,6 +1990,160 @@ os dados de produção, esta camada **mede desempenho**.
 
 ---
 
+# FASE C — HOMOLOG EM 8.4.9 (29/08/2026) ✅ APROVADA
+
+`rds-bahiaba-hml`, `db.t3.micro`, **8.0.45 → 8.4.9**, no lugar, sem Blue/Green.
+
+## ⚠️ A decisão de parameter group — e por que NÃO foi o grupo do verde
+
+**Homolog foi para `default.mysql8.4`, não para `bahia-mysql84`.** A tentação era usar o mesmo
+grupo, para exercitar exatamente o que a produção vai usar. **Seria um erro grave.**
+
+| | Produção | **Homolog** |
+|---|---|---|
+| `innodb_buffer_pool_size` | 11,25 GiB | **256 MB** |
+| `innodb_buffer_pool_chunk_size` | 128 MB | **128 MB** |
+| RAM da instância | 16 GiB (m5.xlarge) | **1 GiB (t3.micro)** |
+
+O MySQL exige que `buffer_pool_size` seja múltiplo de `chunk_size × buffer_pool_instances`.
+Com o `innodb_buffer_pool_instances=8` que acabamos de fixar em `bahia-mysql84`, o mínimo vira
+**128 MB × 8 = 1 GiB** — e o MySQL **aumenta o `buffer_pool_size` sozinho** para chegar lá.
+
+**Isso poria um buffer pool de 1 GiB numa máquina de 1 GiB de RAM.** O parâmetro que protege a
+produção derruba o homolog. Homolog fica em `default.mysql8.4`, que é a continuação natural do
+`default.mysql8.0` que ele já usava.
+
+## Cronologia
+
+| Hora (UTC) | Evento |
+|---|---|
+| 04:08:31 → 04:11:23 | snapshot `bahia-hml-pre-upgrade-84-20260829` — `available`, 100%, 8.0.45 |
+| 04:12:22 | subida disparada |
+| 04:12:31 → 04:12:52 | **pré-verificação: 21 s, aprovada** |
+| **04:13:11** | **último `SELECT` que respondeu** |
+| **04:15:39** | **primeiro `SELECT` que voltou** |
+| 04:20:09 | a API diz `available` |
+
+**INDISPONIBILIDADE REAL: 148 s.** Queda única, 147 falhas contíguas, todas `c:2002`.
+
+**O §16.8 confirmou-se pela segunda vez:** a API demorou **4 min 30 s** a mais que o banco.
+Duas instâncias, duas classes, dois tamanhos — e o mesmo desvio nas duas. **Não é acaso da
+primeira medição.**
+
+## `PrePatchCompatibility.log`
+
+```
+Errors: 0     Warnings: 2     Database Objects Affected: 31
+```
+
+**Uma diferença curiosa contra a cópia de produção:** o item 2 (`check table x for upgrade`) diz
+**"No issues found"** em homolog, enquanto na cópia de produção acusou
+`prod.wp_bwg_theme - Row size too large`. **A tabela existe nos dois.** As duas cópias divergem —
+mais uma instância do §16.6 do HANDOVER: *homologação não é evidência sobre produção*.
+
+## Integridade — o portão que importa
+
+Fotografia completa antes e depois (`scratchpad/estado-banco.php`), comparada linha a linha:
+
+| | |
+|---|---|
+| Tabelas | **92 antes, 92 depois** |
+| Tabelas que sumiram | **nenhuma** |
+| Tabelas que **diminuíram** | **NENHUMA** |
+| Total de linhas | 18.323.235 → 18.323.261 (**+26**) |
+| `wp_posts` | **435.766, idêntico** |
+| `MAX(wp_posts.ID)` e `MAX(wp_bahia_search_idx.ID)` | **idênticos** |
+| Índices FULLTEXT | **idênticos** (os 2 do homolog) |
+| Usuários e plugin de autenticação | **idênticos** |
+
+As +26 linhas são `wp_yoast_indexable` (+12), a hierarquia dele (+12), `wp_postmeta` (+2) e
+transients — **o Yoast reindexando depois que o site voltou**. Crescimento, não perda.
+
+## As três camadas que a Fase A não alcançava
+
+**Camada 1 — o site responde: 16 de 16.**
+
+Home, as 10 editorias, 2 buscas, `wp-admin` (302) e o 404. **Duas respostas exigiram
+investigação, e nenhuma é da subida:**
+
+| URL | Homolog 8.4.9 | Produção 8.0.42 | Veredito |
+|---|---|---|---|
+| `/feed/` | **410** | **410** | deliberado, `mu-plugins/bahia-feeds.php`, decidido em 18/08 |
+| `/sitemap_index.xml` | **504** (60 s) | **200** (7,7 s) | pré-existente, já avaliado e aceito — é a `t3.micro` |
+
+**Camada 2 — a busca funciona**, e devolve resultado, não só código 200: `salvador`, `carnaval`,
+`bahia` e `eleicao` retornaram **8 cards cada**.
+
+**Camada 3 — matéria de teste, pela pilha completa do WordPress:**
+
+| Item | Resultado |
+|---|---|
+| `wp_insert_post` no CPT `politica` | ✅ post 9000288 |
+| Subtítulo (ACF) | ✅ gravado, lido de volta, **e renderizado na página** |
+| Imagem no campo ACF `imagem` (não `_thumbnail_id`) | ✅ anexo 9000219 |
+| Coautoria (Co-Authors Plus) | ✅ `da-redacao` e `agencia-brasil` |
+| **Entrou na `wp_bahia_search_idx`** | ✅ **SIM** |
+| Matéria, e as 2 páginas de autor | ✅ 200 nas três |
+| Aparece na busca do site | ✅ |
+| Removida ao final | ✅ zero resíduo na tabela-sombra |
+
+> **O que fica pendente e é seu:** a matéria foi criada pela pilha do WordPress
+> (`wp_insert_post` + ACF + CAP), **não pelo navegador com login no painel**. O caminho de escrita,
+> os campos, a coautoria e a indexação estão provados; o que falta é o clique no `wp-admin`, que
+> exige credencial que eu não tenho. Continua sendo o item 1 do Anexo C.
+
+## Camada 5 — `carga.sh`, o número de ponta a ponta
+
+**E aqui eu errei a medição duas vezes antes de acertar. Fica registrado porque a Fase D vai
+repetir isto.**
+
+| Corrida | Contexto | Mediana | p90 | `Threads_running` pico / média |
+|---|---|---|---|---|
+| 8.0.45 (27/08 #1) | — | 11,85 s | 15,72 s | **só 3 amostras — inválida** |
+| 8.0.45 (27/08 #2) | — | 9,52 s | 12,90 s | 11 / 3,0 |
+| 8.4.9 #1 | logo após o restart, **pool frio** | 10,63 s | 14,20 s | 13 / 7,1 |
+| 8.4.9 #2 | **30 s depois da #1** | 12,43 s | 17,98 s | 15 / 8,3 |
+| **8.4.9 #3** | **após 5 min de descanso** | **10,54 s** | **14,49 s** | **9 / 3,5** |
+
+**A corrida #2 foi um erro meu de método:** disparei 30 requisições simultâneas numa `t3.micro`
+**30 segundos** depois da rajada anterior. Não mediu aquecimento — mediu a fila da corrida
+anterior, e saiu pior. A hipótese que eu queria testar ("o pool está frio") só pôde ser testada
+com intervalo de verdade.
+
+**A comparação válida é #2 de 8.0 contra #3 de 8.4:**
+
+| | 8.0.45 | **8.4.9** |
+|---|---|---|
+| Mediana HTTP | 9,52 s | **10,54 s** |
+| p90 | 12,90 s | **14,49 s** |
+| Códigos | 30× 200 | **30× 200** |
+| `Threads_running` pico | 11 | **9** |
+| `SQL_CALC_FOUND_ROWS` pico | 5 | **4** |
+
+**HTTP um pouco mais lento, carga no banco um pouco menor.** Nenhum dos dois sai do ruído de
+uma `t3.micro` com 30 URLs frias. **Sem regressão.**
+
+> ### ⚠️ Regra para os portões de carga da Fase D
+>
+> **Deixar intervalo de recuperação entre corridas.** Duas rajadas encavaladas medem a fila da
+> primeira, e o número sai pior sem que nada tenha piorado. Cinco minutos foram suficientes numa
+> `t3.micro`; em produção, o portão dos 0, 5 e 15 minutos já embute o intervalo — **desde que as
+> medições não sejam repetidas dentro de cada janela.**
+
+## Portão de saída da Fase C
+
+- [x] dump verificado antes (snapshot `available`, 100%, 8.0.45)
+- [x] indisponibilidade pelo primeiro `SELECT`: **148 s**
+- [x] `PrePatchCompatibility.log`: 0 erros
+- [x] integridade: 92 tabelas, nenhuma encolheu
+- [x] site respondendo: 16/16
+- [x] busca funcionando, com resultado
+- [x] matéria de teste: ACF, coautoria, indexação, páginas de autor
+- [x] `carga.sh` comparado, com portão de contagem verde
+- [ ] publicação **pelo navegador, no painel** — sua, item 1 do Anexo C
+
+---
+
 # FASE 3 — Blue/Green em produção
 
 ## 3.1 Pré-requisitos — atendidos
