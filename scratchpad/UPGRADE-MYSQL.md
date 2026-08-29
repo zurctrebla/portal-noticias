@@ -1716,7 +1716,159 @@ cedo — só custo de instância e uma cópia a mais dos dados de produção exi
       temporária
 - [ ] Você diz se quer os dois achados de segurança do §1.3 no `PENDENCIAS-gestores.md`
 
-# FASE 2 — Subida da instância de teste e validação
+# FASE 2 — RESULTADO REAL (29/08/2026) ✅ APROVADA
+
+> **A instância de teste subiu de 8.0.42 para 8.4.9 e passou em todos os portões que a
+> isolamento permite verificar.** `rds-bahiaba-teste84`, `db.m5.xlarge`, dados de produção do
+> snapshot `bahia-prod-pre-upgrade-84-20260828`.
+
+## Cronologia, medida
+
+| Hora (UTC) | Evento |
+|---|---|
+| 03:21:56 | restauração disparada |
+| 03:29:45 | **disponível — 7 min 49 s** |
+| 03:38:14 | `modify-db-instance --engine-version 8.4.9` |
+| 03:38:21 → 03:38:42 | **pré-verificação: 21 s, aprovada** (sem evento de cancelamento) |
+| **03:39:00** | **último `SELECT` que respondeu** |
+| 03:40:09 | `The engine version upgrade started` |
+| **03:41:01** | **primeiro `SELECT` que voltou** |
+| 03:42:12 | `The engine version upgrade finished` |
+| 03:45:57 | a API diz `available` |
+
+**INDISPONIBILIDADE REAL: 121 s.** Queda única e contígua, 120 amostras de falha seguidas, todas
+`c:2002` (conexão recusada) — **nenhum erro de consulta**.
+
+> ### ⚠️ A API mente sobre a indisponibilidade, e mente para mais
+>
+> O banco voltou a responder às **03:41:01**. A API só disse `available` às **03:45:57** —
+> **4 min 56 s depois**. Quem cronometrar pelo console reporta ~7,5 min de queda onde houve 2.
+>
+> É o §16 do HANDOVER outra vez: o instrumento óbvio responde a coisa errada. **Medir de segundo
+> em segundo, de fora, com reconexão a cada tentativa** — foi o que o §2.2 mandou e é o que dá o
+> número certo. Vale para a Fase D.
+
+## `PrePatchCompatibility.log` — previsto contra real
+
+```
+Errors: 0     Warnings: 2     Database Objects Affected: 32
+```
+
+| Item | Previsto no §0.10? | Real |
+|---|---|---|
+| `prod.wp_bwg_theme` — Row size too large | **sim** (Anexo C item 5) | idêntico, pré-existente desde 2025 |
+| `mysql_native_password` em `rootbahiaba` e `rds_superuser_role` | **sim** | idêntico — **e funciona no 8.4.9** |
+| **`SET_USER_ID` removido de 3 usuários** | **NÃO** | ver abaixo |
+
+### O único item não previsto — e por que não é portão
+
+O log lista, no item 8, que `rootbahiaba`, `rds_superuser_role` e `rdsadmin` perdem o privilégio
+`SET_USER_ID` (substituído por `SET_ANY_DEFINER` no 8.4).
+
+**Alcance prático: nenhum.** `SET_USER_ID` só é exigido para criar objeto com `DEFINER` de outro
+usuário, e o §0.1 já contou **0 rotinas, 0 gatilhos, 0 views** nos dois schemas. Não há o que
+quebrar. Fica registrado por honestidade de método — **o portão diz "incompatibilidade não
+prevista → PARE"**, e a decisão de não parar está justificada aqui, não escondida.
+
+## Validação — o que passou
+
+| Camada | Resultado |
+|---|---|
+| **2 — a BUSCA (teste principal)** | ✅ **idêntica termo a termo contra produção em 8.0.42** |
+| **4 — `CHECK TABLE`** | ✅ 6 de 6 `OK` |
+| **`EXPLAIN`** | ✅ planos idênticos |
+| **Log de erro do RDS** | ✅ sem erro |
+| **Parameter group** | ✅ exatamente 4 parâmetros de usuário |
+
+### Camada 2 — a busca, contra produção
+
+Índice íntegro nas duas: `PRIMARY`, `date_idx`, `ft(post_title,post_excerpt)`. **258.938 linhas
+dos dois lados.** Os 10 termos do `carga.sh`, `match_total` em 8.4.9 contra 8.0.42:
+
+| termo | 8.4.9 | 8.0.42 | termo | 8.4.9 | 8.0.42 |
+|---|---|---|---|---|---|
+| bahia | 14.876 | 14.876 | lula | 9.633 | 9.633 |
+| salvador | 14.133 | 14.133 | chuva | 1.579 | 1.579 |
+| carnaval | 2.906 | 2.906 | festa | 1.727 | 1.727 |
+| eleicao | 966 | 966 | saude | 3.347 | 3.347 |
+| praia | 1.066 | 1.066 | escola | 1.826 | 1.826 |
+
+**Dez de dez, exatos.** O índice FULLTEXT atravessou a subida de versão maior sem alteração de
+comportamento. Não precisa reconstruir.
+
+### `EXPLAIN` — a única diferença é estatística
+
+Busca, archive, autor e home: mesma ordem de tabelas, mesmos tipos de acesso, mesmas chaves,
+mesmo `Extra`. A única linha que difere é a estimativa de linhas no join do `wp_postmeta`
+(17 → 16) — estimativa, não plano.
+
+## Desempenho — a sonda SQL, mesma máquina, mesmo dado
+
+10 conexões × 50 rodadas = **11.000 medições de cada lado**, portão de contagem verde nas duas.
+
+| classe | 8.0.42 mediana | **8.4.9 mediana** | 8.0 p90 | **8.4 p90** | 8.0 máx | **8.4 máx** |
+|---|---|---|---|---|---|---|
+| busca | 43,6 ms | **43,7 ms** | 207,4 ms | **207,8 ms** | 400,1 ms | **430,6 ms** |
+| archive | 3,9 ms | **3,9 ms** | 5,6 ms | **5,3 ms** | 42,4 ms | **20,7 ms** |
+| home | 6,1 ms | **6,2 ms** | 7,9 ms | **7,4 ms** | 33,0 ms | **14,5 ms** |
+| contagem | 130,4 ms | **125,8 ms** | 168,1 ms | **162,5 ms** | 297,8 ms | **315,5 ms** |
+
+`Threads_running`: **pico 12 nos dois**, mediana 11.
+
+**Conclusão: empate.** Nenhuma diferença sai do ruído. O 8.4.9 não é mais rápido nem mais lento
+neste conjunto de consultas, nesta classe de máquina, com estes dados.
+
+**Honestidade sobre a comparação:** o buffer pool tinha 0,54 GiB na base e 3,12 GiB depois (o
+`CHECK TABLE` carregou tabelas inteiras). O que torna a comparação válida é outra coisa:
+`Innodb_buffer_pool_reads` ficou **congelado** nas passadas finais dos dois lados (35.207→35.208
+e 126.757 constante), ou seja, **o conjunto que a sonda toca estava residente nas duas medições**.
+O excedente é dado que a sonda não visita.
+
+## ⚠️ Quatro parâmetros que mudaram e o grupo de 4 linhas NÃO cobre
+
+Os 4 fixados aguentaram. Mas comparando as variáveis em execução, 8.4.9 contra a produção 8.0.42:
+
+| Variável | Produção 8.0.42 | **Teste 8.4.9** | Coberto? |
+|---|---|---|---|
+| `innodb_buffer_pool_instances` | **8** | **1** | ❌ |
+| `innodb_io_capacity_max` | **2000** | **400** | ❌ (deriva de `io_capacity`) |
+| `temptable_use_mmap` | 1 | 0 | ❌ |
+| `innodb_numa_interleave` | 0 | 1 | ❌ |
+| `binlog_format` | MIXED | ROW | esperado, e a AWS prefere ROW |
+
+**Por que isso não apareceu na medição:** a sonda usou **10 conexões**. Produção roda até
+**12 workers PHP-FPM × 5 pods**. `innodb_buffer_pool_instances=1` só dói sob concorrência alta,
+na disputa pelo mutex do pool — e a 10 conexões não dói.
+
+**Não dá para testar isso agora:** a instância já é 8.4, não há mais 8.0 contra o que comparar em
+concorrência alta.
+
+**Recomendação — fixar os dois primeiros em `bahia-mysql84`**, que é o grupo do verde:
+
+```
+innodb_buffer_pool_instances = 8
+innodb_io_capacity_max       = 2000
+```
+
+Custo zero, elimina duas variáveis da Fase D, e faz o verde nascer com o comportamento de
+produção em vez do padrão novo. **Precisa da palavra do Albert** — muda o desenho de 4 linhas
+que ele aprovou.
+
+## O que NÃO foi validado, e por quê
+
+| Camada | Situação |
+|---|---|
+| **1 — o site responde** | ❌ **impossível sob isolamento** — não há front-end apontando para a instância |
+| **3 — publicar matéria pelo painel** | ❌ mesma razão |
+| **5 — `carga.sh` ponta a ponta** | ❌ mesma razão; a sonda SQL o substituiu por desenho (§1.6) |
+
+**As três dependem de um front-end, e o isolamento que você pediu as exclui por construção.**
+Elas são exatamente o conteúdo da **Fase C**, onde o homolog tem painel e URL. Não são dívida
+desta fase; são o objeto da próxima.
+
+---
+
+# FASE 2 — Subida da instância de teste e validação (roteiro original)
 
 ## 2.1 O parameter group 8.4
 
