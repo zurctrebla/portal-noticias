@@ -1,0 +1,23 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "rds:CreateDBParameterGroup",
+        "rds:ModifyDBParameterGroup",
+        "rds:CopyDBParameterGroup",
+        "rds:DeleteDBParameterGroup",
+        "rds:RestoreDBInstanceFromDBSnapshot",
+        "rds:ModifyDBInstance",
+        "rds:DeleteDBInstance",
+        "rds:CreateDBSnapshot",
+        "rds:AddTagsToResource",
+        "rds:CreateBlueGreenDeployment",
+        "rds:SwitchoverBlueGreenDeployment",
+        "rds:DeleteBlueGreenDeployment"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

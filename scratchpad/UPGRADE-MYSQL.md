@@ -8,6 +8,18 @@ medido. Traz o roteiro fechado da instância de teste.
 `carga.sh`** (§T-1), que você pôs antes de tudo. Nenhuma alteração em banco, em Kubernetes ou em
 recurso da AWS. Todo o resto continua sendo leitura.
 
+> ### Janela de manutenção de 29/08/2026 — o que aconteceu
+>
+> | Fase | Resultado |
+> |---|---|
+> | Snapshot manual de produção | ✅ `bahia-prod-pre-upgrade-84-20260828`, **sem suspensão de E/S** |
+> | **Fase A** — instância de teste | ⛔ **PARADA no passo 1** — RDS somente leitura na credencial. **Não é incompatibilidade** |
+> | **Fase B** — T0 `OPTIMIZE` | ✅ **+2,032 GiB**, bloqueio ≤ 0,129 s |
+> | **Fase C** — homolog | ⏸ depende da Fase A |
+> | **Fase D** — produção Blue/Green | ⏸ depende de A e C |
+>
+> O portão de incompatibilidade **não chegou a ser testado**. Ver a nota de método logo abaixo.
+
 Repositório na revisão `a9c7d1ab`. Documentos irmãos: `HANDOVER.md` (§0.2.1 o achado do
 `bahia_ambiente()`, §16.3 o do `carga.sh`), `IMPORT-prod-para-homolog.md` (comando de dump),
 `RESTAURACAO-PRODUCAO-20260818.md` (números reais de dump),
@@ -24,7 +36,7 @@ Repositório na revisão `a9c7d1ab`. Documentos irmãos: `HANDOVER.md` (§0.2.1 
 | **T3** `DROP DATABASE homolog` | ✅ | **+3,49 GiB** |
 | **T2** 4 tabelas do Action Scheduler | ✅ | **+2,44 GiB** |
 | **T4** 5 tabelas do Rank Math | ✅ | **+0,58 GiB** |
-| **T0** `OPTIMIZE wp_adrotate_tracker` | ⏸ vale de tráfego | +2,0 GB previstos |
+| **T0** `OPTIMIZE wp_adrotate_tracker` | ✅ **29/08, 03:10 UTC** | **+2,032 GiB medidos** |
 | **Autoscaling de armazenamento** | 📋 avaliado, recomendado | ver §T-autoscaling |
 
 | | Antes (13:15 UTC) | Depois (13:45 UTC) |
@@ -62,6 +74,74 @@ de cada uma das três remoções, e os pods não registraram uma única menção
 > sem consequência**. Entre uma tarefa e outra, entre a Fase 2 e a Fase 3, no meio da janela —
 > parar custa a mensalidade de mais um mês, e nada mais. Nenhum portão deste documento precisa
 > ser forçado por relógio. Se um critério não passar, a resposta certa é sempre parar.
+
+---
+
+## ⚠️ Nota de método — a política de leitura foi desenhada para o levantamento, não para a execução
+
+**Descoberto na janela de 29/08/2026, ao tentar criar a instância de teste.** A Fase A parou no
+primeiro comando de RDS, e não por incompatibilidade: a credencial `bahia-pipeline` tem **RDS
+somente leitura**, pela política inline `RdsSomenteLeituraParaUpgrade84` — criada na Fase 0, com o
+nome deste projeto, e correta para o que se pedia dela **naquele momento**.
+
+Simulação de política (`iam:SimulatePrincipalPolicy`, sem efeito colateral):
+
+```
+allowed       rds:Describe*, rds:DownloadDBLogFilePortion, kms:DescribeKey
+implicitDeny  CreateDBParameterGroup, ModifyDBParameterGroup, CopyDBParameterGroup,
+              RestoreDBInstanceFromDBSnapshot, ModifyDBInstance, DeleteDBInstance,
+              CreateDBSnapshot, AddTagsToResource, CreateBlueGreenDeployment,
+              SwitchoverBlueGreenDeployment, DeleteBlueGreenDeployment, kms:CreateGrant
+```
+
+É `implicitDeny`, não deny explícito: **nenhuma SCP no caminho**, anexar política resolve.
+
+> **A lição, e ela é geral:** *permissão mínima para investigar não é permissão mínima para agir.*
+> As duas são legítimas e **são políticas diferentes**. A segunda precisa ser pedida **na hora de
+> executar**, não antecipada no levantamento — antecipá-la teria deixado o projeto inteiro com
+> permissão de apagar produção durante semanas de leitura.
+>
+> **O custo do desenho certo é este:** uma parada no início da janela. **É o custo barato.** O
+> desenho errado não teria parada nenhuma e teria dado a um agente automatizado
+> `DeleteDBInstance` sobre produção desde o primeiro dia de levantamento.
+
+**Corolário registrado em 29/08:** a credencial já tem `IAMFullAccess`, ou seja, **conseguiria
+autoconceder** o acesso que faltava. Não o fez, e a razão está aqui como regra: *uma trava
+removida por quem ela restringe deixa de ser trava.* A ampliação é pedida ao Albert, aplicada por
+ele, e removida no fechamento da janela.
+
+### Limite de tamanho — por que a política nova não entrou como inline
+
+O teto de **2.048 caracteres é agregado por usuário**, não por política. As quatro inline já
+existentes somam **1.556**, então sobram **492**:
+
+| Política inline | Caracteres |
+|---|---|
+| `bahia-pipeline-cloudformation` | 102 |
+| `bahia-pipeline-eks-iam` | 375 |
+| `EFSMinimalAccess` | 810 |
+| `RdsSomenteLeituraParaUpgrade84` | 269 |
+| **Total** | **1.556 / 2.048** |
+
+A primeira redação, com bloco KMS e `Sid`, tinha **756** caracteres — cabe folgada em 2.048
+sozinha, e **não cabe no que sobra**. Política gerenciada resolveria (teto de 6.144), mas o
+usuário **já tem 11 anexadas com quota de 10** — anexar a 12ª pode ser recusada.
+
+**Saída adotada:** política **nova e separada**, `RdsEscritaUpgrade84`, com as **12 ações
+explícitas** e **428 caracteres** — cabe nos 492 que sobram, **sem curinga** e **sem tocar na
+`RdsSomenteLeituraParaUpgrade84`**, que fica intacta para ser a única coisa a restar no
+fechamento da janela.
+
+O que saiu, e por quê:
+
+- **`Sid` e indentação** — o IAM não conta espaço em branco, mas o `Sid` conta.
+- **O bloco KMS** (~180 caracteres). O snapshot é cifrado, mas com a chave **gerida pela AWS**
+  (`alias/aws/rds`), cuja política de chave concede `kms:CreateGrant` a
+  `Principal: "*"` sob condição de `kms:CallerAccount` + `kms:ViaService` — **ela basta sozinha**,
+  sem permissão de identidade. Não deu para confirmar lendo a política da chave (`kms:GetKeyPolicy`
+  também é negado), então **fica como o único ponto a verificar na retomada**: se a restauração
+  falhar por KMS, o remendo é substituir a política de leitura pela combinada com curingas
+  (491 caracteres, orçamento de 761).
 
 ---
 
@@ -680,7 +760,43 @@ silenciosa. E não vai cair: a resolução foi testada de dentro do pod de produ
 
 ---
 
-## T0 — `wp_adrotate_tracker`: 2 GB de arquivo com 5 MB dentro
+## T0 — `wp_adrotate_tracker`: 2 GB de arquivo com 5 MB dentro ✅ CONCLUÍDO
+
+> ### EXECUTADO EM 29/08/2026, 03:10 UTC — na janela de manutenção
+>
+> | | |
+> |---|---|
+> | Dump | `~/BAHIABA-backups/dump-adrotate-tracker-20260829-0410.sql.gz` |
+> | Tamanho | **196.035 bytes** · bruto 1.083.092 B · permissão `444` |
+> | SHA-256 | `99ca121f61c5cc85270250735c35d7343b1f231d889e7006628bf7b4b4d0a0c5` |
+> | Linhas no dump | **22.309**, conferidas tupla a tupla contra a origem |
+> | `lock_wait_timeout` da sessão | **5 s**, confirmado por `SELECT @@session.lock_wait_timeout` antes do comando |
+> | Duração do `OPTIMIZE` | **0,612 s** |
+> | **Bloqueio real da tabela** | **≤ 0,129 s** — sonda paralela, 1.166 leituras em 60 s, **0 falhas** |
+> | `CHECK TABLE` depois | `OK` |
+> | Site depois | 200 em home, busca e archive |
+>
+> **Ganho: +2,032 GiB.** Arquivo da tabela de **~2.062 MB → 11,0 MB**; `FreeStorageSpace` de
+> **9,432 → 11,464 GiB** no CloudWatch, às 03:11 UTC.
+>
+> A nota *"Table does not support optimize, doing recreate + analyze instead"* apareceu como
+> previsto, seguida de `status OK`.
+>
+> **Não havia `mysqldump` nem cliente `mysql` na imagem** — só PHP. O dump foi escrito em PHP
+> (`SELECT` → `INSERT`), com guarda de ambiente que aborta se `siteurl` não for `https://bahia.ba`,
+> e **sem `DROP TABLE`**, de propósito: restaurar exige passo manual.
+>
+> ### ⚠️ Armadilha de medição — `DATA_FREE` mente depois do `OPTIMIZE`
+>
+> Logo após o comando, `information_schema.TABLES` **ainda dizia `DATA_FREE = 2.056 MB`** — o
+> valor de antes, idêntico. A estatística é cacheada (`innodb_stats_on_metadata=OFF` é o padrão
+> no 8.0) e **não se atualiza sozinha na leitura**.
+>
+> **O dado autoritativo é `information_schema.INNODB_TABLESPACES.FILE_SIZE`**, que já mostrava
+> 11,0 MB. Um `ANALYZE TABLE` depois trouxe a `TABLES` para 3,4 MB usados / 4,0 MB mortos.
+>
+> Quem conferir só pela `TABLES` conclui que o `OPTIMIZE` não fez nada e repete a operação sem
+> necessidade. **Confirmar sempre por `INNODB_TABLESPACES`, e cruzar com `FreeStorageSpace`.**
 
 **Nova tarefa, descoberta no levantamento de armazenamento.** É a mais barata do lote e vai
 primeiro, porque é o que dá folga para as outras.
@@ -1414,7 +1530,23 @@ mexi.** Vai para o `PENDENCIAS-gestores.md` junto com o achado 1, se você aprov
 
 ## 1.4 Os comandos, na ordem
 
-**Nenhum foi executado.**
+> **Estado em 29/08/2026, 03:0x UTC — passo 1 feito, passos 2 a 5 bloqueados por permissão.**
+>
+> | Passo | Estado |
+> |---|---|
+> | 1. security group `bahia-mysql84-teste` | ✅ **`sg-045aed7cf5c92b6c5`**, regra única `3306 ← 10.2.0.0/16`, etiquetado, **anexado a nada**, custo zero — passou porque é EC2, não RDS |
+> | 2. parameter group `bahia-mysql84` | ❌ `AccessDenied` |
+> | 3. cópia `bahia-mysql80-teste` e restauração | ❌ `AccessDenied` |
+> | 4. `siteurl` na cópia | ⏸ depende do 3 |
+> | 5. linha de base e subida | ⏸ depende do 3 |
+>
+> **As três chamadas falharam inteiras, sem estado parcial.** O snapshot de origem é o manual
+> `bahia-prod-pre-upgrade-84-20260828` (29/08 02:49:33 → 02:54:36 UTC, `available` 100%, 20 GiB,
+> 8.0.42, cifrado com `alias/aws/rds`) — **e não houve suspensão de E/S**: `WriteLatency` ficou
+> entre 0,65 e 0,86 ms durante toda a criação, com o site em 200.
+>
+> Isso **substitui a decisão A × B × C do §1.1**: o Albert tirou o snapshot manual (opção B) e o
+> evento temido não ocorreu.
 
 ```bash
 REG="--region us-east-1"
