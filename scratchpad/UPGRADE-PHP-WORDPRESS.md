@@ -139,7 +139,66 @@ válida para atualizar; e os três plugins tagDiv acompanham o tema, que é uma 
 
 ---
 
-## ⚠️ Risco de rollback: o `initContainer` não é atualizado pelo pipeline
+## ⚠️ Onde vive o manifesto — e a correção de duas coisas que escrevi errado
+
+**Os `Deployment` não estão neste repositório.** Vivem em
+`infra-bahiaba/kubernetes/{homolog,prod}/wordpress/deployment.yaml`, e **push em `kubernetes/**`
+é deploy**. Ou seja: há **dois caminhos** que alteram o que roda, e eles se sobrescrevem.
+
+### Correção 1 — produção JÁ atualiza os dois contêineres
+
+O `deploy-prod.yml` faz:
+
+```bash
+kubectl set image deployment/wordpress \
+  copy-wp-files="$IMG" \
+  wordpress="$IMG" \
+  -n "$NAMESPACE"
+```
+
+**Os dois, por SHA imutável**, e o workflow ainda imprime o comando de rollback com os dois no
+resumo da execução. **Produção está certa.** O que eu descrevi como problema do "pipeline" é
+problema **só do `deploy-homolog.yml`**, que faz `set image` apenas no contêiner `wordpress`.
+
+### Correção 2 — e o problema real é outro: **produção está rodando na tag flutuante**
+
+Estado lido dos `Deployment` agora:
+
+| | `initContainer` | contêiner de aplicação |
+|---|---|---|
+| **Homolog** | `homolog-latest` | **`a9c7d1ab…` (SHA)** |
+| **Produção** | **`prod-latest`** | **`prod-latest`** |
+
+O `deploy-prod.yml` fixa `prod-<sha>` nos dois. **Produção não está em nenhum SHA** — logo, o
+`set image` foi **sobrescrito por um `apply` do manifesto** depois do último deploy. Push em
+`kubernetes/**` reaplica o YAML, e o YAML declara `prod-latest`.
+
+**E o `initContainer` tem `imagePullPolicy: Always`.**
+
+**Consequência:** com os dois contêineres numa tag flutuante e `pull` sempre, **qualquer restart
+de pod — escalonamento do HPA, troca de nó, crash — puxa o que `prod-latest` estiver apontando
+naquele instante**, sem deploy nenhum. E o pino por SHA que o workflow coloca dura até o próximo
+push que toque `kubernetes/**`.
+
+O comentário do próprio manifesto conta que isto já aconteceu antes, em outra forma:
+
+> *"Até 2026-08-10 estas duas imagens eram `homolog-latest`, construída por push na `staging` —
+> era por isso que produção rodava o código da staging e absorvia qualquer push nela no próximo
+> restart de pod."*
+
+**A separação de ambientes foi corrigida; o mecanismo que a causou continua lá.** Hoje ele só é
+inofensivo porque `prod-latest` e o último build da `main` coincidem.
+
+**Por que isso importa para esta atualização:** o plano de rollback do PHP é "voltar a tag por
+SHA anterior nos dois contêineres". Isso funciona — **e é desfeito silenciosamente pelo próximo
+push em `kubernetes/**`**, que devolve os dois para `prod-latest`, ou seja, para o PHP novo.
+
+**Em homolog é pior**, e vale saber antes de começar: o `initContainer` está em
+`homolog-latest`, então **o `wp-content` servido é sempre o último build da `develop`**,
+independentemente do SHA fixado no contêiner de aplicação. Assim que eu commitar e o build rodar,
+qualquer restart de pod já traz o código novo.
+
+## ⚠️ Risco de rollback: o `initContainer` não é atualizado pelo pipeline DE HOMOLOG
 
 ```yaml
 initContainers:
@@ -151,14 +210,14 @@ containers:
     image: .../bahia-wordpress:a9c7d1ab...         # <- SHA fixo
 ```
 
-O workflow faz **apenas**:
+O `deploy-homolog.yml` faz **apenas**:
 
 ```bash
 kubectl set image deployment/wordpress wordpress=$ECR/$REPO:$IMAGE_TAG -n $NS
 ```
 
-**Só o contêiner de aplicação.** O `initContainer` fica em `homolog-latest`, que o mesmo build
-também empurra.
+**Só o contêiner de aplicação** — ao contrário do `deploy-prod.yml`, que faz os dois. O
+`initContainer` fica em `homolog-latest`, que o mesmo build também empurra.
 
 **Por que isso é grave para o rollback:** o `wp-content` servido — todos os 62 `mu-plugins` e o
 tema — vem do **`initContainer`**, não do contêiner de aplicação, porque o `emptyDir` monta por
@@ -166,8 +225,8 @@ cima de `/var/www/html`. **Voltar só o contêiner de aplicação para o SHA ant
 código.** Volta o binário do PHP e o core do WordPress, e deixa o `wp-content` novo por cima —
 um estado misto que nunca foi testado.
 
-**Em produção os dois estão em `prod-latest`**, o que é consistente mas remove a possibilidade de
-rollback por SHA sem editar o manifesto.
+**Em produção os dois estão em `prod-latest`** — consistentes entre si, mas **fora do SHA que o
+workflow fixa**, porque um `apply` do manifesto passou por cima. Ver a seção acima.
 
 ---
 
@@ -192,6 +251,10 @@ rollback por SHA sem editar o manifesto.
 - [ ] Você aprova **PHP 8.3 agora, PHP 8.4 não**
 - [ ] Você aprova **ficar na linha 6.8 do WordPress**, e tratar a janela do auto-update como
       tarefa própria
-- [ ] Você decide se o **`initContainer` entra no `kubectl set image`** do pipeline — é correção
-      de rollback, não desta atualização, mas ficaria barato fazer junto
+- [ ] Você decide se o **`deploy-homolog.yml` passa a fazer `set image` nos dois contêineres**,
+      como o de produção já faz — é correção de rollback, não desta atualização, mas sairia
+      barato junto
+- [ ] Você decide o que fazer com **produção rodando em `prod-latest`** nos dois contêineres, com
+      `imagePullPolicy: Always` — hoje qualquer restart de pod puxa o último build da `main` sem
+      deploy. **É tarefa própria e não bloqueia esta atualização**, mas afeta o rollback dela
 - [ ] Confirmar que **62 mu-plugins** é o número certo (o roteiro dizia 31)
