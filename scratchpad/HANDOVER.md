@@ -1479,3 +1479,82 @@ Scripts: `scratchpad/aquece-total.php` e `scratchpad/aquece-indices.php`.
 **E o portão que confirma não é percentual nenhum:** é **repetir a passada e ver as leituras
 físicas irem a zero**. Percentual exige escolher um número e um denominador — e o denominador
 errado já custou um portão inteiro (ver `UPGRADE-MYSQL.md`, Fase D, o portão dos 95%).
+
+---
+
+## 19. CIDR de VPC pode colidir com a rede interna da AWS — e o `PROCESSLIST` não distingue
+
+**Quase custou caro em 29/08/2026**, ao desenhar o security group novo do banco de produção,
+minutos antes da troca do Blue/Green.
+
+O `PROCESSLIST` do banco azul mostrava:
+
+```
+10.1.4.241    rdsrepladmin    <- a replicacao vinda do verde
+```
+
+E a regra do security group era:
+
+```
+tcp 3306 <- 10.1.0.0/16, 10.2.0.0/16, sg-0614f9d2cf0b6c697
+```
+
+**`10.1.0.0/16` é o CIDR do EKS de homolog.** A leitura óbvia — *"homolog está conectado ao banco
+de produção"* — está errada, e a leitura seguinte — *"então posso remover essa regra, homolog não
+precisa disto"* — poderia ter cortado a replicação do verde **no meio da operação**.
+
+### A prova está no ENI, não no IP da conexão
+
+| Instância | ENI na VPC | `@@hostname` |
+|---|---|---|
+| Produção (azul) | **172.31.70.197** | `ip-10-1-4-202` |
+| Verde | **172.31.70.50** | — |
+| Homolog | **172.31.50.61** | `ip-10-1-1-218` |
+
+**Prod e homolog estão os dois na `vpc-4c49202b` (172.31.0.0/16) e ambos reportam `@@hostname` em
+`10.1.x`.** Esse `10.1.x` é a **rede de gestão da AWS**, não a VPC de homolog. O CIDR escolhido
+para o EKS de homolog caiu em cima dela por coincidência.
+
+### As duas lições
+
+1. **O IP que aparece numa conexão não identifica de qual rede ela veio.** Bancos gerenciados
+   apresentam endereços da infraestrutura do provedor. **Conferir o ENI** (`describe-network-interfaces`)
+   antes de concluir qualquer coisa sobre origem.
+2. **Escolher CIDR de VPC sem verificar colisão com o provedor cria ambiguidade permanente.**
+   Não quebra nada sozinho — cria a condição para alguém ler errado, e errar numa regra de firewall.
+
+### E o que se faz quando a dúvida não se resolve a tempo
+
+**Não se mexe durante a operação.** Não deu para determinar de que lado o security group avalia a
+conexão de replicação, e a janela não é hora de descobrir. A mudança de SG foi adiada para
+**depois da troca**, quando a replicação já cumpriu o papel e o comando ficou sem consequência.
+
+Aplicada às 06:08:19 e concluída às 06:09:32 — **sem uma falha na sonda**. Adiar custou 19 minutos
+e removeu o risco inteiro.
+
+---
+
+## 20. Para cobrir um intervalo, sonda contínua vale mais que amostra em marcos
+
+**29/08/2026.** O plano da virada previa portão de carga **aos 0, 5 e 15 minutos**. O marco dos 5
+minutos passou enquanto se aguardava uma decisão, e a medição saiu aos 12.
+
+**O intervalo não ficou descoberto** — porque havia uma sonda rodando o tempo todo, de segundo em
+segundo, com reconexão a cada tentativa:
+
+```
+cobertura : 05:48:48 -> 06:12:14 UTC   (23,4 minutos)
+amostras  : 1.392      ok : 1.392      FALHAS : 0
+```
+
+Ela cobriu a troca do Blue/Green, os três portões de carga **e** a alteração de security group.
+
+**Um marco prova o instante dele e mais nada.** Se a indisponibilidade tivesse acontecido aos 3
+minutos, ou aos 8, os portões de 0/5/15 passariam todos e não veriam. A sonda contínua vê.
+
+**A regra:** marcos servem para **decidir** (portão que dispara rollback, com carga sintética e
+critério em número). Cobertura de intervalo é da **sonda contínua**, que roda do antes ao depois
+e não depende de o relógio da operação bater com o relógio de quem mede.
+
+E a sonda contínua é barata: um laço de `SELECT 1` com reconexão, um pod, um arquivo TSV.
+`scratchpad/indisponibilidade.php`.

@@ -2551,6 +2551,97 @@ corridas do verde: 11.000/11.000, zero erros, 107 amostras cada.
 
 ---
 
+# ✅ VIRADA CONCLUÍDA — 29/08/2026, produção em MySQL 8.4.9
+
+## Indisponibilidade: **ZERO segundo**
+
+```
+troca disparada   05:49:14 UTC
+troca concluida   05:50:29 UTC   (75 s de operacao)
+
+sonda de 1 em 1 segundo, com reconexao a cada tentativa:
+  cobertura : 05:48:48 -> 06:12:14 UTC   (23,4 min)
+  amostras  : 1.392     ok : 1.392     FALHAS : 0
+```
+
+**Nenhuma falha de conexão nem de consulta**, em 23,4 minutos cobrindo a troca, os três portões de
+carga **e** a alteração de security group.
+
+**O contraste que justifica o Blue/Green:**
+
+| Ambiente | Método | Indisponibilidade |
+|---|---|---|
+| Instância de teste | subida no lugar | **121 s** |
+| Homolog | subida no lugar | **148 s** |
+| **PRODUÇÃO** | **Blue/Green** | **0 s** |
+
+## Os três portões de carga
+
+| | T+0 | T+12 | T+18 (final) | Gatilho |
+|---|---|---|---|---|
+| Códigos | 30× 200 | 30× 200 | 30× 200 | — |
+| Mediana | 5,39 s | 6,07 s | **5,05 s** | — |
+| p90 | 8,12 s | 7,31 s | **5,96 s** | — |
+| Máximo | 8,59 s | 7,51 s | **6,15 s** | — |
+| **`Threads_running` pico** | **7** | **9** | **8** | **> 10 = rollback** |
+| `Threads_running` média | 3,0 | 3,2 | 3,1 | — |
+
+**Nenhum passou de 9.** A cauda apertou a cada corrida (p90 de 8,12 → 5,96 s) conforme o pool do
+verde aqueceu com tráfego real.
+
+**Nota de método:** o portão dos 5 minutos foi medido aos 12 — o marco passou aguardando decisão.
+Não foi rotulado como "5 minutos". A cobertura do intervalo veio da sonda contínua (HANDOVER §20).
+
+## Estado final
+
+| Recurso | Estado |
+|---|---|
+| `rds-bahiaba-2023` | **8.4.9**, `bahia-mysql84`, **`PubliclyAccessible=false`**, SG `bahia-mysql-prod` |
+| `rds-bahiaba-hml` | **8.4.9**, `default.mysql8.4` |
+| `rds-bahiaba-2023-old1` | 8.0.42 — **rede de rollback, ver abaixo** |
+| SG `bahia-mysql-prod` (`sg-082a1eabb3950f471`) | regra única: `3306 ← 10.2.0.0/16` |
+
+**Removidos no fechamento:** `rds-bahiaba-teste84`, `bahia-mysql80-teste`, SG
+`bahia-mysql84-teste` (`sg-045aed7cf5c92b6c5`), e o Blue/Green `bgd-8ut7qcosqs2aknnl`.
+
+## 🔴 `rds-bahiaba-2023-old1` — risco enquanto existir, e data de saída
+
+**Mantido de propósito como rede de rollback.** Mas o risco começa no segundo em que a troca
+aconteceu:
+
+> É um **banco de produção congelado**, com **o mesmo usuário e a mesma senha** do banco vivo,
+> **na mesma rede**, e com o security group **antigo** (`MySQL`, que aceita `10.1.0.0/16` e
+> `10.2.0.0/16`). Qualquer coisa que resolva o nome errado **escreve num banco que ninguém lê** —
+> sem erro, sem aviso, e com aparência de sucesso.
+
+**Ele diverge do banco vivo a cada segundo que passa.** Um rollback depois de horas de tráfego não
+é mais "voltar ao estado anterior": é perder tudo que foi publicado desde a troca.
+
+| | |
+|---|---|
+| **Vale até** | o site passar por **um ciclo de tráfego real** — um dia útil completo |
+| **Data de remoção sugerida** | **01/09/2026** (segunda-feira, após o fim de semana) |
+| **Comando** | `aws rds delete-db-instance --db-instance-identifier rds-bahiaba-2023-old1 --skip-final-snapshot --delete-automated-backups` |
+| **Antes de remover** | conferir que `rds-bahiaba-2023` responde e que a última publicação da redação está lá |
+
+**Não há snapshot a preservar:** o `bahia-prod-pre-upgrade-84-20260828` cobre o estado
+pré-virada, e é anterior e menor que este.
+
+## O número para os gestores
+
+| | |
+|---|---|
+| **Indisponibilidade do site** | **zero segundo** |
+| **Economia a partir de agora** | **US$ 241,20/mês** — o Extended Support do MySQL 8.0 em produção |
+| Evitado | a dobra para **~US$ 584/mês em 01/08/2028** |
+
+**Ressalva honesta sobre o número:** os US$ 241,20 são o custo medido do Extended Support **da
+produção**. Homolog também saiu do 8.0 e pode somar mais, mas **a inscrição dela nunca foi
+confirmada** — a credencial não vê o Cost Explorer (Anexo C, item 3). O número acima é o que está
+verificado; o real pode ser maior, nunca menor.
+
+---
+
 # Anexo A — Custo do Extended Support
 
 **US$ 241,20/mês** bate com: **4 vCPU × US$ 0,100/vCPU-hora × 603 horas**. São ~25 dias: é **a
