@@ -482,3 +482,151 @@ corridas de 30 URLs.
 - [x] painel abrindo
 - [x] **PHP foi a única variável** — core e `mtime` idênticos antes e depois
 - [x] indisponibilidade cronometrada: 34 s, bloco único
+
+---
+
+# ⚠️ A oferta da 7.1 no painel — auditoria de 29/08/2026
+
+**O painel oferece a 7.1 nos dois ambientes.** Levantado a pedido do Albert. **Nada foi
+atualizado.**
+
+**Correção de escopo do meu levantamento:** a existência da 7.1 *estava* registrada (§"WordPress:
+ficar na linha 6.8"). **O que faltou foi a pergunta que importa — se o auto-update pegaria uma
+versão principal sozinho.** Essa lacuna era minha, e é a séria: se pegasse, "ficar no 6.8" não
+seria uma decisão nossa, seria uma esperança.
+
+## 1. O que o painel oferece, exatamente
+
+`get_site_transient('update_core')`, conferido em produção **e** homolog, verificado às 07:14 UTC:
+
+```
+oferta 0: response=upgrade     current=7.1     php_min=7.4     locale=pt_BR
+oferta 1: response=upgrade     current=7.1     php_min=7.4     locale=en_US
+oferta 2: response=autoupdate  current=7.1     php_min=7.4     locale=en_US
+oferta 3: response=autoupdate  current=7.0.4   php_min=7.4     locale=en_US
+oferta 4: response=autoupdate  current=6.9.7   php_min=7.2.24  locale=en_US
+oferta 5: response=autoupdate  current=6.8.8   php_min=7.2.24  locale=en_US
+```
+
+Instalado: **6.8.3** nos dois. **A 7.1 aparece inclusive como `response=autoupdate`** — o que
+assusta, e é justamente por isso que a pergunta 2 precisava de resposta medida.
+
+## 2. ✅ O auto-update NÃO pega versão principal — verificado na função que decide
+
+**A 7.1 é versão principal:** ramo `6.8` → ramo `7.1`. Também são principais a 7.0.4 e a 6.9.7.
+
+Em vez de deduzir do padrão do WordPress, chamei a própria função de decisão do core:
+
+```
+Core_Upgrader::should_update_to_version()
+  7.1     ramo 6.8 -> 7.1   MAJOR   false
+  7.0.4   ramo 6.8 -> 7.0   MAJOR   false
+  6.9.7   ramo 6.8 -> 6.9   MAJOR   false
+  6.8.8   ramo 6.8 -> 6.8   MINOR   *** true ***
+
+find_core_auto_update()  ->  aplicaria sozinho: 6.8.8
+```
+
+**Idêntico nos dois ambientes.** Os valores que governam:
+
+| | valor | efeito |
+|---|---|---|
+| `auto_update_core_major` | **`'unset'`** | **principal DESLIGADO** |
+| `auto_update_core_minor` | `'enabled'` | minor ligado |
+| `auto_update_core_dev` | `'enabled'` | dev ligado |
+| `WP_AUTO_UPDATE_CORE` | **não definida** | vale o padrão acima |
+| filtro `allow_major_auto_core_updates` | **`false`** | nenhum plugin o liga |
+
+> ### ⚠️ A armadilha que quase me pegou aqui
+>
+> O filtro **`auto_update_core` devolve `true` para a 7.1**. Olhar só para ele — que é o nome
+> mais óbvio — daria a resposta **errada**. Ele governa *se o core atualiza*, não *para qual
+> versão*. A escolha da versão é do `should_update_to_version()`, e lá a 7.1 é `false`.
+>
+> **Dois filtros com nomes parecidos e respostas opostas.** A pergunta certa não é "o
+> auto-update está ligado?", é "o que `find_core_auto_update()` devolve?".
+
+**Conclusão: produção sobe sozinha para a 6.8.8, e não passa disso.** A Tarefa B continua sendo
+"divergência entre pods", não "mudança de versão principal sem aprovação".
+
+## 3. Compatibilidade da 7.1 — existe lá em cima, e nenhuma está instalada aqui
+
+Consultado o `api.wordpress.org` para os plugins que vivem lá:
+
+| plugin | **nosso** | upstream | tested up to | req. PHP |
+|---|---|---|---|---|
+| `advanced-custom-fields` | **6.2.1.1** | 6.8.9 | **7.1** | 7.4 |
+| `wordpress-seo` (Yoast) | **27.7** | 28.3 | **7.1** | 7.4 |
+| `wp-smushit` | **3.22.1** | 4.3.2 | **7.1** | 7.4 |
+| `capability-manager-enhanced` | **2.21.0** | 2.50.1 | **7.1** | 7.2.5 |
+| `foogallery` | **2.4.32** | 3.2.6 | **7.1** | 7.0 |
+| `google-site-kit` | **1.180.0** | 1.186.0 | **7.1** | 7.4 |
+| `taxonomy-terms-order` | **1.9.1** | 2.0 | **7.1** | — |
+| `amazon-s3-and-cloudfront` | **3.2.11** | 3.3.1 | 7.0.4 | **8.1** |
+| `co-authors-plus` | **3.6.6** | 4.1.1 | 7.0.4 | 7.4 |
+| `disable-comments` | **2.5.3** | 2.8.0 | 7.0.4 | 7.0 |
+| `twitter-auto-publish` | **1.7.6** | 1.7.7 | 7.0.4 | 7.4 |
+| `post-type-switcher` | **4.0.0** | 4.0.1 | 6.9.7 | 8.0 |
+| `regenerate-thumbnails` | **3.1.6** | 3.1.6 | 6.8.8 | 5.2.4 |
+
+**Nenhum plugin nosso está na versão de cima. Todos, sem exceção.** Alguns por muito: ACF
+6.2.1.1 → 6.8.9; Smush 3.22.1 → 4.3.2; CAP 2.21.0 → 2.50.1; FooGallery 2.4.32 → 3.2.6;
+Co-Authors 3.6.6 → 4.1.1.
+
+**Sete dos treze já suportam a 7.1 — em versões que não temos.**
+
+**Fora do wp.org, sem informação nenhuma:**
+
+| | situação |
+|---|---|
+| Tema **Newspaper 12.7.6** | pago, `Requires at least` e `Tested` **vazios** |
+| `td-composer`, `td-cloud-library`, `td-social-counter` | sem `readme.txt`, acompanham o tema |
+| **AdRotate Pro 5.13.1** | pago |
+| **ACF Pro 6.2.1.1** | pago (o 7.1 acima é do ACF gratuito) |
+| `role-quick-changer` | **não está mais no wp.org** — abandonado |
+| Nossos 6 plugins internos + **62 mu-plugins** | só testáveis rodando contra a 7.1 |
+
+**Os 62 mu-plugins passaram no `php -l` sob 8.3 e 8.4 — isso é sintaxe, não API do WordPress.**
+Compatibilidade com a 7.1 só se prova rodando, e não há ambiente 7.1 para rodar. **Construí-lo é
+projeto próprio.**
+
+## 4. ✅ A 7.1 NÃO exige PHP acima do 8.3
+
+```
+PHP  : exige >= 7.4      temos 8.2.29 (prod) / 8.3.28 (homolog)  -> OK
+MySQL: exige >= 5.5.5    temos 8.4.9                             -> OK
+```
+
+**O PHP não é o obstáculo — nem antes nem depois do 8.3.** O obstáculo são os plugins e o tema.
+
+## 5. O que muda de comportamento
+
+WordPress **7.1 "Mary Lou", lançada em 19/08/2026** — dez dias atrás. `db_version` **61833**
+contra os **60421** instalados: **1.412 revisões de esquema** de distância.
+
+Do Field Guide, filtrado para o que atinge tema clássico:
+
+| Área | Mudança | Risco aqui |
+|---|---|---|
+| **Editor em iframe, agora obrigatório** | "plugins que dependem de atravessar a fronteira do documento do editor devem revisar seu JavaScript e CSS" | **o maior** — o tagDiv injeta JS e CSS no editor |
+| **Barra de admin persistente** | permanece durante navegação nas telas do editor | quem estende a toolbar precisa revisar |
+| **REST/mídia** | validação de dimensões no sideload, `encode quality` em anexos, registro em múltiplos tamanhos | toca o Offload Media e o Smush |
+| `@wordpress/reusable-blocks` | depreciado, a caminho de no-op | baixo |
+| Prefixo `__experimental*` | passa a registrar depreciação no console | baixo |
+
+**O Field Guide não lista remoção de função PHP nem mudança de `WP_Query` ou de esquema** — o
+foco dele é o editor. **Isso não é o mesmo que dizer que não há**; é dizer que a fonte consultada
+não cobre. Duas versões principais (6.9 e 7.0) ficam no meio do caminho e não foram auditadas.
+
+## Veredito
+
+**A recomendação de ficar no 6.8 não muda — e agora está sustentada por medição, não por
+prudência.** O que mudou é a razão: não é só que os plugins declaram até 7.0, é que
+**nenhum deles está na versão que declara isso.**
+
+**O caminho para a 7.1, se um dia for desejado, é um projeto com esta ordem:** atualizar os 13
+plugins do wp.org → resolver os 4 pagos/sem-fonte (ACF Pro, AdRotate Pro, tagDiv, Newspaper) →
+decidir o que fazer com o `role-quick-changer` abandonado → só então o core, passando por 6.9 e
+7.0. **Não é uma atualização; é uma migração.**
+
+**E o alívio é real e verificado: nada disso acontece sozinho.**
