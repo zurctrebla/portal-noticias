@@ -1428,3 +1428,54 @@ leitura do valor em execução. Assentou exato.
 **E a correção trouxe a sua própria contrapartida**, registrada em destaque no §1.2 do
 `UPGRADE-MYSQL.md`: um valor absoluto em bytes **amarra o parameter group à `db.m5.xlarge`**.
 Três passos, três riscos, cada correção com o seu. O que não se pode é parar de medir no meio.
+
+---
+
+## 18. `COUNT(*)` não aquece tabela no InnoDB
+
+**Descoberto em 29/08/2026**, aquecendo o verde do Blue/Green. É o padrão do §16 aplicado a
+**preparação** em vez de medição: um instrumento que parece fazer o trabalho e não faz.
+
+```sql
+SELECT COUNT(*) FROM wp_posts;     -- NAO aquece a tabela
+```
+
+**O InnoDB conta pelo MENOR índice disponível**, que quase sempre é um secundário. Ele lê as
+folhas desse índice e **nunca toca as páginas de dado**. Num banco restaurado de snapshot, onde
+os blocos vêm do S3 sob demanda, isso significa que o dado continua frio depois de a passada de
+aquecimento ter "terminado com sucesso".
+
+**O sintoma:** o buffer pool empacou em **0,56 GiB e não subiu**, por três passadas seguidas.
+Nenhum erro. As consultas responderam. Os tempos até melhoraram entre a 1ª e a 2ª passada — o
+suficiente para parecer que tinha aquecido.
+
+### O que aquece de verdade
+
+```sql
+-- 1) as paginas de DADO: o indice agrupado E a tabela
+SELECT COUNT(*) FROM `t` FORCE INDEX (PRIMARY);
+
+-- 2) os caminhos ate ela: cada indice secundario, um a um
+SELECT COUNT(`primeira_coluna_do_indice`) FROM `t` FORCE INDEX (`nome_do_indice`);
+```
+
+Medido no verde, mesma instância, passadas em sequência:
+
+| Passada | Pool depois | Leituras físicas |
+|---|---|---|
+| `COUNT(*)` simples, 3× | **0,566 GiB** — empacado | — |
+| `FORCE INDEX (PRIMARY)` nas tabelas > 1 MB | **2,686 GiB** | 72.422 |
+| 47 índices secundários, um a um | **2,956 GiB** | 13.110 |
+| repetição das duas anteriores | 2,956 GiB (**+0,000**) | **0** |
+
+**Sem a passada com `FORCE INDEX (PRIMARY)`, o verde iria para a troca com o dado ainda no S3 e a
+ilusão de estar aquecido** — que é exatamente o modo de falha da virada de 18/08.
+
+**Os secundários importam tanto quanto:** a busca, o archive e a ordenação por data passam por
+eles. Um pool com o dado e sem os caminhos até ele ainda paga E/S na primeira consulta real.
+
+Scripts: `scratchpad/aquece-total.php` e `scratchpad/aquece-indices.php`.
+
+**E o portão que confirma não é percentual nenhum:** é **repetir a passada e ver as leituras
+físicas irem a zero**. Percentual exige escolher um número e um denominador — e o denominador
+errado já custou um portão inteiro (ver `UPGRADE-MYSQL.md`, Fase D, o portão dos 95%).
