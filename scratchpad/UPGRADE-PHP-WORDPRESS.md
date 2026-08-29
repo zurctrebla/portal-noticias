@@ -630,3 +630,149 @@ decidir o que fazer com o `role-quick-changer` abandonado → só então o core,
 7.0. **Não é uma atualização; é uma migração.**
 
 **E o alívio é real e verificado: nada disso acontece sozinho.**
+
+---
+
+# TESTE: WordPress 7.1 em HOMOLOG (29/08/2026) — **nada quebrou**
+
+**Só homolog. Produção não foi tocada e está verificada.** O objetivo era descobrir hoje o que a
+7.1 quebra, para dimensionar a migração. **A resposta é surpreendente e está medida.**
+
+## Método
+
+**Pelo caminho de código do painel, no pod em execução** — `Core_Upgrader::upgrade()` com a oferta
+`7.1 pt_BR`, `FS_METHOD=direct`, seguido de `wp_upgrade()`.
+
+**Por que não pela imagem:** o `Dockerfile` é **compartilhado com produção**. Trocar o `FROM` para
+uma tag 7.1 deixaria uma mudança de core esperando o próximo merge para a `main` — armadilha.
+Aplicando no pod, a mudança vive no `emptyDir` e some num `rollout restart`.
+
+**Não foi preciso destravar auto-update nenhum:** `auto_update_core_major` continua `'unset'`.
+A trava governa o updater **automático**; a atualização manual não passa por ela. **Nada foi
+alterado e nada precisa ser desfeito.**
+
+| Etapa | Resultado |
+|---|---|
+| Troca de arquivos | 08:29:40, ~10 s |
+| Migração de banco (`wp_upgrade()`) | **0,2 s** — `db_version` 60421 → **61833** |
+| **Indisponibilidade real** | **5 s**, em 2 blocos (4 s + 1 s), códigos 503 |
+
+> ⚠️ **O `kubectl exec` caiu no meio** (`connection reset by peer`, 08:36:27), depois da troca de
+> arquivos e **antes** do `wp_upgrade()`. Homolog ficou com core 7.1 e banco em 60421 por ~1
+> minuto. Refeito **destacado** (`setsid nohup`), que é como operação longa em pod deve rodar.
+> **Lição: `kubectl exec` não é um lugar seguro para processo longo — o túnel cai e não há como
+> saber o que ficou pela metade.**
+
+## O achado que reenquadra tudo: **o site usa o editor CLÁSSICO**
+
+O maior risco previsto era o **editor em iframe obrigatório da 7.1** contra o tagDiv, que injeta
+JS e CSS no editor. Medido no navegador, na tela de edição de uma matéria real:
+
+```
+editor_blocos    : false
+editor_classico  : true      (TinyMCE, #content_ifr)
+iframe_canvas    : 0         (o iframe da 7.1 e do editor de BLOCOS)
+```
+
+**A mudança que mais assustava não se aplica a este site.** O tagDiv monta a experiência de edição
+sobre o editor clássico, e a 7.1 não mexeu nele.
+
+## O editor, item a item
+
+| Item | Resultado |
+|---|---|
+| Tela de edição carrega | ✅ **HTTP 200**, 2,99 MB |
+| Campos ACF | ✅ **12 campos**, incluindo **`subtitulo`** e **`imagem`** |
+| Metabox do tagDiv | ✅ **11 elementos** `td_post*` / `tdc*` |
+| Co-Authors Plus | ✅ 14 elementos |
+| Yoast | ✅ 93 elementos |
+| Metaboxes visíveis | ✅ **16** |
+| Botão de publicar | ✅ presente |
+| **Erro fatal na página** | ✅ **nenhum** |
+| **Erro de JS no console** | ✅ **NENHUM** |
+| Aviso no console | **1**: `wp.compose.pure is deprecated since version 7.1` |
+
+O único aviso de console **não vem do nosso código** — `grep` em `plugins/`, `themes/` e
+`mu-plugins/` não acha `compose.pure`. Vem de bundle minificado ou do próprio core.
+
+**Os avisos na tela do painel são todos pré-existentes:** AdRotate ("107 anúncios expirados"),
+o pedido de doação do Twitter Auto Publish, e dois avisos padrão do WordPress **ocultos**.
+
+## Publicação e busca
+
+| Camada | Resultado |
+|---|---|
+| **Matéria de teste** | ✅ post no CPT `politica`, **subtítulo ACF**, **imagem** no campo ACF, **2 coautores** do CAP, **entrou na tabela-sombra**, permalink e páginas de autor gerados — removida sem resíduo |
+| **Índice de busca** | ✅ `PRIMARY`, `date_idx`, `ft` — estrutura idêntica |
+| **`MATCH` nos 10 termos** | ✅ todos respondendo; contagens iguais às de antes (+1 da matéria de teste) |
+| **Site** | ✅ **14 de 14** — home, 4 archives, single, 2 buscas, autor, Quem Somos, 404, `wp-admin`, `wp-login`, `/feed/` 410 |
+
+## Logs — comparados com a linha de base do PHP 8.3
+
+| | PHP 8.3 + WP **6.8.3** | PHP 8.3 + WP **7.1** |
+|---|---|---|
+| `PHP Fatal error` | **0** | **0** |
+| `PHP Deprecated` | **0** | **0** |
+| `PHP Warning` | 6 em 25 min | **7 em 25 min** |
+| Origens | `co-authors-plus:1193`, `puredevs-gdpr:356` | **as mesmas duas** |
+
+**Nenhum tipo de aviso novo.** O §23 aplicado: sem a linha de base, os 7 avisos seriam
+indistinguíveis de regressão.
+
+## Carga, com 5 min de descanso
+
+| | mediana | p90 | máximo | `Threads_running` pico / média |
+|---|---|---|---|---|
+| WP 6.8.3 | 10,55 s | 13,65 s | 14,32 s | 6 / 3,4 |
+| **WP 7.1** | **10,49 s** | **13,66 s** | **14,06 s** | 11 / **3,4** |
+
+30× 200 nas duas, portão verde. **Mediana e p90 idênticos.** O pico de 6 para 11 é ruído de
+amostragem de 30 pontos — a média é a mesma (§22: um pico de poucas amostras não mede pico).
+
+---
+
+## Dimensionamento da migração
+
+**Com o que foi medido, a migração para a 7.1 é MUITO menor do que o levantamento previa.**
+
+### O que mudou na avaliação
+
+| No levantamento (antes de testar) | **Medido agora** |
+|---|---|
+| "Editor em iframe é o maior risco, o tagDiv injeta JS e CSS nele" | **Não se aplica — o site usa o editor clássico** |
+| "Teto declarado é 7.0, maioria em 6.8 — apostar sem informação" | **Os plugins declaram 6.8/7.0 e funcionam na 7.1 do mesmo jeito** |
+| "Três versões maiores à frente, migração de projeto próprio" | **Zero fatais, zero erros de JS, zero regressão de desempenho** |
+
+### Estimativa
+
+| Trabalho | Dias |
+|---|---|
+| Repetir este teste com a redação usando o painel de verdade por um dia | **1** |
+| Fluxos de painel não cobertos: envio de mídia, agendamento, edição em massa, lixeira, revisões | **1** |
+| Atualizar os 13 plugins do wp.org e revalidar (é o maior bloco, e é independente da 7.1) | **2–3** |
+| Tema Newspaper e os 3 tagDiv: confirmar com o fornecedor ou testar o pacote novo | **1–2** |
+| Decidir o `role-quick-changer` (abandonado desde o WP 4.4) — substituir ou remover | **0,5** |
+| Subida em produção com Blue/Green de banco não é necessária; é rollout de imagem | **0,5** |
+| **Total** | **6 a 8 dias** |
+
+### Os bloqueadores reais — e nenhum é a 7.1
+
+1. **`role-quick-changer`, abandonado.** Fora do wp.org, `Tested up to 4.4.2`, sem manutenção
+   desde 2015. **É o único item da lista sem dono.**
+2. **Tema Newspaper 12.7.6 e os 3 plugins tagDiv.** Não declaram compatibilidade com nada, não
+   estão no wp.org, e são o código mais acoplado do site. **Funcionaram na 7.1 no teste de hoje**
+   — mas o teste cobriu abrir e publicar, não a superfície inteira do tema.
+3. **Os 13 plugins desatualizados.** **Este é o trabalho de verdade**, e ele existe
+   independentemente da 7.1: ACF 6.2.1.1 → 6.8.9, Smush 3.22.1 → 4.3.2, CAP 2.21.0 → 2.50.1.
+4. **ACF Pro e AdRotate Pro** exigem licença válida para atualizar. **Verificar antes de planejar.**
+
+### O que este teste NÃO cobriu, e é honesto dizer
+
+- **Uso real da redação.** Foram ~30 minutos, sem ninguém editando de verdade.
+- **Envio de mídia** — e a 7.1 mexeu em validação de dimensões e em `encode quality` no REST,
+  que toca o Offload Media e o Smush.
+- **6.9 e 7.0**, que ficam no caminho e não foram auditadas isoladamente.
+- **A superfície do tema além de abrir e publicar uma matéria.**
+
+> **Veredito: a 7.1 deixou de ser o obstáculo. O obstáculo é a dívida de plugins, que já existia
+> e que este teste tornou visível.**
