@@ -45,11 +45,59 @@ jobs:
             --region ${{ env.AWS_REGION }} \
             --name ${{ env.EKS_CLUSTER }}
 
+      - name: Imagem antes do deploy (para rollback)
+        id: anterior
+        run: |
+          CURRENT=$(kubectl get deployment/wordpress -n ${{ env.NAMESPACE }} \
+            -o jsonpath='{.spec.template.spec.containers[?(@.name=="wordpress")].image}' 2>/dev/null || echo "")
+          echo "imagem antes do deploy: ${CURRENT:-(deployment ainda nao existe)}"
+          echo "previous_image=$CURRENT" >> "$GITHUB_OUTPUT"
+
       - name: Deploy no EKS
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          IMG="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          # OS DOIS CONTEINERES, na mesma operacao — igual ao deploy-prod.yml.
+          #
+          # O initContainer copy-wp-files e quem popula /var/www/html no volume
+          # compartilhado que o php-fpm e o nginx enxergam: e ELE que entrega o
+          # wp-content, porque o emptyDir monta por cima do /var/www/html da
+          # imagem. O conteiner `wordpress` entrega o binario do PHP e o core do
+          # WordPress.
+          #
+          # Ate 2026-08-29 este passo atualizava so o `wordpress`. O resultado era
+          # que o initContainer ficava na tag flutuante do manifesto e o codigo
+          # servido vinha SEMPRE do ultimo build da develop, independentemente do
+          # SHA fixado aqui -- e um rollback por SHA voltava o PHP e o core, mas
+          # nao o codigo. Estado misto que nunca foi testado.
           kubectl set image deployment/wordpress \
-            wordpress=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            copy-wp-files="$IMG" \
+            wordpress="$IMG" \
             -n ${{ env.NAMESPACE }} || \
           echo "Deployment ainda não existe, será criado pelos manifests"
+
+          kubectl rollout status deployment/wordpress -n ${{ env.NAMESPACE }} --timeout=600s || true
+
+      - name: Como reverter
+        if: always()
+        run: |
+          ANTERIOR="${{ steps.anterior.outputs.previous_image }}"
+          if [ -n "$ANTERIOR" ]; then
+            {
+              echo "### Rollback deste deploy"
+              echo ''
+              echo '```bash'
+              echo "kubectl set image deployment/wordpress \\"
+              echo "  copy-wp-files=$ANTERIOR \\"
+              echo "  wordpress=$ANTERIOR \\"
+              echo "  -n ${{ env.NAMESPACE }}"
+              echo "kubectl rollout status deployment/wordpress -n ${{ env.NAMESPACE }}"
+              echo '```'
+              echo ''
+              echo "> O manifesto em \`infra-bahiaba/kubernetes/homolog/wordpress/deployment.yaml\`"
+              echo "> fixa um SHA proprio. Se este deploy for para valer, atualize o SHA la tambem —"
+              echo "> senao o proximo \`kubectl apply\` do tf-apply.yml desfaz este rollback."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
