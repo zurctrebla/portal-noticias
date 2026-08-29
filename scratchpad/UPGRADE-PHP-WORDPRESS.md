@@ -258,3 +258,60 @@ workflow fixa**, porque um `apply` do manifesto passou por cima. Ver a seção a
       `imagePullPolicy: Always` — hoje qualquer restart de pod puxa o último build da `main` sem
       deploy. **É tarefa própria e não bloqueia esta atualização**, mas afeta o rollback dela
 - [ ] Confirmar que **62 mu-plugins** é o número certo (o roteiro dizia 31)
+
+---
+
+# Tarefas próprias, decididas em 29/08/2026
+
+## Tarefa A — PHP 8.4, quando for a hora
+
+**Não é hoje.** O bloqueio é a depreciação de **tipo implicitamente nullable**
+(`function f(Foo $x = null)` passa a exigir `?Foo $x = null`). São `E_DEPRECATED`, não fatais,
+mas cada chamada escreve no log.
+
+**Quem depreca o quê — medido em 29/08/2026**, varredura restrita a listas de parâmetros:
+
+| Componente | Ocorrências | Podemos corrigir? |
+|---|---|---|
+| `amazon-s3-and-cloudfront` (WP Offload Media) | **244** | ❌ terceiro, gratuito — depende de release deles |
+| `twitter-auto-publish` (`vendor/composer/ca-bundle`) | 13 | ❌ dependência Composer vendorizada |
+| `adrotate-pro` (`library/mobile-detect.php`) | 9 | ❌ **pago** — depende de release |
+| `google-site-kit` (`third-party/firebase/php-jwt`) | 7 | ❌ dependência vendorizada |
+| `td-social-counter` (`vendor/abraham/twitteroauth`) | 5 | ❌ dependência vendorizada |
+| `themes/bahia_refactor/Mobile-Detect` | 1 | ✅ **nosso repositório**, biblioteca vendorizada |
+| `td-composer/includes/Mobile_Detect.php` | 1 | ❌ plugin do tema |
+| **`mu-plugins` (código nosso)** | **0** | — |
+| **TOTAL** | **280** | |
+
+**O padrão é claro: 100% está em biblioteca de terceiro vendorizada.** Nenhuma linha do nosso
+código precisa mudar. O caminho para o 8.4 é **esperar os releases**, não corrigir código.
+
+**O que destrava:** WP Offload Media sozinho responde por **87%**. Quando ele sair com o
+`?` nos tipos, o número cai para 36 e o assunto muda de figura.
+
+**Como reavaliar:** repetir a varredura (está em `git log` desta sessão) depois de cada rodada
+de atualização de plugins. **Não subir para 8.4 enquanto o total não estiver perto de zero em
+código que não controlamos.**
+
+## Tarefa B — o que atualiza sozinho hoje, que é deploy que ninguém aprova
+
+**Levantado em 29/08/2026, a pedido do Albert.**
+
+| Mecanismo | Estado | Consequência |
+|---|---|---|
+| **Auto-update do core do WordPress** | **LIGADO** (padrão; sem `DISALLOW_FILE_MODS` nem `WP_AUTO_UPDATE_CORE` no `wp-config.php`) | o core sobe sozinho de 6.8.3 para 6.8.8 dentro do pod, **num `emptyDir`** — e volta a 6.8.3 no próximo pod |
+| **`imagePullPolicy: Always`** nos dois contêineres | **LIGADO** | com tag flutuante, qualquer restart de pod puxa o build mais recente **sem deploy** |
+| **Tag flutuante no manifesto** (`prod-latest` / `homolog-latest`) | **em uso** | um `kubectl apply` desfaz o pino por SHA — ver a seção do `tf-apply` |
+
+**As três se somam:** o código e a versão do WordPress que rodam em produção num instante
+qualquer **não são determinados por nenhum deploy aprovado**. São determinados por *quando o
+último pod nasceu* e *o que estava em `latest` naquele momento*.
+
+**Perguntas que a tarefa precisa responder, e não respondi aqui:**
+
+1. Desligar o auto-update do core (`WP_AUTO_UPDATE_CORE=false`) e passar a atualizar pela imagem,
+   ou mantê-lo e aceitar a janela? **Desligar sem trocar a imagem congela em 6.8.3, que é pior.**
+2. O mesmo vale para plugins e temas — `DISALLOW_FILE_MODS` cobriria tudo de uma vez, e também
+   impediria instalação pelo painel, o que é decisão de processo, não técnica.
+3. O `wp-content/upgrade` existe no pod: o WordPress **está** escrevendo lá. Vale conferir se há
+   plugin com auto-update ligado individualmente.
