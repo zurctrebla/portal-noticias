@@ -2424,6 +2424,133 @@ horário que a AWS já reservou.
 
 ---
 
+# FASE D — O VERDE (29/08/2026) — criado, aquecido, **antes da troca**
+
+`bgd-8ut7qcosqs2aknnl` / `bahia-bg-84-20260829`.
+Verde: **`rds-bahiaba-2023-green-ghcfhd`**, `db.m5.xlarge`, **8.4.9**, `bahia-mysql84` `in-sync`.
+
+| Hora (UTC) | Evento |
+|---|---|
+| 04:56:26 | criação disparada — `PROVISIONING` |
+| 05:07:51 | réplica criada, replicação retomada |
+| 05:13–05:15 | verde sobe de 8.0.42 para **8.4.9** |
+| 05:26:50 | **`AVAILABLE`** |
+| 05:28:03 | verde `available` |
+
+**Produção intocada durante os 32 minutos:** `WriteLatency` plana em 0,64–0,79 ms, site em 200.
+
+## Os sete parâmetros, lidos EM EXECUÇÃO no verde
+
+```
+innodb_buffer_pool_size        11811160064   OK      innodb_io_capacity_max      2000  OK
+innodb_buffer_pool_instances   8             OK      innodb_adaptive_hash_index  1     OK
+innodb_io_capacity             200           OK      innodb_change_buffering     all   OK
+                                                     innodb_strict_mode          0     OK
+PORTAO: 7 de 7      versao=8.4.9   read_only=1   siteurl=https://bahia.ba
+```
+
+**O `buffer_pool_size` nasceu em 11,00 GiB exatos, sem arredondar** — a correção do §1.2 valeu.
+
+## Integridade: verde contra azul
+
+`estado-banco.php` nos dois, `diff` completo. **A única linha diferente é o nome do host.** Todas
+as contagens de tabela, todos os `MAX(ID)`, os índices FULLTEXT, os usuários e a contagem de
+posts por tipo: **idênticos entre 8.0.42 e 8.4.9.**
+
+## ⚠️ O portão dos 95% está QUEBRADO — e não é culpa do verde
+
+> **`Innodb_buffer_pool_bytes_data ≥ 95% da base` é inalcançável, e sempre foi.**
+
+| | |
+|---|---|
+| Base (azul) | **10,294 GiB** |
+| Dado que existe em disco | **4,063 GiB** (arquivos) / 3,587 GiB (lógico) |
+| Verde, totalmente aquecido | **2,956 GiB** |
+| Razão contra a base | **28,7%** |
+
+**O azul tem mais dado no pool do que existe no banco** — 2,4× mais. A explicação está na
+aritmética e no relógio:
+
+```
+dado vivo hoje                                  4,29 GiB
+tabelas apagadas em 27/08 (T2 + T3 + T4)      + 6,45 GiB
+                                              = 10,74 GiB   <- bate com os 10,29 GiB do pool
+uptime do azul: 457 dias — nunca reiniciou desde as remoções
+```
+
+**O pool do azul carrega o fantasma de 6,45 GiB de tabelas que não existem mais.** O verde
+nasceu há uma hora e só pode conter o que existe. **Nenhum verde jamais passaria neste portão**, e
+insistir nele significaria ou esperar para sempre ou abortar uma virada saudável.
+
+**É o §16 outra vez:** o portão responderia "reprovado" tanto para um verde frio quanto para um
+verde perfeito. Um critério que não distingue os dois casos não é critério.
+
+### O portão que substitui, e por que é melhor
+
+| Portão | Medido | Veredito |
+|---|---|---|
+| **Convergência: leituras físicas param** | 1ª passada **72.422** reads → 2ª passada **0** | ✅ definitivo |
+| **Taxa de acerto incremental, janela de 5 min sob carga** | **99,9995%** (244.828.613 requisições, **1.255** leituras físicas) | ✅ portão ≥ 99,9% |
+| **Residência sobre o dado que EXISTE** | 2,956 de 3,587 GiB = **82,4%** | ✅ |
+| Residência sobre a base do azul | 28,7% | ❌ métrica inválida |
+
+**Zero leituras físicas na segunda passada é mais forte que qualquer percentual:** significa que
+tudo que uma varredura completa de dados **e** de índices alcança já está residente. Não há o que
+carregar.
+
+## ⚠️ E o aquecimento tinha um defeito meu: `COUNT(*)` não aquece a tabela
+
+**O `SELECT COUNT(*) FROM t` do roteiro não derrota o lazy loading do que importa.** O InnoDB
+escolhe o **menor índice disponível** para contar — quase sempre um secundário — e lê só as
+páginas dele. **As páginas de dado nunca são tocadas.**
+
+O sintoma foi o pool empacar em **0,56 GiB e não subir mais**, por três passadas seguidas.
+
+A correção, em duas camadas:
+
+| Passada | Comando | Pool depois | Reads |
+|---|---|---|---|
+| `COUNT(*)` simples | `SELECT COUNT(*) FROM t` | **0,566 GiB** (empacado) | — |
+| **dados** | `SELECT COUNT(*) FROM t FORCE INDEX (PRIMARY)` | **2,686 GiB** | 72.422 |
+| **índices** | `SELECT COUNT(col) FROM t FORCE INDEX (idx)`, 47 índices | **2,956 GiB** | 13.110 |
+| repetição das duas | — | 2,956 GiB (**+0,000**) | **0** |
+
+`FORCE INDEX (PRIMARY)` varre o índice agrupado, **que é a tabela**. Sem ele, o verde iria para a
+troca com o dado no S3 e a ilusão de estar aquecido.
+
+Scripts: `aquece-total.php` (dados) e `aquece-indices.php` (secundários).
+
+## Desempenho do verde — duas corridas, com descanso entre elas (§16.10)
+
+| classe | verde #1 | verde #2 | referência 8.0.42 ¹ |
+|---|---|---|---|
+| busca | 45,3 ms | 46,6 ms | 43,6 ms |
+| archive | 3,9 ms | 3,9 ms | 3,9 ms |
+| home | 6,2 ms | 6,2 ms | 6,1 ms |
+| contagem | 128,5 ms | 134,5 ms | 130,4 ms |
+| `Threads_running` pico | **13** | **12** | 12 |
+
+¹ instância de teste em 8.0.42, mesma classe e mesmos dados. Portão de contagem verde nas duas
+corridas do verde: 11.000/11.000, zero erros, 107 amostras cada.
+
+## `ReplicaLag`
+
+**0 s**, com oscilações de ±1 s, em 14 leituras consecutivas de 1 minuto entre 05:25 e 05:38 UTC.
+
+## Portão de saída — antes da troca
+
+- [x] verde em 8.4.9 com `bahia-mysql84` `in-sync`
+- [x] **7 de 7 parâmetros verificados em execução**
+- [x] conteúdo idêntico ao azul
+- [x] convergência do aquecimento: 0 leituras físicas na repetição
+- [x] taxa de acerto incremental **99,9995%** ≥ 99,9%
+- [x] sonda com desempenho equivalente, duas corridas com descanso
+- [x] **`ReplicaLag` = 0 s**
+- [ ] ~~`bytes_data` ≥ 95% da base~~ — **portão inválido, substituído**
+- [ ] **grupo próprio de segurança** — a reportar antes de aplicar
+
+---
+
 # Anexo A — Custo do Extended Support
 
 **US$ 241,20/mês** bate com: **4 vCPU × US$ 0,100/vCPU-hora × 603 horas**. São ~25 dias: é **a

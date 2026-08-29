@@ -4,19 +4,18 @@
     {
       "Effect": "Allow",
       "Action": [
-        "rds:CreateDBParameterGroup",
-        "rds:ModifyDBParameterGroup",
-        "rds:CopyDBParameterGroup",
-        "rds:DeleteDBParameterGroup",
-        "rds:RestoreDBInstanceFromDBSnapshot",
+        "rds:CreateBlueGreenDeployment",
+        "rds:CreateDBInstanceReadReplica",
+        "rds:PromoteReadReplica",
+        "rds:SwitchoverBlueGreenDeployment",
+        "rds:DeleteBlueGreenDeployment",
         "rds:ModifyDBInstance",
         "rds:RebootDBInstance",
         "rds:DeleteDBInstance",
-        "rds:CreateDBSnapshot",
-        "rds:AddTagsToResource",
-        "rds:CreateBlueGreenDeployment",
-        "rds:SwitchoverBlueGreenDeployment",
-        "rds:DeleteBlueGreenDeployment"
+        "rds:RestoreDBInstanceFromDBSnapshot",
+        "rds:ModifyDBParameterGroup",
+        "rds:DeleteDBParameterGroup",
+        "rds:AddTagsToResource"
       ],
       "Resource": "*"
     }
