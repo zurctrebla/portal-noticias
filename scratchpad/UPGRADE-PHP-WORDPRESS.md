@@ -336,3 +336,97 @@ qualquer **não são determinados por nenhum deploy aprovado**. São determinado
    impediria instalação pelo painel, o que é decisão de processo, não técnica.
 3. O `wp-content/upgrade` existe no pod: o WordPress **está** escrevendo lá. Vale conferir se há
    plugin com auto-update ligado individualmente.
+
+---
+
+# FASES 2 e 3 — PHP 8.3 EM HOMOLOG ✅ APROVADO (29/08/2026)
+
+`FROM wordpress:6.8-php8.2-fpm` → `wordpress:6.8-php8.3-fpm`, commit `fd15e6f3` na `develop`.
+
+## Ordem executada, e por quê
+
+| # | Passo | Resultado |
+|---|---|---|
+| 1 | SHA fixo no manifesto de **homolog** (`89c6d6b` no infra) | rollout, **26 s** em 2 blocos |
+| 2 | Paridade do `deploy-homolog.yml` — os dois contêineres (`01506f89`) | rollout, **26 s** |
+| 3 | **PHP 8.3** (`fd15e6f3`) | rollout, **34 s** em 1 bloco |
+
+Produção **não foi tocada em nenhum dos três**: 5 pods, mesmos nomes, 200.
+
+## A prova de que só uma variável mudou
+
+Era o risco que o Albert levantou: o rollout devolve o core do WordPress para o 6.8.3 da imagem, e
+quem validar sem saber pode atribuir ao PHP um comportamento que é do core regredindo.
+
+| | Antes (07:04:27) | **Depois (07:15:50)** |
+|---|---|---|
+| PHP | 8.2.29 | **8.3.28** |
+| `wp_version` | 6.8.3 | **6.8.3** |
+| `core mtime` | 2025-09-30 17:30:38 | **2025-09-30 17:30:38** |
+| Extensões | 41 | **41** |
+
+**O core não se moveu** — porque o rollout do passo 2 já o tinha devolvido a 6.8.3, e a imagem
+nova entrega o mesmo 6.8.3. **Uma variável, provada, não assumida.**
+
+E a **terceira variável — o WP-Cron reatualizando no meio do teste — nunca disparou.** O `mtime`
+foi conferido no início, depois do deploy, depois da matéria de teste e no fechamento: idêntico
+nos quatro momentos. O `mtime` é o detector: o auto-update reescreve o arquivo e a data vira
+recente (foi assim que se viu o 6.8.8 de 26/08).
+
+## Indisponibilidade: 34 s, em bloco único
+
+```
+queda: 07:07:09 -> 07:07:42   34s
+codigos: 29x 503, 2x 502
+tempo de resposta quando OK: mediana 2,20s  p90 2,48s  max 4,46s
+```
+
+É o `maxSurge: 0` com uma réplica: o pod cai antes de o novo subir. **Esperado e aceito em
+homolog** — em produção o `maxSurge: 1` evita isso.
+
+## Validação
+
+| Camada | Resultado |
+|---|---|
+| **Site** | **12 de 12** — home, 3 archives, single, 2 buscas, autor, Quem Somos, 404, `wp-admin` (302), `wp-login` |
+| **Busca** (teste principal) | índice íntegro (`PRIMARY`, `date_idx`, `ft`), **242.864 linhas**, os 10 termos com `MATCH`, **8 cards** por busca na web |
+| **Matéria de teste** | post no CPT `politica`, subtítulo ACF **renderizado na página**, imagem no campo `imagem`, **2 coautores** do CAP, **entrou na tabela-sombra**, matéria e as 2 páginas de autor em 200, apareceu na busca — removida sem resíduo |
+| **Painel** | `/wp-admin/` 302 e `/wp-login.php` servindo o formulário |
+| **Logs dos 62 mu-plugins** | **0 fatais, 0 depreciações** |
+
+### Os avisos são pré-existentes — verificado contra produção
+
+Apareceram 6 `PHP Warning` em 25 min. **Nenhum é novo.** Produção, ainda em **PHP 8.2.29**, tem
+os mesmos, em volume muito maior:
+
+| Origem | Homolog (PHP 8.3, 25 min) | **Produção (PHP 8.2, 60 min)** |
+|---|---|---|
+| `co-authors-plus/php/class-coauthors-plus.php:1193` | 2 | **90** |
+| `puredevs-gdpr-compliance/.../class-pd-gdpr-public.php:356` | 2 | **5** |
+| `wp-smushit/core/class-url-utils.php:171` | 0 | 3 |
+| **Fatais / depreciações** | **0 / 0** | **0 / 0** |
+
+**O PHP 8.3 não introduziu um único aviso novo.** A comparação contra produção é o que permite
+afirmar isso — sem ela, os 6 avisos seriam indistinguíveis de regressão.
+
+## Carga — mesma receita, com 5 min de descanso
+
+| | n | mediana | p90 | máximo | `Threads_running` pico | média |
+|---|---|---|---|---|---|---|
+| **PHP 8.2.29** | 30× 200 | 10,54 s | 14,49 s | 14,98 s | **9** | 3,5 |
+| **PHP 8.3.28** | 30× 200 | **10,55 s** | **13,65 s** | **14,32 s** | **6** | 3,4 |
+
+**Empate na mediana, cauda melhor.** p90 caiu 0,84 s, o máximo 0,66 s e o pico de
+`Threads_running` de 9 para 6. Nada indica regressão; a melhora está dentro do ruído de duas
+corridas de 30 URLs.
+
+## Portão de saída da Fase 3
+
+- [x] site respondendo: 12/12
+- [x] busca funcionando, índice íntegro, resultados voltando
+- [x] matéria com subtítulo, imagem e coautoria — publicada, visível, removida
+- [x] 62 mu-plugins: **0 fatais, 0 avisos novos** (comparado contra produção)
+- [x] `carga.sh` antes e depois, com descanso, portão de contagem verde nas duas
+- [x] painel abrindo
+- [x] **PHP foi a única variável** — core e `mtime` idênticos antes e depois
+- [x] indisponibilidade cronometrada: 34 s, bloco único
