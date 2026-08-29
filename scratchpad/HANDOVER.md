@@ -1328,6 +1328,40 @@ crescer** entre passadas — foi o que sustentou a comparação 8.0 × 8.4 (cong
 lado e 126.757 do outro), não o total de bytes no pool, que diferia 6× entre as duas medições
 por razão irrelevante.
 
+### 16.10 Duas corridas de carga encavaladas medem a fila da primeira
+
+**Errei isto em 29/08/2026**, validando o homolog em 8.4.9, e o erro chegou a virar hipótese
+escrita antes de eu perceber.
+
+A corrida logo após o restart deu mediana 10,63 s. Suspeitei de buffer pool frio e **repeti
+30 segundos depois** para ver se melhorava. Saiu **pior**: 12,43 s, com `Threads_running` médio
+subindo de 7,1 para 8,3.
+
+**A segunda corrida não mediu aquecimento. Mediu a fila que a primeira deixou.** São 30
+requisições simultâneas de URLs frias contra uma `t3.micro`; meio minuto não basta para o
+PHP-FPM, o pool de conexões e o buffer pool voltarem ao repouso.
+
+Com **5 minutos de descanso**, a mesma carga deu **10,54 s e `Threads_running` pico 9** — abaixo
+do 8.0.45, que era 11.
+
+| Corrida | Intervalo desde a anterior | Mediana | `Threads_running` pico/média |
+|---|---|---|---|
+| #1 | — (pós-restart) | 10,63 s | 13 / 7,1 |
+| #2 | **30 s** | **12,43 s** | **15 / 8,3** |
+| #3 | **5 min** | **10,54 s** | **9 / 3,5** |
+
+**O número saiu 18% pior sem que nada tivesse piorado** — e, se eu tivesse parado na #2, teria
+relatado uma regressão que não existe.
+
+**A regra:** medição de carga precisa de **intervalo de recuperação** entre corridas. Sem ele, o
+instrumento mede a si mesmo.
+
+**Onde isto morde de verdade:** na Fase D o portão de carga em produção — `Threads_running` aos
+0, 5 e 15 minutos, com **acima de 10 virando rollback** — é o que decide desfazer a virada. Um
+número inflado por corrida encavalada **dispara um rollback desnecessário em produção**. As
+janelas de 0/5/15 já embutem o intervalo, **desde que não se repita a medição dentro de cada
+uma**.
+
 ### A regra que fica
 
 Toda medição precisa de um **portão de contagem**: quantas linhas entraram, quantas saíram, e

@@ -1423,6 +1423,34 @@ na janela tem **3,589 GB**.
 janela ainda não tem data. **C está descartado**: um `PrePatchCompatibility.log` gerado sobre
 tabelas que já foram apagadas não responde a pergunta que queremos fazer.
 
+> # 🔴 NÃO use `bahia-mysql84` no homolog. Ele derruba a `t3.micro`.
+>
+> **Se você chegou aqui pensando "vamos usar o mesmo parameter group nos dois ambientes, por
+> consistência" — pare e leia.** É a conclusão certa em quase todo projeto e é **errada neste**.
+>
+> `bahia-mysql84` fixa **`innodb_buffer_pool_instances = 8`**. O MySQL exige que
+> `innodb_buffer_pool_size` seja múltiplo de `chunk_size × instances`, e quando não é,
+> **ele aumenta o buffer pool sozinho** para satisfazer a conta.
+>
+> | | Produção | **Homolog** |
+> |---|---|---|
+> | Classe | db.m5.xlarge | **db.t3.micro** |
+> | RAM | 16 GiB | **1 GiB** |
+> | `innodb_buffer_pool_size` | 11,25 GiB | **256 MB** |
+> | `innodb_buffer_pool_chunk_size` | 128 MB | 128 MB |
+> | **Mínimo forçado por `instances=8`** | 1 GiB — irrelevante | **1 GiB — a RAM inteira** |
+>
+> **O parâmetro existe para proteger a produção sob concorrência alta, e é exatamente ele que
+> põe um buffer pool de 1 GiB numa máquina de 1 GiB.**
+>
+> **A regra:** `bahia-mysql84` é **só de produção** — a instância de teste e o verde do
+> Blue/Green. **Homolog fica em `default.mysql8.4`**, que é a continuação natural do
+> `default.mysql8.0` que ele sempre usou. Foi assim que a Fase C subiu, em 29/08/2026.
+>
+> **A lição geral:** parameter group não é configuração portável entre ambientes — é
+> configuração **acoplada ao tamanho da máquina**. Copiar "por consistência" transporta uma
+> premissa de hardware junto, e ela pode não valer do outro lado.
+
 ## 1.2 Parameter group de destino — quatro linhas, e uma que não é preciso escrever
 
 Família **`mysql8.4`**, nome proposto **`bahia-mysql84`**.

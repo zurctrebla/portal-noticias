@@ -10,6 +10,7 @@
         "rds:DeleteDBParameterGroup",
         "rds:RestoreDBInstanceFromDBSnapshot",
         "rds:ModifyDBInstance",
+        "rds:RebootDBInstance",
         "rds:DeleteDBInstance",
         "rds:CreateDBSnapshot",
         "rds:AddTagsToResource",
