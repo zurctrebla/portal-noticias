@@ -314,7 +314,59 @@ código precisa mudar. O caminho para o 8.4 é **esperar os releases**, não cor
 de atualização de plugins. **Não subir para 8.4 enquanto o total não estiver perto de zero em
 código que não controlamos.**
 
-## Tarefa B — o que atualiza sozinho hoje, que é deploy que ninguém aprova
+## 🔴 Tarefa B — PRIORIDADE IMEDIATA APÓS ESTA JANELA
+
+> **Elevada em 29/08/2026, à frente do levantamento de EC2 e do resto da fila.**
+
+### O fato que a eleva, medido em produção às 07:33 UTC
+
+> **Produção estava servindo WordPress 6.8.3 e 6.8.8 SIMULTANEAMENTE desde 28/08, e o leitor
+> recebia uma ou outra conforme o pod para o qual o ALB o mandava.**
+
+| pod | início | `wp_version` | `mtime` do `version.php` |
+|---|---|---|---|
+| `wordpress-5745977bf4-58zb4` | 29/08 07:19 | **6.8.3** | 2025-09-30 (da imagem) |
+| `wordpress-5745977bf4-7f5dk` | 27/08 13:03 | **6.8.3** | 2025-09-30 (da imagem) |
+| `wordpress-5745977bf4-gsf6q` | 27/08 13:02 | **6.8.8** | **2026-08-28 14:15** |
+
+**Os dois pods de 27/08 nasceram com 41 segundos de diferença. Um auto-atualizou, o outro não.**
+Cada um tem o seu próprio `emptyDir`, e o WP-Cron de cada pod decide sozinho quando rodar.
+
+**Isto não é "uma janela de versão antiga após restart", que era como estava descrito antes.**
+É **divergência de versão entre pods servindo tráfego ao mesmo tempo**, por pelo menos um dia,
+sem nada no cluster registrando.
+
+### E a normalização de hoje foi acidente, não conserto
+
+O rollout do pino de SHA (07:36–07:39) recriou os cinco pods, e todos voltaram ao **6.8.3** da
+imagem. **Ficou uniforme por acidente** — o efeito colateral de uma mudança que não tinha nada a
+ver com WordPress.
+
+**O WP-Cron vai recriar a divergência sozinho nos próximos dias**, um pod de cada vez, na ordem
+em que cada cron disparar. Sem intervenção, o estado misto volta.
+
+### Os três mecanismos que se somam
+
+| Mecanismo | Estado | Consequência |
+|---|---|---|
+| **Auto-update do core** | **LIGADO** (padrão; sem `DISALLOW_FILE_MODS` nem `WP_AUTO_UPDATE_CORE`) | cada pod atualiza por conta própria, para um `emptyDir` |
+| **`imagePullPolicy: Always`** | **LIGADO** nos dois contêineres | com tag flutuante, restart puxa build novo sem deploy (HANDOVER §21) |
+| **`/var/www/html` em `emptyDir`** | por desenho | cada pod tem o seu core, e ele morre com o pod |
+
+**Somados: o que roda em produção não é determinado por nenhum deploy aprovado** — é determinado
+por *quando cada pod nasceu* e *o que estava em `latest` naquele instante*, pod a pod.
+
+### O que a tarefa precisa decidir
+
+1. Desligar o auto-update do core (`WP_AUTO_UPDATE_CORE=false`) **e** passar a atualizar pela
+   imagem. **Desligar sem trocar a imagem congela em 6.8.3, que é pior que a divergência.**
+2. `DISALLOW_FILE_MODS` cobriria plugins e temas também, e impediria instalação pelo painel —
+   decisão de processo, não técnica.
+3. O `wp-content/upgrade` existe nos pods: conferir se há plugin com auto-update próprio.
+
+---
+
+## Tarefa B — levantamento original (o que atualiza sozinho hoje)
 
 **Levantado em 29/08/2026, a pedido do Albert.**
 

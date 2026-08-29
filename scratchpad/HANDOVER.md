@@ -1724,3 +1724,66 @@ Se o ambiente antigo tem **muitos** avisos e o novo tem **poucos**, a leitura in
 Pode ser só que o novo recebeu menos tráfego. **Normalizar por volume** — aqui, 90 em 60 min de
 produção contra 2 em 25 min de homolog, com ordens de grandeza de tráfego diferentes — é o que
 impede a conclusão fácil nos dois sentidos.
+
+---
+
+## 24. Limiar que converte latência em falsa indisponibilidade — e apaga a prova
+
+**Errei isto em 29/08/2026**, medindo o rollout do pino de SHA em produção. É o pior tipo de
+defeito de instrumento catalogado até aqui: **ele não erra o número — ele destrói o dado que
+mostraria o erro.**
+
+A sonda usava `curl --max-time 5` e classificava qualquer estouro como falha:
+
+```
+07:36:47  http=502  tempo=0.99s     <- erro de verdade
+07:39:56  http=000  tempo=5.01s     ┐
+07:40:10  http=000  tempo=5.00s     │
+   ... mais 9 iguais ...            │  TODAS coladas no teto de 5s
+07:44:53  http=000  tempo=5.01s     ┘
+```
+
+Reportei **12 falhas** num rollout que, por desenho (`maxSurge: 1` / `maxUnavailable: 0`), não
+deveria ter indisponibilidade nenhuma.
+
+**Onze das doze eram requisições mais lentas que 5 segundos**, não requisições sem resposta. O
+site estava no ar, com cache frio depois de o HPA escalar de 3 para 5 pods. A mediana das que
+responderam era 2,34 s, com p90 de 2,73 s — o teto de 5 s parecia folgado e não era, na janela
+de aquecimento.
+
+### O que torna este defeito pior que os outros
+
+Os defeitos do §16 **descartam** dado: o `xargs` engole linhas, a amostragem colapsa, o
+`carga.sh` gravava em diretório inexistente. O dado some, mas o mundo continua lá para ser
+medido de novo.
+
+**Este apaga a informação na origem.** A sonda desistiu aos 5 s, então **não existe forma de
+saber, depois, se aquelas requisições responderiam em 6 s ou nunca responderiam.** A pergunta
+"foi lentidão ou foi queda?" ficou permanentemente sem resposta para aquela janela.
+
+E o número que ele produz é **plausível**: "12 falhas durante um rollout" não chama atenção. Só
+apareceu porque a saída trazia o campo `tempo`, e os onze estavam todos em 5,00–5,01 s — um
+agrupamento que não acontece por acaso. **Se a sonda gravasse só o código, teria passado.**
+
+### O desenho certo, e a regra
+
+```bash
+# --max-time GENEROSO: define o que e "sem resposta"
+# LIMIAR separado: define o que e "lento", e lento continua sendo RESPOSTA
+--max-time 30        limiar_lento=5
+classes: ok | lento | erro | timeout
+```
+
+> **Timeout de cliente é uma decisão sobre o que se considera queda, não sobre paciência.**
+> Se o limiar de "lento" e o limite de "sem resposta" forem o mesmo número, o instrumento
+> deixa de distinguir degradação de indisponibilidade — e, pior, **destrói a evidência** que
+> permitiria separá-las depois.
+>
+> Sempre que houver um limiar que descarta a observação, pergunte: **o que eu perco para sempre
+> quando ele dispara?**
+
+Corrigido em `scratchpad/sonda-http.sh`. Em homolog o defeito não tinha aparecido porque lá as
+falhas eram `503` genuínos do ALB sem alvo saudável (`maxSurge: 0`, uma réplica); em produção,
+com `maxSurge: 1`, sempre há alvo saudável — então o que a sonda encontrou foi latência.
+**O mesmo instrumento, correto num ambiente e enganoso no outro, pela diferença da estratégia de
+rollout.**
