@@ -2379,3 +2379,76 @@ Cheguei a anunciar *"está acontecendo agora"* com base numa **única** mediçã
 medições seguidas depois deram **0,93 s**. Pior: cronometrando do meu computador, um `HIT` mediu
 **1,45 s** e um `MISS` **0,83 s** — porque ~0,9 s é rede até `us-east-1`. **Tempo medido da ponta
 errada não atribui nada**; o que atribui é o header, que estava lá o tempo todo.
+
+---
+
+## 37. Latência medida da ponta errada não mede o servidor
+
+**Onde apareceu.** Investigação do incidente de 01/09/2026.
+
+Cronometrando `https://bahia.ba/` **do meu computador**, um `HIT` de cache mediu **1,45 s** e um
+`MISS` mediu **0,83 s**. O HIT — que o servidor entrega do disco em milissegundos — apareceu
+**mais lento** que o MISS.
+
+**A causa é trivial e por isso perigosa:** ~0,9 s de cada medição é rede até `us-east-1`
+(`dns=0,003 + conexao=0,10 + tls=0,31 + primeiro byte=0,52`). O sinal do servidor — dezenas de
+milissegundos — fica **abaixo do ruído do transporte**, e a ordenação entre duas medidas passa a
+ser aleatória.
+
+Medido do lugar certo, os mesmos pods respondiam em **10 a 30 ms**.
+
+> **Tempo de resposta de servidor mede-se de dentro do cluster, ou pelo cabeçalho que o próprio
+> servidor emite.** Deste site: `X-FastCGI-Cache: HIT|MISS|BYPASS` já existia na resposta o tempo
+> todo, e é categórico — não depende de latência, de rota, nem de qual continente mede.
+>
+> Cronômetro na ponta do cliente serve para responder *"como está para o usuário"*. **Não serve
+> para atribuir custo a componente.**
+
+### E o falso positivo: "está acontecendo agora" com uma amostra
+
+No meio da mesma investigação anunciei que produção estava degradando **naquele instante**, com
+base em **uma** medição de 25,8 s. Quatro medições seguidas, minutos depois, deram **0,93 s**.
+
+É o §22 outra vez — agora na direção oposta. Lá a agregação inventou uma indisponibilidade que não
+existiu; aqui **uma amostra única inventou um incidente em curso**. A mesma disciplina resolve os
+dois casos: **nenhuma afirmação sobre estado a partir de um ponto — nem para o bem, nem para o
+mal.** E o custo do falso positivo não é zero: ele desvia a atenção de quem está lendo o relatório.
+
+---
+
+## 38. Qualquer query string desliga o cache — e o quanto isso custa é medível
+
+**Onde apareceu.** Mesma investigação. Regra encontrada no `default.conf` do nginx:
+
+```nginx
+if ($query_string != "") { set $skip_cache 1; }
+```
+
+Confirmado pelo cabeçalho, na mesma URL: limpa dá `HIT`; com `?utm_source=facebook` dá **`BYPASS`**,
+três vezes seguidas. **Não é heurística — é categórico.**
+
+**A consequência estrutural é real:** todo link que chega com parâmetro — `utm_*`, `fbclid`,
+`gclid`, qualquer coisa — **renderiza em PHP**. E link compartilhado em rede social costuma ter
+parâmetro.
+
+**Mas o volume, medido em 3 horas de log dos três pods, é modesto:**
+
+| | |
+|---|---|
+| requisições totais | 33.883 |
+| dinâmicas | 22.659 |
+| **com query string (bypass garantido)** | **3.452 — 15,2% das dinâmicas** |
+| **parâmetros de rastreio (`fbclid` + `gclid`)** | **18 ocorrências** |
+
+**Os 3.452 são quase todos internos, não campanha:** `s` (busca, 1.166), `q` (827), `url` (oEmbed,
+737), `redirect_to`/`reauth` (276 cada), `format` (184).
+
+> **A hipótese que eu ia defender — "o tráfego de rede social não cacheia" — não se sustenta neste
+> site: são dezoito requisições em três horas.** O que de fato não cacheia é a **busca** e o
+> **oEmbed**. Vale registrar a regra pelo que ela é, e o volume pelo que ele é: **eram coisas
+> diferentes, e só a medição separou.**
+
+**O que sobra de acionável:** 1.817 requisições em 3 h (8,0% das dinâmicas) têm query string que
+**não precisaria** desligar o cache — sobretudo `oembed` com `url=` e `format=`. Uma regra que
+liste os parâmetros que realmente exigem bypass (`s`, `doing_wp_cron`, `redirect_to`, `preview`,
+`p`, `page_id`, `replytocom`) em vez de negar tudo recuperaria essas 8%.
