@@ -1374,7 +1374,7 @@ salvar habilitado.
 
 ## 🟠 O que o console revelou — e que eu não tinha visto
 
-**Zero erros. Onze avisos por carga**, e três deles nomeiam o risco futuro com precisão:
+**Zero erros. Nove advertências por carga** (mais 2 logs informativos), e três delas nomeiam o risco futuro com precisão:
 
 ```
 Block with API version 2 or lower is deprecated since version 6.9.
@@ -1414,7 +1414,7 @@ Demais avisos: `wp.compose.pure` (depreciado na 7.1), `wp.compose.withState` (5.
 
 ## 🔴 E o "zero erros, um aviso" de 29/08 era subcontagem
 
-Naquele dia relatei **1 aviso**. Hoje são **11 por carga**. A diferença não é o ambiente: é que o
+Naquele dia relatei **1 aviso**. Hoje são **9 advertências por carga**. A diferença não é o ambiente: é que o
 rastreamento de console **começa quando a ferramenta é chamada**, e eu havia capturado **depois**
 da carga. **Os avisos de carregamento não estavam lá para serem lidos.**
 
@@ -1429,3 +1429,52 @@ elemento que só existe no clássico.
 
 **Consequência para o plano de lotes:** o lote 7 (PublishPress Capabilities) **não sobe** para
 primeiro. Não há caixa Publicar ausente para diagnosticar.
+
+---
+
+## ✅ LOTE 1 — concluído em 01/09/2026
+
+| Plugin | De | Para |
+|---|---|---|
+| Post Type Switcher | 4.0.0 | **4.0.1** |
+| WP Twitter Auto Publish | 1.7.6 | **1.7.7** |
+| Site Kit by Google | 1.180.0 | **1.186.0** |
+
+Os três continuam **ativos**. Atualizados pelo `Plugin_Upgrader` no pod, com
+`bulk_upgrade` — as três respostas `OK`, e o log do upgrader mostra download do wordpress.org,
+descompactação, remoção da versão antiga e "Plugin updated successfully" para cada um.
+
+**Rede antes de mexer:** `tar` dos três diretórios (4.272.082 bytes, 2.259 entradas) guardado —
+rollback de arquivo em segundos. **Sem dump de banco**: nenhum dos três migra dados.
+
+### Validação
+
+| Camada | Resultado |
+|---|---|
+| Site (home, 2 archives, busca, Quem Somos, autor) | **6 de 6** em 200 |
+| Busca | índice **242.864** linhas · **10 de 10** termos · `s=bahia` 501 encontrados |
+| Rascunho com ACF + coautoria | subtítulo ok, imagem `9000219`, **2 coautores**, removido sem resíduo |
+| Post Type Switcher carregado | sim |
+| Logs (8 min) | **0 fatais · 0 depreciações · 0 notices** · 5 avisos, mesmas duas origens conhecidas |
+| **Editor no navegador** | canvas em iframe, **0 blocos inválidos**, botão Salvar habilitado, 8 campos ACF, 11 metaboxes, 152 elementos tagDiv, **0 avisos do editor** |
+
+### 📌 Linha de base do console, para comparar nos próximos lotes
+
+**Zero erros. Nove advertências por carga**, idênticas antes e depois deste lote:
+
+```
+2x  Block API version 1: adrotate/advert, adrotate/group
+1x  Block API version 1: fooplugins/foogallery        <- ALVO DO LOTE 2
+1x  wp.compose.pure deprecated since 7.1
+1x  wp.compose.withState deprecated since 5.8
+1x  wp.editPost.PluginDocumentSettingPanel deprecated since 6.6
+3x  ... added to the iframe incorrectly (global-styles, td-guten-blocks, td-gut)
+```
+
+> **O teste objetivo do lote 2 é este:** se depois de subir o FooGallery para 3.2.6 a advertência
+> de `fooplugins/foogallery` **sumir**, é um bloco legado a menos — e sobram só os dois do
+> AdRotate, que não têm conserto pelo nosso lado.
+
+**Nota de contagem:** o registro anterior dizia "11 avisos"; são **9 advertências mais 2 logs
+informativos** (`JQMIGRATE` e `api-fetch preload`). Corrigido acima, porque este número é a
+linha de base de comparação dos próximos lotes e precisa estar exato.
