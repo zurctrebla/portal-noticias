@@ -2632,3 +2632,31 @@ algum momento, o Google indexou, e **continua voltando**. Não é ataque em curs
 > `/categoria/` vieram de outra origem, e os do Google são 96% `/listing-sell/`. A conclusão
 > parecia coerente porque encaixava num defeito conhecido, **e é justamente aí que encaixar é
 > perigoso.**
+
+---
+
+## 44. Encaixar num defeito conhecido dá coerência à conclusão errada
+
+**Onde apareceu.** 01/09/2026, ao decompor os 404 por origem.
+
+Vi `66.249.72.x` — Googlebot — no topo dos geradores de 404, e a conclusão veio pronta: *o Google
+está batendo em `/categoria/`, que é o defeito de taxonomia que já documentamos* (18 CPTs
+disputando o mesmo slug de reescrita). **Encaixava perfeitamente.** Havia um defeito conhecido,
+documentado, com sintoma exatamente igual, e um agente conhecido por insistir em URLs quebradas.
+
+**Medido: 540 dos 563 404 do Googlebot são `/listing-sell/…`. Os `/categoria/` vieram de outra
+origem.** A conclusão estava errada em quase 100%.
+
+> **Um defeito já documentado é a explicação mais barata que existe — e por isso a mais
+> perigosa.** Ele dispensa investigação: já tem nome, já tem causa, já foi aceito antes. Quando um
+> sintoma novo encaixa nele, a tentação é fechar sem medir, porque *fechar* parece confirmar o
+> que já se sabia.
+>
+> **O sinal é a sensação de coerência chegando antes do dado.** Se a explicação apareceu completa
+> antes de você contar as ocorrências, ela não veio da evidência — veio da memória.
+
+É a família do §16 numa forma nova. Nas outras, o instrumento respondia outra pergunta. **Aqui o
+instrumento estava certo e disponível; quem respondeu antes dele fui eu.**
+
+O que corrigiu foi trivial: agrupar por prefixo de URL em vez de aceitar a primeira hipótese —
+três linhas de código que eu só rodei porque decidi mostrar exemplos no relatório.
