@@ -2209,3 +2209,69 @@ registram só no painel.
 **O custo real deste erro nesta sessão:** a frase central de um relatório — *"o maior risco
 previsto da 7.1 não se aplica"* — era falsa, e ficou três dias de pé sustentando um
 dimensionamento de migração.
+
+---
+
+## 35. O autoscaler não enxerga esgotamento de pool de workers
+
+**Onde apareceu.** Incidente de 01/09/2026: a redação não conseguiu usar o painel de produção
+entre ~09:31 e ~09:36 UTC, enquanto o site público seguiu normal.
+
+**O que foi medido:**
+
+```
+DatabaseConnections (prod)  09:32  60
+                            09:33  60      <- teto exato, tres minutos travado
+                            09:34  60
+TargetResponseTime medio    09:33  11,41 s   (normal: 0,30 s)
+2XX por minuto              09:33  44        (normal: ~230)
+CPU do banco                09:33  16,4%     ReadLatency 0   DiskQueue 0,23
+```
+
+**60 = 5 pods × `pm.max_children` 12.** Todo worker do PHP-FPM segura uma conexão. Os sessenta
+estavam ocupados ao mesmo tempo: as requisições novas ficaram na fila do FPM, a latência subiu 38×
+e a vazão caiu 80%. **O banco estava ocioso** — o gargalo era a camada de aplicação.
+
+**Por que só a redação sentiu.** Quem está logado **não usa o `fastcgi_cache`**: cada clique vai a
+PHP. O leitor anônimo é servido pelo cache e não percebe nada. **Medir o site público não revela
+este defeito** — e foi exatamente o que o painel mostrava: tudo verde.
+
+### O ponto estrutural: o HPA é cego para este modo de falha
+
+```
+HPA: min=2 max=5, metricas cpu@70% e memory@80%
+Durante a saturacao: cpu=38%, memory=38%
+```
+
+**Nenhuma das duas métricas chega perto do gatilho, porque os workers não estão gastando CPU —
+estão bloqueados esperando I/O.** Um pool esgotado tem CPU baixa por definição: os processos
+existem, estão ocupados, e não fazem nada. O autoscaler vê um serviço folgado.
+
+E, mesmo que visse, **o Deployment já estava em 5 de 5**, o teto do próprio HPA.
+
+> **Escalar por CPU protege contra o gargalo de CPU, e só contra ele.** Quando a capacidade é
+> medida em *slots* — workers de FPM, conexões de banco, threads de fila —, a métrica que revela a
+> exaustão é a **ocupação do pool** ou o **tempo na fila**, nunca a CPU. Um sistema pode estar 100%
+> saturado com 38% de CPU, e o gráfico que o time olha vai dizer que está tudo bem.
+
+### O contrafactual, que é o que separa causa de coincidência
+
+Mesma janela (09:00–10:10 UTC), dias anteriores:
+
+| Dia | Conexões máx | Minutos ≥55 | Resp. média máx | PHP |
+|---|---|---|---|---|
+| 28/08 | 25 | 0 | 2,43 s | 8.2 |
+| 29/08 | 29 | 0 | 2,93 s | 8.2 |
+| **31/08** | **60** | **1** | 3,61 s | **8.2** |
+| **01/09** | **60** | **3** | **11,41 s** | **8.3** |
+
+**31/08 bateu o mesmo teto, ainda em PHP 8.2.** A saturação **não** foi causada pela subida do PHP
+8.3 — é anterior a ela. Sem esta comparação, o dia da mudança seria culpado por associação.
+
+**E 28 e 29/08 param em 25-29 conexões porque o teto era outro**: 5 pods × `max_children` **5**.
+A correção para 12 subiu o teto de 25 para 60 — e o teto de 60 também é alcançado. **Aumentar um
+limite sem medir a demanda troca o valor do teto, não a existência dele.**
+
+**O que não sei:** por que hoje foi pior que 31/08 (3 minutos contra 1; 11,4 s contra 3,6 s).
+Segunda-feira contra domingo é o candidato óbvio, e não tenho como separar isso do PHP 8.3 com os
+dados desta janela.
