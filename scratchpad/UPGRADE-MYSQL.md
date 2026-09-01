@@ -3142,3 +3142,74 @@ residuo: wp_posts=0  wp_postmeta=0   (limpo)
 **Remover a `RdsEscritaUpgrade84`** — o Albert faz no console, e a conferência por
 `simulate-principal-policy` volta neste documento. **A ordem foi respeitada: instância primeiro,
 política depois** — sem ela, o `DeleteDBInstance` teria sido perdido.
+
+---
+
+# 🔒 FECHAMENTO — `RdsEscritaUpgrade84` removida, 01/09/2026
+
+O Albert removeu a política no console **depois** da remoção da instância, na ordem correta.
+Conferência por `simulate-principal-policy` (sem efeito colateral):
+
+| Ação | Decisão |
+|---|---|
+| `rds:ModifyDBInstance` | **`implicitDeny`** ✅ |
+| `rds:DeleteDBInstance` | **`implicitDeny`** ✅ |
+| `rds:RestoreDBInstanceFromDBSnapshot` | **`implicitDeny`** ✅ |
+| `rds:CreateBlueGreenDeployment` · `Switchover` · `Delete` | `implicitDeny` |
+| `rds:CreateDBInstanceReadReplica` · `PromoteReadReplica` | `implicitDeny` |
+| `rds:ModifyDBParameterGroup` · `DeleteDBParameterGroup` | `implicitDeny` |
+| `rds:AddTagsToResource` | `implicitDeny` |
+| `rds:DescribeDBInstances` · `DescribeDBSnapshots` | `allowed` — leitura, como deve ser |
+
+**A trava voltou inteira.** Restam quatro políticas inline: `bahia-pipeline-cloudformation`,
+`bahia-pipeline-eks-iam`, `EFSMinimalAccess` e `RdsSomenteLeituraParaUpgrade84`.
+
+## 🟡 Achado na conferência: a política "somente leitura" não é somente leitura
+
+`rds:RebootDBInstance` continuou **`allowed`** depois da remoção. `MatchedStatements` aponta a
+origem:
+
+```
+origem: user_bahia-pipeline_RdsSomenteLeituraParaUpgrade84
+```
+
+```json
+{ "Sid": "RdsLeituraUpgrade84", "Effect": "Allow", "Resource": "*",
+  "Action": [ "rds:Describe*", "rds:ListTagsForResource", "rds:DownloadDBLogFilePortion",
+              "cloudwatch:GetMetricData", "cloudwatch:GetMetricStatistics",
+              "cloudwatch:ListMetrics", "rds:RebootDBInstance" ] }
+```
+
+**`RebootDBInstance` é escrita, e reinicia o banco de produção.** Medimos o custo disso nesta
+mesma janela: as duas subidas no lugar levaram **121 s e 148 s** de indisponibilidade. E o
+`Resource` é `*`, então alcança `rds-bahiaba-2023`.
+
+**O que torna isto pior que uma permissão a mais é o nome.** Quem auditar por nome — e é o que se
+faz numa lista de dez políticas — lê "SomenteLeitura" e segue adiante. A permissão de escrita
+está escondida atrás de um rótulo que promete o contrário. **Um nome que mente é um controle
+que não existe.**
+
+Correção: remover `"rds:RebootDBInstance"` da lista. É uma linha, e não afeta nada — a ação foi
+usada uma vez, na Fase 2, para aplicar parâmetro estático, e aquilo acabou.
+**Não faço eu: `rds:RebootDBInstance` seria removida com IAM, e a trava só é trava se não for eu
+quem mexe nela** (mesmo princípio de 29/08, §"a política que o Albert anexou").
+
+## Limpeza dos temporários da Fase 1 — verificada
+
+| Recurso | Estado |
+|---|---|
+| Instância `rds-bahiaba-teste84` | **não existe** |
+| SG `bahia-mysql84-teste` (`sg-045aed7cf5c92b6c5`) | **não existe** (`InvalidGroup.NotFound`) |
+| Parameter group `bahia-mysql80-teste` | **não existe** |
+| `bahia-mysql84` | **fica** — é o de produção, `in-sync` |
+| `mysql80-edit` | 🟡 **órfão**: era o do azul, família mysql8.0, sem instância. Inofensivo, mas é resíduo. Só sai com permissão sua — perdi o `DeleteDBParameterGroup` |
+
+## Estado final da camada de banco
+
+```
+rds-bahiaba-2023   8.4.9   db.m5.xlarge  pg=bahia-mysql84 (in-sync)  publico=NAO  sg=bahia-mysql-prod
+rds-bahiaba-hml    8.4.9   db.t3.micro   pg=default.mysql8.4         publico=NAO
+```
+
+**Um único security group dedicado em produção, nada exposto à internet, os dois ambientes na
+mesma versão.** O projeto de MySQL está encerrado.
