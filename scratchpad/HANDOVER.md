@@ -2452,3 +2452,36 @@ parâmetro.
 **não precisaria** desligar o cache — sobretudo `oembed` com `url=` e `format=`. Uma regra que
 liste os parâmetros que realmente exigem bypass (`s`, `doing_wp_cron`, `redirect_to`, `preview`,
 `p`, `page_id`, `replytocom`) em vez de negar tudo recuperaria essas 8%.
+
+---
+
+## 39. Meça o entorno, não só o alvo
+
+**Onde apareceu.** 01/09/2026, ao calcular quanto a raspagem de busca custava em dólar.
+
+A pergunta era estreita: *quanto custa em banda a raspagem?* A resposta é **US$ 3,65/mês** — 41 GB,
+1,7% da saída. Quase nada.
+
+**Mas para responder foi preciso medir a banda total.** E ali, ao lado, estava isto:
+
+```
+saida do ALB          : 2.355 GB/mes  ->  ~USD 212/mes
+compressao            : DESLIGADA  (#gzip on; comentado no nginx.conf)
+home                  : 575.135 bytes que caberiam em 93.784  (-83,7%)
+economia ao ligar     : ~USD 170/mes = USD 2.034/ano
+```
+
+**O achado colateral vale 46× o achado que eu procurava.**
+
+> **Ao investigar um custo, meça a categoria inteira à qual ele pertence, não só a fatia
+> suspeita.** A fatia só ganha sentido contra o total — e o total costuma ter dentro dele coisas
+> que ninguém foi procurar, porque ninguém tinha motivo para olhar ali.
+
+E não foi sorte: a mesma varredura produziu **três** achados que não eram o alvo —
+`robots.txt` respondendo **404** (com o sitemap existente e invisível), a busca já sendo
+`noindex` (o que barateia a defesa), e os 8% de `oembed` que não precisavam sair do cache.
+**Nenhum deles apareceria numa consulta que perguntasse só pela raspagem.**
+
+**O contraponto honesto:** medir o entorno custa tempo e produz distração. A disciplina não é
+"meça tudo" — é **medir o denominador de qualquer fração que se vá reportar**. "1,7% da banda"
+obriga a conhecer a banda; e é ao conhecer a banda que se vê o que há nela.
