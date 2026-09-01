@@ -2660,3 +2660,31 @@ instrumento estava certo e disponível; quem respondeu antes dele fui eu.**
 
 O que corrigiu foi trivial: agrupar por prefixo de URL em vez de aceitar a primeira hipótese —
 três linhas de código que eu só rodei porque decidi mostrar exemplos no relatório.
+
+### Acréscimo ao §43 — o rastreador não é teimoso, está sendo confirmado
+
+Descoberto ao montar o diff: **as URLs de spam não devolvem 404 — devolvem `301` para matérias
+reais**, adivinhadas pelo `redirect_guess_404_permalink()` do núcleo a partir do último segmento.
+
+```
+/listing-sell/qualquer/coisa -> 301 -> /entretenimento/coisa-atipica-diz-equipe-de-roberto-carlos.../
+/craigslist/x                -> 301 -> /economia/x-afirma-que-pagou-todas-as-multas.../
+/near-me/y                   -> 301 -> /entretenimento/yacoce-simoes-celebra-35-anos.../
+```
+
+**Isso muda a leitura inteira do item.** Eu tinha descrito o Googlebot como rastreador insistindo
+em URLs mortas — dívida de índice, custo de worker. **Não é isso.**
+
+> **Do ponto de vista do Google, aquelas URLs FUNCIONAM.** Ele pede, recebe `301`, chega em
+> conteúdo real e relevante. É a confirmação de que a URL vale — e por isso ele volta. **O
+> comportamento que eu li como teimosia é, na verdade, o crawler respondendo corretamente a um
+> sinal que nós emitimos.**
+
+E o dano não é só nosso worker: **é o domínio emprestando autoridade a URLs de spam.** Cada 301
+diz ao Google que `bahia.ba/listing-sell/<lixo>` é um endereço legítimo deste site que leva a
+conteúdo bom. **É vetor de SEO trabalhando contra o site**, não apenas consumo de CPU.
+
+**A lição de método:** ao medir um custo, eu classifiquei o agente (*"rastreador teimoso"*) antes
+de verificar **o que ele recebia de volta**. O status da resposta estava no mesmo log que eu já
+estava lendo. **Um padrão de requisição só se interpreta junto com a resposta que ele obtém** —
+sozinho, ele descreve metade da conversa, e a metade que falta é a nossa.
