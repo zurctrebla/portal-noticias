@@ -2297,3 +2297,85 @@ primeiro dia em 8.3.
 **Isto é registro de incerteza, não de conclusão.** A tentação é fechar a causa no dia da mudança,
 porque é a explicação mais disponível — e foi exatamente contra isso que o contrafactual de 31/08
 serviu.
+
+---
+
+## 36. Não atribua capacidade sem medir quem a consome
+
+**Onde apareceu.** 01/09/2026. Eu tinha diagnosticado o incidente da redação como saturação de
+PHP-FPM e preparado a correção — `max_children` 12→20 e `minReplicas` 2→6. **O Albert parou a
+aplicação com uma pergunta de uma linha:** *60 conexões simultâneas não batem com o número de
+pessoas trabalhando no painel.*
+
+**Ele estava certo.** Os logs do nginx da janela 09:31–09:36, dos pods que viveram o incidente:
+
+| Classe | Requisições | % das dinâmicas |
+|---|---|---|
+| público | 2.428 | 83,6% |
+| **busca `/?s=`** | **400** | **13,8%** |
+| wp-json | 46 | 1,6% |
+| **wp-admin + login + admin-ajax** | **27** | **0,9%** |
+
+**A redação era 0,9%.** A correção que eu ia aplicar teria dado mais capacidade para servir mais
+depressa um tráfego que não era dela — **exatamente o erro de quando 5 virou 12**, que trocou o
+valor do teto sem mudar sua existência.
+
+### O que o tráfego era
+
+```
+2.259 IPs distintos em 2.905 requisicoes dinamicas
+2.194 deles fizeram UMA requisicao so
+400 buscas vindas de 399 IPs distintos — 398 com uma busca cada
+user-agents: Chrome/Safari/Firefox comuns, de Mac e Windows
+```
+
+**Uma busca por IP, quatrocentos IPs, em seis minutos.** Não é rastreador — é **pool distribuído**,
+e a distribuição existe justamente para que nenhum limite por IP alcance. As defesas que o site já
+tem não pegam: o mapa `bad_bot` casa por user-agent (Ahrefs, Semrush, Bytespider…) e estes se
+apresentam como navegador; e os `limit_req_zone` existentes cobrem **só** `login` e `xmlrpc`.
+
+E o padrão **se repete**: 80 buscas às 08:12, 111 às 08:30, **436 às 09:30**, 239 às 10:12 —
+contra média de 45 por bloco de 6 minutos. O pico foi **9,8× a média**.
+
+### O que eu ainda NÃO consigo responder, e é o ponto
+
+A pergunta era *"dos 60 workers, quantos eram a redação e quantos outra coisa"*. **A primeira
+metade está respondida — quase nenhum. A segunda não.**
+
+Com os custos medidos em repouso, a janela inteira precisa de **~3,5 workers de média**. Foram
+**60**. **Um fator de 17 que não fecha.**
+
+**Sei onde estão os pontos cegos, e são todos de instrumentação:**
+
+| Falta | Consequência |
+|---|---|
+| `$request_time` no `log_format` | uso custo em repouso, não o custo durante a saturação |
+| `$upstream_cache_status` no `log_format` | infiro HIT/MISS por unicidade de URL em vez de medir — **e o header `X-FastCGI-Cache` existe na resposta, só não é registrado** |
+| `request_slowlog_timeout` do FPM desligado | nenhum registro de em que função um worker lento parou |
+| média de 6 minutos | esconde rajada de segundos, que é onde 60 acontece |
+
+> **Antes de aumentar um limite, meça quem o está consumindo.** Um teto alcançado prova que a
+> demanda passou da oferta — **não prova de quem é a demanda**. E sem saber de quem é, aumentar a
+> oferta é comprar capacidade para um consumidor que você não escolheu.
+
+### Achado colateral, este sim acionável
+
+```nginx
+if ($query_string != "") { set $skip_cache 1; }
+```
+
+**Qualquer query string desativa o cache.** Confirmado pelo header: a mesma URL dá `HIT` limpa e
+`BYPASS` com `?utm_source=facebook`. **A busca, portanto, nunca é cacheada** — e são 238 termos
+distintos em 436 requisições, então cachear removeria ~45% delas.
+
+Na janela do incidente, 520 das 2.905 dinâmicas (17,9%) tinham query string. **Verifiquei se eram
+`utm_*`/`fbclid` — não eram**: 401 são o `s=` da busca, o resto é `q`, `url` (oEmbed) e parâmetros
+de REST. **A hipótese do rastreamento de campanha não se sustentou, e é bom que eu tenha
+conferido antes de construir a história em cima dela.**
+
+### E um erro meu de instrumento, no meio disto
+
+Cheguei a anunciar *"está acontecendo agora"* com base numa **única** medição de 25,8 s. Quatro
+medições seguidas depois deram **0,93 s**. Pior: cronometrando do meu computador, um `HIT` mediu
+**1,45 s** e um `MISS` **0,83 s** — porque ~0,9 s é rede até `us-east-1`. **Tempo medido da ponta
+errada não atribui nada**; o que atribui é o header, que estava lá o tempo todo.
