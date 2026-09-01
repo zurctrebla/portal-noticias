@@ -1542,3 +1542,46 @@ blocos legados restantes, de 126 registrados:
 > canal de correção.** O item 13 do `PENDENCIAS-gestores.md` foi atualizado com esse contraste —
 > o FooGallery custou uma atualização de rotina; o AdRotate virou decisão porque não há por onde
 > a correção chegar.
+
+---
+
+# 🔺 ANEXO D ELEVADO OUTRA VEZ — o incidente é a TERCEIRA manifestação
+
+**Registrado em 01/09/2026.** O mesmo achado apareceu três vezes no mesmo dia, por três caminhos
+diferentes:
+
+| # | Onde | Custo medido |
+|---|---|---|
+| **1** | Rollout do PHP 8.3 em produção | **35 falhas em 1.459 req = 2,40%**, contra 0,10% fora da janela |
+| **2** | Rollout disparado pelo `apply` do manifesto | 5 falhas em 628 req = 0,80%, contra 0,00% fora |
+| **3** | **Incidente da redação** | quem está logado **não tem cache para absorver** — é quem paga o rollout, e é quem pagou a saturação |
+
+**A terceira manifestação é a que muda a natureza do item.** As duas primeiras eram custo de
+operação nossa. A terceira mostra que **a mesma população — a redação — é a que sofre nos dois
+casos**, porque em nenhum dos dois há cache entre ela e o PHP.
+
+E os **dois rollouts da correção de capacidade somam mais uma dose**: cada um ~2,40%, ambos
+pagos principalmente por quem está logado.
+
+> **O Anexo D deixou de ser melhoria de desenho e virou item que se paga a cada operação.**
+> Enquanto não existir `readinessProbe` e `preStop`, toda mudança em produção — inclusive as que
+> existem para ajudar a redação — cobra um pedágio da redação.
+
+**São três correções, e continuam sendo três:**
+
+1. `readinessProbe` — sem ela, `maxUnavailable: 0` conta pods, não capacidade de servir
+2. `preStop` — sem ele, o pod derrubado segue recebendo tráfego durante a desregistração
+3. **`rollout restart` incondicional no `tf-apply.yml`** — deveria ser condicional a mudança de
+   ConfigMap/Secret; hoje qualquer edição em `kubernetes/**` custa um rollout inteiro
+
+## Caminho 3 da capacidade — tarefa própria, ao lado do Anexo D
+
+**O HPA por CPU é cego para esgotamento de pool por construção.** Medido: durante a saturação
+completa dos 60 workers, `cpu=38%` e `memory=38%` — nenhuma das duas métricas chega perto do
+gatilho, porque worker bloqueado esperando I/O **não gasta CPU**.
+
+**O sinal certo é ocupação do pool ou tempo de fila**, não utilização de CPU. Implementação
+possível: expor o `php-fpm status` (`listen.status_path`), coletar `active processes` /
+`listen queue`, e escalar por métrica externa. **Não resolve amanhã, e por isso não entra na
+janela de capacidade** — mas é o que faz a correção de hoje parar de ser um número escolhido a
+mão.
