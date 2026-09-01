@@ -1740,3 +1740,74 @@ if ($arg_replytocom != "")     { set $skip_cache 1; }   # resposta a comentario
 **Recupera 1.817 requisições em 3 h — 8,0% das dinâmicas**, quase todas `oembed` com `url=` e
 `format=`. Os parâmetros de rastreio (`fbclid`, `gclid`) passariam a cachear também, mas são
 **18 ocorrências em 3 h**: o ganho ali é estrutural, não de volume.
+
+---
+
+# 🔍 O RASTRO DE SPAM — o que foi procurado, o que não foi achado, e o que resta saber
+
+**Investigado em 01/09/2026**, depois que o log instrumentado mostrou o Googlebot como o maior
+gerador de 404 do site: **540 de 563 requisições em `/listing-sell/…`**, com `/craigslist/` e
+`/near-me/` junto, e caminhos em base64 referenciando o IMDb.
+
+## O que foi procurado — e não achado
+
+| Onde | Resultado |
+|---|---|
+| `wp_posts` — slug, título e conteúdo, 5 padrões | **0** de 435 mil |
+| `wp_options` — nome e valor, incl. `eval(` e `base64_deco` | **0** |
+| Regras de reescrita | **0** de 737 |
+| Arquivos em `wp-content` com o padrão | **0** |
+| Assinaturas clássicas de webshell (8) | **0** em todas |
+| Administradores | **6**, todos `@bahia.ba` + o do Albert |
+
+E o base64 das URLs **não decodifica** — nem direto nem invertido. Não é base64 padrão.
+
+## O argumento que pesa mais que a varredura
+
+**O site roda de imagem imutável.** O `wp-content` vem do git pela imagem, o core vem da imagem
+oficial do WordPress, e `/var/www/html` é `emptyDir`. **Arquivo injetado morre no próximo
+rollout — e os pods reiniciam o tempo todo.** Persistência em arquivo é **arquiteturalmente
+impossível** nesta infraestrutura. E o banco está limpo.
+
+**Os dois juntos fecham o que dá para fechar daqui.**
+
+## 🟡 A incerteza que resta, e ela é real
+
+**Não sei como aquelas URLs chegaram ao índice do Google.** Duas explicações, e não consigo
+separá-las com o que tenho:
+
+| | Hipótese | O que a confirmaria |
+|---|---|---|
+| **a** | Houve injeção **na era da VPS** (OpenLiteSpeed, desligada), o conteúdo morreu na migração, e o Google ficou com o índice | alguma dessas URLs ter retornado **200** algum dia |
+| **b** | As URLs **nunca estiveram aqui** — sites de spam criam links para URLs fabricadas num domínio real | nenhuma jamais ter retornado 200; só link externo |
+
+> **O Search Console decide, e é do Albert.** Ver quantas URLs desse padrão o Google conhece e se
+> alguma já retornou 200. Sem isso, *"provavelmente resíduo de índice"* é o máximo que a
+> evidência sustenta — e **"provavelmente" não basta para comprometimento**.
+
+## ✅ Por que o item B (410) é a resposta certa **nos dois cenários**
+
+**Independe de como aquilo chegou lá.** O `410 Gone` diz ao Google *"isto não existe mais"*, e ele
+**remove do índice** — enquanto o `404` diz *"não achei agora"* e ele volta a tentar. Se houve
+injeção, o 410 encerra o rastro; se nunca houve, o 410 encerra igual. **Uma linha resolve o custo
+de hoje e a permanência no índice, sem depender da resposta.**
+
+## 🔴 E um achado no meio: URL de spam **resolve para matéria real**
+
+```
+/listing-sell/qualquer/coisa -> 301 -> /entretenimento/coisa-atipica-diz-equipe-de-roberto-carlos.../
+/craigslist/x                -> 301 -> /economia/x-afirma-que-pagou-todas-as-multas.../
+/near-me/y                   -> 301 -> /entretenimento/yacoce-simoes-celebra-35-anos.../
+```
+
+É o **`redirect_guess_404_permalink()`** do núcleo: quando uma URL não existe, o WordPress
+**adivinha** a matéria de slug mais parecido e redireciona. **É o mesmo mecanismo do `/acesso/`**
+já documentado nos gestores.
+
+**Isto é pior que o 404**, e provavelmente é parte de por que essas URLs sobrevivem: elas
+*funcionam*. O Google segue um 301 para conteúdo real e mantém a URL de spam viva no índice, com
+autoridade emprestada do domínio.
+
+**O item B fecha isso para os três caminhos.** Mas a função continua ligada para todo o resto do
+site — **desligá-la é um `remove_filter` de uma linha num mu-plugin**, e fica como tarefa própria,
+porque exige deploy de imagem.
