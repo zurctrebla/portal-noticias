@@ -2840,3 +2840,180 @@ suspeitos precisa ser um.
 **Fechados nesta revisão:** parameter groups · verificação de pré-atualização · armazenamento
 alocado · reservas · versão de destino · causa do Action Scheduler · saúde do WP-Cron ·
 `carga.sh`.
+
+---
+
+# 🔎 Remoção do `rds-bahiaba-2023-old1` — auditoria de escrita (01/09/2026)
+
+**A remoção NÃO foi executada.** Falta permissão para o snapshot final — ver §"Bloqueio" abaixo.
+Esta seção registra as verificações, que estão **todas limpas**.
+
+**A pergunta que a auditoria responde não é "posso apagar?" — é "alguma coisa ainda resolve o
+nome antigo?".** Se resolvesse, apagar transformaria escrita perdida em erro de conexão. Melhor,
+mas só depois de saber qual sistema é.
+
+Referência de tempo: a troca do Blue/Green concluiu em **2026-08-29 05:49:32 UTC** (evento da AWS,
+`Switchover from primary rds-bahiaba-2023 to rds-bahiaba-2023-green-ghcfhd completed`).
+
+## Caminho 1 — CloudWatch, 871 amostras de 5 min desde a troca
+
+| Métrica | Resultado |
+|---|---|
+| `DatabaseConnections` | **0 em 871 de 871 amostras.** Máximo global = 0 |
+| `WriteIOPS` | **não é zero**: média 0,567, máximo 2,20 (no próprio instante da troca) |
+| `WriteThroughput` | média 5,26 KB/s, máximo 43,7 KB/s (idem, na troca) |
+
+**O piso de escrita não é zero, e por isso exige contrafactual** (HANDOVER §23). Duas medidas:
+
+**a) A mesma instância física, antes da troca, sob carga real** (24 h de 28/08, quando ainda se
+chamava `rds-bahiaba-2023` — o nome mudou, o disco não):
+
+| | Antes (produção viva) | Depois (aposentada) | Razão |
+|---|---|---|---|
+| `WriteIOPS` mediana | **54,9** | **0,57** | **96× menos** |
+| `WriteIOPS` máximo | **338,7** | 2,20 | 154× menos |
+| `DatabaseConnections` mediana | 2,4 | **0** | — |
+| `DatabaseConnections` máximo | **48** | **0** | — |
+
+**b) Padrão diurno.** Um banco que recebe publicação oscila com a redação: antes da troca a média
+por hora ia de 28 a 111 (**4×**). Depois: **razão máximo/mínimo por hora = 1,18×** em 74 horas.
+Não há dia nem noite — é piso constante, não trabalho.
+
+## Caminho 2 — contagens e `MAX(pk)`, três leituras separadas
+
+Sem snapshot de contagens salvo do instante da troca. **A referência que serve é o verde**: os dois
+eram idênticos na troca (`ReplicaLag` = 0), então produção andou e o azul deveria estar parado.
+
+| Tabela | `old1` (06:24, 06:25 **e** 06:39) | verde (produção) | Δ |
+|---|---|---|---|
+| `wp_posts` `COUNT` | **440.798** | 441.087 | +289 |
+| `wp_posts` `MAX(ID)` | **9.002.091** | 9.002.413 | +322 |
+| `wp_postmeta` `COUNT` | **8.731.782** | 8.737.466 | +5.684 |
+| `wp_postmeta` `MAX` | **13.679.066** | 13.684.885 | +5.819 |
+| `wp_bahia_search_idx` `COUNT` | **258.938** | 259.094 | +156 |
+| `wp_adrotate_tracker` `COUNT` | **28.288** | 51.034 | +22.746 |
+| `wp_adrotate_tracker` `MAX` | **34.270.153** | 34.549.866 | +279.713 |
+| `wp_options` `MAX` | **292.265.732** | 292.498.866 | +233.134 |
+| `wp_term_relationships` `COUNT` | **612.975** | 613.346 | +371 |
+
+**As três leituras do `old1`, a 15 minutos de distância, deram valores idênticos, dígito por
+dígito.** E **todo `MAX(pk)` do azul é menor que o do verde** — não existe no azul nenhum
+identificador que produção não tenha. Se algo tivesse escrito ali, apareceria um ID acima do
+verde, porque o `AUTO_INCREMENT` dos dois partiu do mesmo ponto.
+
+## Caminho 3 — `UPDATE_TIME` com `information_schema_stats_expiry = 0`
+
+```
+UPDATE_TIME mais recente de TODAS as tabelas do schema prod:  2026-08-29 05:49:20 UTC
+Troca concluída (evento da AWS):                              2026-08-29 05:49:32 UTC
+```
+
+**Doze segundos antes da troca. O banco parou de escrever exatamente onde deveria.**
+
+Duas confirmações independentes vieram de brinde, no schema `mysql`:
+
+```
+mysql.rds_topology     update_time = 2026-08-29 05:49:32   <- o instante do rename, gravado pela AWS
+mysql.rds_sysinfo      update_time = 2026-09-01 04:10:55   <- o backup automatico de hoje
+mysql.rds_heartbeat2   update_time = 2026-09-01 06:37:41   <- o UNICO escritor vivo
+```
+
+## Caminho 4 — quem conectou
+
+**O primeiro instrumento que tentei não serve nesta instância, e isso é parte do achado:**
+
+```
+performance_schema               = 0     <- DESLIGADO no parameter group antigo
+performance_schema_accounts_size = 0
+linhas em performance_schema.accounts = 0
+```
+
+`performance_schema.accounts` voltou **vazia**. Vazia não é "ninguém conectou" — é "não há
+instrumentação". Ver HANDOVER §26.
+
+**O que serve: `PROCESSLIST` amostrado a 1 Hz, de uma conexão só** (assim todo incremento de
+`Connections` é de terceiros, por construção):
+
+```
+300 amostras em 300 s
+threads vistas:  rdsadmin@localhost         600/300  (duas, persistentes)
+                 event_scheduler@localhost  300/300
+CLIENTES EXTERNOS (nem rdsadmin, nem event_scheduler, nem eu):  NENHUM em 300 amostras
+Connections: 82.153.078 -> 82.153.081   (+3, nenhuma minha)
+```
+
+**As +3 conexões em 300 s são da própria RDS** — mesma taxa medida numa segunda corrida
+independente (+3 em 315 s). E elas explicam o piso de escrita: `mysql.rds_heartbeat2` avançou de
+`1788244346032` para `1788244661032` — **exatamente os 315 s decorridos**. O que escreve no
+`old1` é a AWS, na tabela dela, no schema `mysql`. **No schema `prod`, nada.**
+
+## Caminhos extras — quem *poderia* apontar para lá
+
+| Verificação | Resultado |
+|---|---|
+| `cm/secret/deploy/sts/cronjob/job` em **prod** citando `old1` | **nenhum** — só `rds-bahiaba-2023` |
+| idem em **homolog** | **nenhum** — só `rds-bahiaba-hml` |
+| `infra-bahiaba` (yaml/tf/sh) citando `old1` | **nenhum** |
+| SG do `old1`: quem entra na 3306 | `10.1.0.0/16` (EKS homolog), `10.2.0.0/16` (EKS prod), `sg-0614f9d2cf0b6c697` |
+| `sg-0614f9d2cf0b6c697` ("EC2") | **zero instâncias associadas** |
+| EC2 ligadas na conta | **5**: os 4 nós do EKS prod e o 1 nó do EKS homolog. A VPS antiga **não está ligada** |
+| Log de erro do RDS | último registro em **2026-08-29 05:06:13**, *antes* da troca — é o aviso do `10.1.4.241` do §19. Depois disso o log corrente está **vazio** |
+
+## 🟡 Achado colateral: o `old1` ficou 3 dias com IP público
+
+```
+rds-bahiaba-2023-old1 ...rds.amazonaws.com  ->  52.7.249.221   (PubliclyAccessible = true)
+rds-bahiaba-2023      ...rds.amazonaws.com  ->  172.31.70.50   (PubliclyAccessible = false)
+```
+
+**O verde nasceu fechado; o azul continuou aberto.** O SG não abre para nenhum CIDR público, então
+não houve exposição efetiva — mas a instância aposentada, com o dado de produção, passou três dias
+com endereço na internet, protegida por uma única camada. Ela também carrega o SG **antigo e
+compartilhado** (`MySQL`, `sg-0234245542eb43738`), não o `bahia-mysql-prod` dedicado que o verde
+recebeu. **A remoção resolve os dois de uma vez.**
+
+## 🔴 Bloqueio: o snapshot final não cabe na política
+
+`simulate-principal-policy`, sem efeito colateral:
+
+| Ação | Decisão |
+|---|---|
+| `rds:ModifyDBInstance` (desligar a proteção) | **allowed** |
+| `rds:DeleteDBInstance` | **allowed** |
+| `rds:AddTagsToResource` | allowed |
+| **`rds:CreateDBSnapshot`** | **`implicitDeny`** |
+| **`rds:CopyDBSnapshot`** | **`implicitDeny`** |
+| `rds:DeleteDBInstanceAutomatedBackup` | `implicitDeny` |
+| `rds:RestoreDBInstanceToPointInTime` | `implicitDeny` |
+| `rds:StartExportTask` | `implicitDeny` |
+
+**Causa:** `CreateDBSnapshot`, `CopyDBSnapshot` e `CreateDBParameterGroup` foram **retiradas de
+propósito** na revisão de 756 → 431 caracteres, para abrir espaço a `CreateDBInstanceReadReplica`
+e `PromoteReadReplica` dentro do limite agregado de 2048 do IAM. **Todo caminho para um artefato
+permanente está fechado para o `bahia-pipeline`.**
+
+### O que já existe de rede, sem precisar de permissão nenhuma
+
+| Artefato | Tipo | Versão | Quando | Validade |
+|---|---|---|---|---|
+| `bahia-prod-pre-upgrade-84-20260828` | **manual** | 8.0.42 | 29/08 **02:49** | **permanente** |
+| `bahia-prod-pre-virada-newspaper-20260819` | **manual** | 8.0.42 | 19/08 06:06 | **permanente** |
+| `rds:rds-bahiaba-2023-old1-2026-09-01-04-10` | automático | 8.0.42 | **hoje 04:10** | expira ~08/09 |
+| `rds:...-old1-2026-08-31-04-11` | automático | 8.0.42 | 31/08 | expira ~07/09 |
+| `rds:...-old1-2026-08-30-04-11` | automático | 8.0.42 | 30/08 | expira ~06/09 |
+| `dump-PRODUCAO-20260819-0711.sql.gz` | lógico, local | 8.0.42 | 19/08 | permanente |
+
+**O snapshot manual de 28/08 é 3 horas mais velho que o congelamento — e a medição diz que essas
+3 horas não têm conteúdo editorial:** o `UPDATE_TIME` de `wp_posts` é **01:51:33**, anterior ao
+snapshot. O que mudou entre 02:49 e 05:49 foi `wp_postmeta`, `wp_options`, `wp_adrotate_*` e os
+indexáveis do Yoast — transiente, contagem de anúncio e índice de SEO. **Nenhuma matéria.**
+
+### Os quatro caminhos, para o Albert decidir
+
+| | Caminho | Custo | Observação |
+|---|---|---|---|
+| **A** | Albert cria o snapshot no console e eu apago depois | 30 s dele | É o plano original, ao pé da letra |
+| **B** | Acrescentar `rds:CreateDBSnapshot` à política | edição | Rende pouco: a política sai hoje |
+| **C** | Aceitar o manual de 28/08 e apagar com `--skip-final-snapshot` | zero | Justificado pela medição: nenhuma matéria no intervalo |
+| **D** | Apagar **com** `--final-db-snapshot-identifier` numa chamada só | zero | **Falha sem efeito** se a permissão não cobrir: a AWS valida antes de agir, e a instância não é tocada |
+

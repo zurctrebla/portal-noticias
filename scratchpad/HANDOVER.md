@@ -1787,3 +1787,65 @@ falhas eram `503` genuínos do ALB sem alvo saudável (`maxSurge: 0`, uma répli
 com `maxSurge: 1`, sempre há alvo saudável — então o que a sonda encontrou foi latência.
 **O mesmo instrumento, correto num ambiente e enganoso no outro, pela diferença da estratégia de
 rollout.**
+
+---
+
+## 25. "Zero" numa métrica gerenciada é zero **do que ela conta**
+
+**Onde apareceu.** Auditoria do `rds-bahiaba-2023-old1` antes de removê-lo, 01/09/2026.
+
+A métrica `DatabaseConnections` do CloudWatch deu **0 em 871 de 871 amostras** cobrindo as 72 h
+desde a troca. Máximo global zero. É um número muito confortável, e eu quase o reportei como
+"ninguém conectou".
+
+**O contador do próprio servidor discordava.** Numa sonda de conexão única — em que qualquer
+incremento é, por construção, de terceiros — o `Connections` global subiu **+3 em 300 s**, e
+repetiu **+3 em 315 s** numa segunda corrida independente. Cerca de 860 conexões por dia que o
+CloudWatch simplesmente não mostra.
+
+**As duas medidas estão certas.** Elas contam populações diferentes: o CloudWatch não inclui as
+conexões de gerência da própria RDS (`rdsadmin@localhost`), e eram exatamente essas. A
+consequência prática ficou visível também na escrita: o `WriteIOPS` nunca era zero — 0,567 de
+média — porque a AWS atualiza `mysql.rds_heartbeat2` continuamente. O valor da tabela avançou
+`1788244346032 → 1788244661032`, **exatamente os 315 s decorridos**.
+
+> **Uma métrica gerenciada responde a pergunta dela, não à sua.** "Zero conexões" no painel
+> significa "zero conexões da categoria que este gráfico desenha". Antes de tratar um zero como
+> ausência, pergunte **quem foi excluído da contagem** — e confirme no contador do servidor, que
+> não filtra nada.
+
+O que fechou a questão não foi o gráfico: foi o `PROCESSLIST` amostrado a 1 Hz por 300 s, que
+mostrou **300/300 amostras com apenas `rdsadmin@localhost` e `event_scheduler@localhost`, e
+nenhum cliente externo**. Esse instrumento vê tudo, inclusive o que a métrica esconde.
+
+---
+
+## 26. Tabela vazia não é ausência — pode ser instrumento desligado
+
+**Onde apareceu.** Mesma auditoria, ao responder "quem conectou".
+
+Consultei `performance_schema.accounts`, que acumula `TOTAL_CONNECTIONS` por usuário e host. Ela
+respondeu **sem erro** e voltou **vazia**. A leitura tentadora é "nenhuma conta conectou".
+
+A leitura certa estava a uma variável de distância:
+
+```
+performance_schema               = 0     <- DESLIGADO
+performance_schema_accounts_size = 0
+linhas em performance_schema.accounts = 0
+```
+
+**O Performance Schema está desligado nesta instância** (parameter group antigo, `mysql80-edit`).
+A tabela existe, aceita `SELECT`, devolve zero linhas — e zero linhas ali significa "não há
+instrumentação", não "não há conexões". Pior: `performance_schema.global_status` **continua
+funcionando** com o P_S desligado, porque é alimentada pelas variáveis de estado do servidor e não
+pela instrumentação. Então parte das consultas ao mesmo schema respondia com dado bom, o que
+reforça a impressão errada de que o subsistema está de pé.
+
+> **Resultado vazio é uma afirmação sobre o instrumento antes de ser sobre o mundo.** Antes de
+> concluir "não houve", verifique se o que mediria "houve" estava ligado. Um `SELECT` que devolve
+> zero linhas sem erro é o formato mais convincente que a falta de medição pode assumir.
+
+Parente do §16.7 (`DATA_FREE` devolvendo o valor de antes do `OPTIMIZE`) e do §24 (o limiar que
+apaga a prova): as três são falhas em que **o instrumento respondeu, e a resposta não era sobre o
+que eu perguntei**.
