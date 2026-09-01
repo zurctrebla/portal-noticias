@@ -1081,3 +1081,108 @@ daquele merge, então o aviso é lido no momento em que importa:
 
 `docker build --check` no arquivo real: **"Check complete, no warnings found"**, e o metadata
 carregado foi `wordpress:6.8.3-php8.3-fpm` — o default resolve certo.
+
+## Rollout de homolog — a 7.1 SOBREVIVEU, que era o teste desta etapa
+
+```
+08:32:46  push na develop (fd15e6f3..b1d0d15b, 13 commits)
+08:33:19  guarda de build no CI: "core na imagem: 7.1 (db_version 61833) — pedido: 7.1.0"
+08:34:56  workflow verde, pod novo de pe
+```
+
+**Indisponibilidade: 38 s**, um bloco contínuo (último 200 às 08:34:10, primeiro 200 às 08:34:48;
+1× 504 e 5× 503 entre eles). Homolog tem **1 réplica com `maxSurge: 0`** — a queda é por desenho.
+
+> ⚠️ **Minha primeira contagem deu 36 s em "dois blocos" e estava errada** — o script separou por
+> intervalo de 3 s e o buraco entre as amostras era só a resposta de 10,4 s consumindo o intervalo
+> da sonda. É o §22 de novo. **Entre 08:34:22 e 08:34:44 não há nenhum 200: é um bloco só.**
+
+### A prova de que a 7.1 agora vem da IMAGEM
+
+| | Antes (aplicada no pod) | Depois (pela imagem) |
+|---|---|---|
+| `wp_version` | 7.1 | **7.1** |
+| **`core mtime`** | **2026-08-29 08:29:40** ← `Core_Upgrader` | **2026-08-19 20:04:50** ← build da imagem |
+| `db_version` (banco) | 61833 | **61833** |
+| PHP | 8.3.28 | **8.3.33** |
+
+**O `mtime` é a prova.** Se a 7.1 ainda viesse do `emptyDir`, o pod novo teria 6.8.3 com `mtime`
+de 2025-09-30. Ele tem os arquivos da 7.1 com a data de build da imagem oficial.
+**A armadilha do `db_version` acabou: core e banco são coerentes e sobrevivem a qualquer rollout.**
+
+**E foi provado duas vezes**: o segundo rollout, do `apply` do manifesto (08:48), trouxe a 7.1 de
+volta igual.
+
+### 🟡 Efeito colateral medido: o PHP também mudou
+
+`8.3.28` → **`8.3.33`**. Cada tag do WordPress empacota o próprio patch de PHP; o `ARG` isola a
+versão do WordPress, mas o **veículo** é a imagem base, que carrega PHP junto.
+**Homolog está em PHP 8.3.33 e produção em 8.3.28** — mesma minor, patches diferentes. Não é
+defeito, é consequência do desenho, e passa quando os ambientes se equipararem.
+
+## Validação em homolog
+
+| Camada | Resultado |
+|---|---|
+| Site (home, 2 archives, 2 buscas, Quem Somos, autor) | **7 de 7** em 200 |
+| Índice de busca | **242.864** linhas, `FULLTEXT (post_title, post_excerpt)` |
+| Busca — MATCH / `WP_Query` | **10 de 10** · `s=bahia` 501 encontrados |
+| Rascunho com ACF + coautoria | subtítulo, imagem e **2 coautores** lidos de volta; removido sem resíduo |
+| **Editor** | **200, 996 KB** — 75 refs TinyMCE, `wp-editor-container`, 56 campos ACF, 25 metaboxes, 92 elementos tagDiv, 50 CAP, 277 Yoast, **0 fatais** |
+
+### ✅ ENVIO DE MÍDIA — o buraco do teste anterior, agora coberto
+
+```
+imagem gerada  : 1200x800 JPEG, 30.667 bytes
+upload         : ID 9000292 em 6,7 s        (media_handle_sideload)
+derivadas      : 13 entradas -> 12 arquivos distintos
+                 (medium e td_300x0 dao 300x200 e o WP reusa o mesmo arquivo)
+offload S3     : wp_as3cf_items OK — bucket static.bahia.ba, regiao sa-east-1
+URL            : https://d1x4bjge7r9nas.cloudfront.net/.../teste-midia-71-...jpg
+```
+
+**Verificado dos dois lados:** as URLs respondem **200** no CloudFront (30.667 / 2.170 / 6.955
+bytes), o `head-object` da AWS confirma o objeto, e `s3 ls` mostra **13 objetos** no prefixo —
+1 original + 12 derivadas, **exatamente o esperado, nada faltando**.
+
+**Na matéria:** `td_485x360` renderizou `<img width="485" height="360" src="…cloudfront…">` com
+**srcset**, e os `td_*` do Newspaper foram todos gerados. Smush 3.22.1 ativo, sem interferência.
+
+**A 7.1 mexeu em validação de dimensões e `encode quality` no REST — e nada disso quebrou o
+Offload Media nem o Smush.**
+
+Limpeza: rascunho e anexo removidos, 0 resíduo em `postmeta` e em `as3cf_items`. **Os arquivos no
+S3 permanecem de propósito** — a guarda `bahia-homolog-guardas.php` registra
+`as3cf_remove_source_files_from_provider => __return_empty_array`, porque o bucket é compartilhado
+com produção. São 13 objetos de teste, ~95 KB, com nome datado.
+
+## 🟠 Questão aberta: a caixa Publicar não está no HTML do editor
+
+`submitdiv` / `id="publish"` **não aparecem** na tela de edição — nem em post publicado, nem em
+post novo, nem em página. O que foi possível estabelecer:
+
+| Verificação | Resultado |
+|---|---|
+| É mudança da 7.1? | **NÃO** — `post_submit_meta_box` e as 6 ocorrências de `id="publish"` em `meta-boxes.php` são **idênticas** entre o core 6.8.3 e o 7.1 |
+| É específico do tipo de post? | **NÃO** — falta em `post` e em `page` |
+| Oculto por preferência do usuário? | **NÃO** — `metaboxhidden_post` vazio |
+| Restrito pelo PublishPress Capabilities? | **NÃO** — `cme_restrict_editor_features` vazio |
+| Algum plugin remove? | os dois `remove_meta_box('submitdiv')` (ACF Pro e CAP) são **escopados a outros post types** |
+
+**Não determinei a causa, e não comparei com produção de propósito:** buscar a tela de admin de
+produção exigiria uma sessão, que grava token no banco — fora do que esta etapa autorizou.
+
+> **Precisa de 30 segundos de olho humano:** abrir `hml.bahia.ba/wp-admin` no navegador e ver se o
+> botão *Atualizar* está na tela. **Meu `curl` não executa JavaScript**, e o tagDiv Composer tem
+> 49–68 referências nessas páginas e manipula a interface do editor em tempo de execução. Se o
+> botão estiver lá, não há nada errado. Se não estiver, é defeito **pré-existente** — o core é
+> idêntico — e vale conferir em produção também.
+
+## Manifesto de homolog — estava defasado desde antes de hoje
+
+`a9c7d1ab` → **`b1d0d15b`**. O SHA anterior é o commit do *offset do archive*, **anterior até ao
+PHP 8.3**: um `apply` teria revertido homolog para antes da 7.1 **e** do 8.3. A disciplina do
+mesmo dia não foi seguida no deploy anterior de homolog, e isso estava valendo agora.
+
+Sabendo do §32, **contei com o rollout**: o `tf-apply.yml` reinicia os pods de forma incondicional.
+Custou mais um restart de homolog — e serviu como segunda prova de que a 7.1 sobrevive.
