@@ -2567,3 +2567,68 @@ x 3 variantes de dispositivo na chave  (|d=$bahia_mobile$bahia_ipad)
 
 O caminho não é mais worker: é **menos fatias** — cache compartilhado entre réplicas, ou menos
 dimensões na chave. As duas são mudanças de porte e nenhuma cabe numa janela de correção.
+
+---
+
+## 42. Aprovação não sobrevive ao dado que ela estava esperando
+
+**Onde apareceu.** 01/09/2026. O `limit_req` global na busca foi **desenhado, defendido e
+aprovado** — sobre a hipótese de que a raspagem de busca esgotava os workers. O log instrumentado
+chegou horas depois e mostrou que **a busca é 0,8% dos worker-segundos**.
+
+A correção foi retirada. Mas o que interessa é o mecanismo que quase a manteve:
+
+> **Uma correção aprovada com o dado a caminho deve ser REEXAMINADA quando o dado chega — não
+> aplicada por já estar aprovada.**
+
+A aprovação é sobre o raciocínio disponível no momento em que foi dada. Quando a medição que a
+motivou finalmente existe, ela **substitui** o raciocínio; e se o contradiz, a aprovação anterior
+perde o objeto. **Executar assim mesmo é confundir "combinado" com "verdadeiro".**
+
+**O sinal de alerta é reconhecível:** a frase *"isso já está aprovado"* aparecendo entre a
+chegada do dado e a aplicação. Toda vez que ela for a justificativa, a pergunta certa é: *aprovado
+com base em quê, e esse "quê" ainda vale?*
+
+Parente do §23 e do §28 — em todos, a conclusão foi formada antes de a medição existir, e a
+tentação foi tratá-la como estabelecida.
+
+---
+
+## 43. O 404 é uma superfície de amplificação: 7,5% do consumo, e ninguém o media
+
+**Onde apareceu.** Mesma leitura do log instrumentado.
+
+```
+1.618 requisicoes 404 em 99 min
+935 worker-segundos  =  7,5% de TODO o consumo de PHP
+0,578 s e 55 KB por 404 (313 KB antes do gzip de hoje)
+404 NAO entra no fastcgi_cache — cada um e render completo
+```
+
+**O 404 renderiza o tema inteiro.** Uma URL inexistente custa quase o mesmo que uma matéria real
+— e como não cacheia, custa isso **todas as vezes**. Qualquer um pode gerar 404 à vontade, de
+graça, e o custo é nosso.
+
+**É o resíduo do defeito da rodada 4** — lá o 404 chegou a 36 s por causa da pré-renderização do
+`next_prev` do tagDiv, e o `bahia-td-query-perf.php` derrubou para ~1,5 s. **A catástrofe foi
+corrigida; a amplificação continua.**
+
+### De onde vêm, medido
+
+| Origem | Reqs | Worker-seg | O que pede |
+|---|---|---|---|
+| **Googlebot** | 563 | **326** | **540 são `/listing-sell/…`** — rastro de injeção de spam |
+| outro | 365 | 255 | diversos, inclui `/categoria/` (defeito de taxonomia conhecido) |
+| **Hetzner (raspador)** | 426 | 214 | `/wp-sitemap.xml?q=<editoria>` — parâmetro **inventado** |
+| Bingbot | 243 | 135 | diversos |
+| ClaudeBot | 21 | 7 | diversos |
+
+**O maior gerador de 404 do site é o Googlebot rastreando URLs de spam** — `/listing-sell/`,
+`/craigslist/`, `/near-me/`, caminhos em base64 referenciando o IMDb. Alguém injetou isso em
+algum momento, o Google indexou, e **continua voltando**. Não é ataque em curso: é dívida.
+
+> **Corrigi minha própria leitura no meio disto:** vi `66.249.72.x` gerando 404 e concluí que era
+> o Googlebot batendo em `/categoria/`, o defeito de taxonomia já documentado. **Não era** — os
+> `/categoria/` vieram de outra origem, e os do Google são 96% `/listing-sell/`. A conclusão
+> parecia coerente porque encaixava num defeito conhecido, **e é justamente aí que encaixar é
+> perigoso.**
