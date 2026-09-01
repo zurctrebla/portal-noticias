@@ -23,6 +23,13 @@
 #   Nenhum outro arquivo participa. Se voce esta lendo isto e os dois ambientes
 #   ja estao equiparados, faca os dois passos e apague este bloco.
 #
+#   ATENCAO ao que mais esta separado sem estar escrito: cada tag do WordPress
+#   empacota o SEU proprio patch de PHP. Hoje homolog roda PHP 8.3.33 (da tag
+#   7.1.0) e producao roda 8.3.28 (da tag 6.8.3) -- mesma minor, patches
+#   diferentes. Nao ha nada a fazer sobre isso: os patches SE REALINHAM SOZINHOS
+#   no gesto de saida acima, porque os dois ambientes voltam a construir a
+#   partir da mesma tag. O desalinhamento nasce e morre com a separacao.
+#
 # >>> PARA QUEM FOR FAZER O MERGE develop -> main <<<
 #   O `FROM` de producao muda de `6.8-php8.3-fpm` para `6.8.3-php8.3-fpm`.
 #   Medido em 01/09/2026: as duas tags tem o MESMO digest

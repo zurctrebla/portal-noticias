@@ -1057,6 +1057,10 @@ se perca no outro" deixa de existir por construção.**
 > A separação acaba quando homolog e produção estiverem na **mesma versão de WordPress E de
 > plugins**. O gesto: (1) apagar `--build-arg WP_VERSION=` do `deploy-homolog.yml`; (2) alinhar o
 > default do `ARG`. **Nenhum outro arquivo participa.**
+>
+> **E os patches de PHP se realinham sozinhos nesse mesmo gesto**: os dois ambientes voltam a
+> construir a partir da mesma tag, que traz o mesmo PHP. O desalinhamento de patch **não é uma
+> pendência própria** — ele nasce e morre com a separação.
 
 ## Onde fica o aviso para quem fizer o merge `develop → main`
 
@@ -1113,12 +1117,29 @@ de 2025-09-30. Ele tem os arquivos da 7.1 com a data de build da imagem oficial.
 **E foi provado duas vezes**: o segundo rollout, do `apply` do manifesto (08:48), trouxe a 7.1 de
 volta igual.
 
-### 🟡 Efeito colateral medido: o PHP também mudou
+### 🟡 Consequência do desenho (não é defeito): o PHP também mudou
 
-`8.3.28` → **`8.3.33`**. Cada tag do WordPress empacota o próprio patch de PHP; o `ARG` isola a
-versão do WordPress, mas o **veículo** é a imagem base, que carrega PHP junto.
-**Homolog está em PHP 8.3.33 e produção em 8.3.28** — mesma minor, patches diferentes. Não é
-defeito, é consequência do desenho, e passa quando os ambientes se equipararem.
+`8.3.28` → **`8.3.33`**.
+
+**Cada tag do WordPress empacota o próprio patch de PHP.** O `ARG WP_VERSION` isola a versão do
+WordPress, mas o **veículo é a imagem base**, e ela carrega o PHP junto. Escolher a versão do
+WordPress escolhe, sem dizer, o patch do PHP.
+
+**Homolog está em PHP 8.3.33 e produção em 8.3.28** — mesma minor, patches diferentes. **Isto é
+consequência do desenho, não defeito**: qualquer separação por imagem base teria o mesmo efeito, e
+a alternativa (fixar o patch do PHP por conta própria) trocaria um desalinhamento por manutenção
+de uma segunda dimensão.
+
+> ### ⚠️ O que isso significa para a validação dos plugins que vem agora
+>
+> **A validação dos plugins vai acontecer sobre um PHP diferente do de produção.** Não é
+> bloqueante — é diferença de patch, não de minor —, mas **precisa estar no relatório daquela
+> etapa**, para que ninguém atribua a um plugin um comportamento que é do patch do PHP.
+>
+> Na prática: se um plugin se comportar de forma inesperada em homolog, a pergunta *"isso também
+> acontece em 8.3.28?"* faz parte do diagnóstico, e não pode ser respondida em homolog. É o mesmo
+> tipo de armadilha do §23 — **um sintoma num ambiente que difere em duas dimensões não diz qual
+> delas o causou.**
 
 ## Validação em homolog
 
