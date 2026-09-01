@@ -158,3 +158,33 @@ Se a `db_version` continuar em `61833`, **o banco não foi restaurado** — só 
 - **A imagem e o Dockerfile.** A atualização é aplicada **no pod em execução**, não pela imagem —
   justamente para não deixar uma mudança de core no `Dockerfile`, que é **compartilhado com
   produção** e viraria armadilha no próximo merge para a `main`.
+
+---
+
+## ⚠️ ARMADILHA: um `push` na `develop` desfaz metade da 7.1, e só metade
+
+**Isto não é o procedimento de rollback. É o acidente que se parece com ele.**
+
+A 7.1 de homolog vive **só no `emptyDir`** do pod — foi aplicada no pod em execução, de propósito,
+para não pôr uma mudança de core no `Dockerfile` compartilhado com produção. Mas o banco **não**
+vive no `emptyDir`: a `db_version` foi migrada para **61833** e está no RDS.
+
+**Qualquer coisa que recrie o pod devolve os arquivos ao 6.8.3 e deixa o banco em 61833:**
+
+- `git push` na `develop` → reconstrói a imagem → troca os pods
+- `kubectl rollout restart` · `kubectl apply` · o HPA · a morte de um nó
+
+O resultado é **core 6.8.3 sobre banco 61833** — o estado que a seção "Por que não existe
+downgrade limpo" descreve como nunca testado por ninguém. O WordPress vê uma `db_version` maior
+que a dele e **não migra**: fica lendo tabelas e opções num formato que o código antigo pode não
+entender, **sem erro visível na subida**.
+
+> **Antes de qualquer `push` na `develop`, decida conscientemente o que fazer com homolog:**
+>
+> 1. **Aceitar a volta ao 6.8.3** — e então restaurar o banco também, pelo Caminho A acima. Os
+>    dois, sempre.
+> 2. **Manter a 7.1** — e reaplicá-la no pod novo depois do rollout, com o mesmo script.
+> 3. **Adiar o push** — é o que está feito hoje: 9 commits esperando na `develop`, de propósito.
+
+**O que torna isto perigoso é a assimetria**: o `push` é um gesto rotineiro, e o efeito dele aqui
+é silencioso. Ninguém vai olhar a `db_version` depois de um deploy de documentação.
