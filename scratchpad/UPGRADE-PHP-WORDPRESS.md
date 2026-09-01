@@ -1295,3 +1295,39 @@ solitários: um dump restaurado apaga o trabalho de todo lote que estiver junto.
 **Toda esta validação acontece sobre um patch de PHP diferente do de produção.** Não é bloqueante,
 mas se um plugin se comportar de forma inesperada, *"isso também acontece em 8.3.28?"* faz parte
 do diagnóstico — e **não pode ser respondido em homolog**. Ver a seção da separação do Dockerfile.
+
+## Registros que acompanham o plano de lotes
+
+### Os 4 inativos — decisão adiada para depois dos lotes
+
+Akismet · All-in-One WP Migration · NextScripts · **WPS Hide Login**. Não rodam, então atualizar
+não muda comportamento. A escolha é **atualizar ou remover**, e fica para depois.
+
+> 🔗 **O WPS Hide Login tem um resíduo que precisa sair junto se ele for removido.** Foi ele que
+> deixou a opção órfã **`whl_page = 'acesso'`**, que faz **`/acesso/` cair numa matéria por
+> adivinhação do núcleo** — o WordPress não encontra a página, chuta o post mais parecido e serve
+> outra coisa. **Remover o plugin sem apagar a opção mantém o defeito sem o culpado à vista.**
+> Se a decisão for remover, a opção sai no mesmo gesto.
+
+### Os que ficam fora por não ter canal de atualização
+
+| Plugin | Versão | Situação |
+|---|---|---|
+| tagDiv Composer | 5.4.5 | sem canal — atualização só pelo fornecedor |
+| tagDiv Cloud Library | 3.9.5 | idem |
+| tagDiv Social Counter | 5.7 | idem |
+| Coberturas · Posts do Dia · Relatórios · Vídeo de destaque · Push Notifications | 1.0 | **nossos** |
+| **AdRotate Professional** | **5.13.1** | 🟡 **pago, e sem licença no `adrotate_config`** |
+
+### 🟡 Pendência nova: AdRotate Professional é pago e está sem licença
+
+Medido em 01/09/2026: `adrotate_config` **não tem licença**, e o plugin **não oferece nenhuma
+atualização**. Ele governa toda a publicidade do site — os grupos, os agendamentos e a contagem
+de entrega que sustenta a PI.
+
+> **Plugin pago sem licença não recebe correção de segurança.** Não é questão de perder recurso
+> novo: é ficar de fora do canal por onde a correção chegaria, num plugin que fica **em toda
+> página** e que **grava** (a tabela `wp_adrotate_tracker`, que já precisou de `OPTIMIZE`).
+> Não há como saber daqui se existe correção pendente — **é exatamente esse o problema.**
+
+Fica como pendência de decisão comercial, ao lado das licenças do ACF PRO.
