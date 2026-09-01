@@ -2485,3 +2485,85 @@ E não foi sorte: a mesma varredura produziu **três** achados que não eram o a
 **O contraponto honesto:** medir o entorno custa tempo e produz distração. A disciplina não é
 "meça tudo" — é **medir o denominador de qualquer fração que se vá reportar**. "1,7% da banda"
 obriga a conhecer a banda; e é ao conhecer a banda que se vê o que há nela.
+
+---
+
+## 40. O instrumento respondeu — e desmentiu a correção que eu ia aplicar
+
+**Onde apareceu.** 01/09/2026, primeira leitura do log instrumentado (99 minutos, 29.483
+requisições, formato novo com `rt=`, `urt=` e `cache=`).
+
+### A atribuição que faltava
+
+`urt` é o tempo do PHP-FPM, ou seja, **worker-segundos**:
+
+| Classe | Reqs | Worker-seg | % | s/req |
+|---|---|---|---|---|
+| **público** | 15.856 | **10.113** | **81,3%** | 0,638 |
+| **sitemap** | 771 | **1.224** | **9,8%** | **1,588** |
+| admin-ajax | 933 | 568 | 4,6% | 0,608 |
+| wp-json/oEmbed | 990 | 230 | 1,9% | 0,233 |
+| wp-admin | 370 | 130 | 1,0% | 0,352 |
+| **BUSCA** | 149 | **104** | **0,8%** | 0,700 |
+| estático | 10.007 | 2,6 | 0,0% | — |
+
+**Média de 2,10 workers ocupados, de 60 disponíveis.** Vinte e oito vezes de folga.
+
+> **A busca é 0,8% dos worker-segundos.** O `limit_req` global que eu desenhei — e que o Albert
+> aprovou — atacaria menos de um por cento do consumo. **Mesmo a rajada do incidente (436 buscas
+> em 6 min × 0,7 s) dá 0,85 worker.** A raspagem de busca não é o que esgotou o pool.
+
+### O que o instrumento mostrou no lugar
+
+**`/wp-sitemap.xml?q=<editoria>`: 771 requisições, 1,588 s cada — a classe MAIS CARA por
+requisição, 9,8% de todo o consumo.** E:
+
+```
+431 das 771 respondem 404   (um 404 que custa 1,6 s de PHP e devolve 60 KB)
+o parametro ?q= faz BYPASS do cache -> render completo, toda vez
+vem de 5 IPs, nao do pool disperso: 78.47.42.23 (183), 186.232.82.83 (125),
+46.225.122.219 (118), 142.132.174.203 (84), 159.69.206.158 (44)
+```
+
+**Custa mais que a busca, é mais concentrado, e é mais fácil de conter.** Não estava em nenhuma
+hipótese minha antes de o log existir.
+
+---
+
+## 41. Cache fragmentado além do que o tráfego amortiza
+
+**Taxa de acerto medida com pods quentes: 17,6%** (HIT 2.213 contra MISS+EXPIRED 10.386).
+
+**E não é defeito de configuração.** Testado num pod só, mesmo user-agent: **12 chamadas, 12 HIT,
+1 ms cada**. O TTL segura além de 130 s. `fastcgi_ignore_headers Set-Cookie` está lá.
+
+**São duas causas, as duas medidas:**
+
+**1. Quase metade do tráfego é de URL que aparece uma vez.**
+
+```
+6.504 URLs distintas em 12.772 requisicoes cacheaveis
+5.933 URLs (91,2%) pedidas UMA vez  ->  46,5% das requisicoes
+```
+
+É a assinatura de rastreador percorrendo um acervo de 435 mil posts: cada matéria é pedida uma
+vez, renderizada, guardada, e nunca mais pedida. **Cache não ajuda o que não repete.**
+
+**2. A chave fragmenta em 15 fatias independentes.**
+
+```
+5 pods (cada um com seu /tmp/nginx-cache em emptyDir)
+x 3 variantes de dispositivo na chave  (|d=$bahia_mobile$bahia_ipad)
+= 15 fatias que precisam ser preenchidas SEPARADAMENTE
+```
+
+**Das 571 URLs que repetem, 481 (84%) recebem menos de 15 requisições** — mediana de **4**.
+**Elas nunca chegam a encher todas as fatias**, e por isso continuam dando MISS mesmo repetindo.
+
+> **Cada dimensão na chave de cache multiplica o volume necessário para amortizá-la.** Três
+> variantes de dispositivo × cinco réplicas exigem quinze vezes mais repetição da mesma URL para
+> o cache render o mesmo. Num tráfego cuja URL mediana repete quatro vezes, **a chave está
+> dimensionada para um tráfego que este site não tem.**
+
+O caminho não é mais worker: é **menos fatias** — cache compartilhado entre réplicas, ou menos
+dimensões na chave. As duas são mudanças de porte e nenhuma cabe numa janela de correção.
