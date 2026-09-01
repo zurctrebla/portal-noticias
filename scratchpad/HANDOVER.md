@@ -2098,3 +2098,44 @@ Custo medido: **5 requisições de leitor perdidas** (`HTTPCode_ELB_502_Count = 
 em vez de medir a operação — a primeira foi o `--delete-automated-backups` do §27. Lá o substituto
 foi o nome da flag; aqui, um comando parecido com o que o pipeline roda. **O padrão é o mesmo, e
 reconhecê-lo escrito não impediu a repetição: a defesa tem que ser procedimento, não memória.**
+
+---
+
+## 33. Referência de imagem que se move sozinha — a lição vale para TODA camada
+
+**Onde apareceu.** Separação do `Dockerfile` por ambiente, 01/09/2026.
+
+O `FROM` era `wordpress:6.8-php8.3-fpm`. **`6.8` é tag flutuante de minor**: aponta para a última
+6.8.x que o mantenedor publicar. É **exatamente o mesmo mecanismo** do `prod-latest` que
+corrigimos no §21 — só que **uma camada abaixo**, na imagem base, onde ninguém tinha olhado.
+
+**A simetria é o ponto.** No §21 o problema era nosso: nossa tag flutuante fazia o Kubernetes não
+enxergar troca de código. Aqui o problema é de terceiro: a tag do mantenedor pode entregar um core
+diferente amanhã, sem que nada no nosso repositório mude. **Um rollback para "o commit de ontem"
+reconstrói a imagem e pode trazer um core que ontem não existia.** O git fica idêntico e o
+artefato não.
+
+> **Toda referência de imagem que não seja imutável é uma dependência que muda sem commit.**
+> Isso vale para a tag que você publica, para a imagem base que você consome, e para qualquer
+> `:latest`, `:stable` ou minor flutuante no caminho. A pergunta não é "de quem é a tag" — é
+> "esta referência pode apontar para outro conteúdo amanhã?".
+
+**O que fizemos:** fixar a patch exata (`6.8.3`, `7.1.0`), depois de **medir** que os digests eram
+idênticos aos das flutuantes no dia (`sha256:906c2572…` e `sha256:5a9cee04…`) — então a fixação
+foi no-op provado, não aposta.
+
+**E uma defesa que a fixação sozinha não dá:** uma guarda de build que lê a versão do core dentro
+da imagem e falha se não bater com a pedida.
+
+```
+=== core na imagem: 7.1 (db_version 61833) — pedido: 7.1.0 ===
+=== core na imagem: 6.8.3 (db_version 60421) — pedido: 6.8.3 ===
+```
+
+Testada nos três casos antes de entrar: default, homolog, e **divergência forçada** — que falhou o
+build com código 1, como devia. **A guarda responde no log de todo build a pergunta que a Tarefa B
+mostrou que ninguém sabia responder: qual core esta imagem entrega?**
+
+A fixação impede a deriva; a guarda **detecta** a deriva que a fixação não cobrir — tag reescrita
+no registro, cache envenenado, engano de digitação no `--build-arg`. São defesas de camadas
+diferentes e não substituem uma à outra.

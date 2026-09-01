@@ -1020,3 +1020,64 @@ terminações.
 **Terceiro item, do mesmo achado:** o `rollout restart` incondicional do `tf-apply.yml` deveria
 ser **condicional à mudança de ConfigMap/Secret**. Hoje qualquer edição em `kubernetes/**` custa
 um rollout — e, enquanto 1 e 2 não existirem, cada rollout custa requisições.
+
+---
+
+# 🔀 Dockerfile separado por ambiente — 01/09/2026, **TEMPORÁRIO**
+
+## O desenho: um arquivo com `ARG`, não dois arquivos
+
+```dockerfile
+ARG WP_VERSION=6.8.3                        # default = PRODUCAO
+FROM wordpress:${WP_VERSION}-php8.3-fpm
+```
+
+```yaml
+# deploy-homolog.yml — a UNICA diferenca entre as duas imagens
+WP_VERSION: 7.1.0
+docker build --build-arg WP_VERSION="$WP_VERSION" ...
+```
+
+`deploy-prod.yml` **não muda**: usa o default. **Produção é o padrão, homolog é o desvio, e o
+desvio é o que se apaga na saída.**
+
+### Por que não dois arquivos
+
+O levantamento mostrou que **só a linha `FROM` precisa diferir** — `php.ini`,
+`zzz-bahia-pool.conf` e `.dockerignore` são **idênticos** entre `main` e `develop`, e as variáveis
+de ambiente nem estão na imagem (vivem no ConfigMap/Secret do `infra-bahiaba`).
+
+Com dois arquivos, toda correção futura no build teria de ser feita **duas vezes**, e o
+esquecimento seria **silencioso**. Numa separação temporária o risco não é o desenho estar errado
+— é apodrecer sem ninguém notar. **Com um arquivo só, a pergunta "como impedir que uma correção
+se perca no outro" deixa de existir por construção.**
+
+## Condição de saída — escrita no topo do `Dockerfile`
+
+> A separação acaba quando homolog e produção estiverem na **mesma versão de WordPress E de
+> plugins**. O gesto: (1) apagar `--build-arg WP_VERSION=` do `deploy-homolog.yml`; (2) alinhar o
+> default do `ARG`. **Nenhum outro arquivo participa.**
+
+## Onde fica o aviso para quem fizer o merge `develop → main`
+
+**No próprio `Dockerfile`, no bloco de comentário do `ARG`** — que é o arquivo que aparece no diff
+daquele merge, então o aviso é lido no momento em que importa:
+
+> O `FROM` de produção muda de `6.8-php8.3-fpm` para `6.8.3-php8.3-fpm`. Medido em 01/09/2026: as
+> duas tags têm o **mesmo digest** (`sha256:906c2572…`), então é no-op no dia. **Confira o digest
+> de novo antes de mergear** — `6.8` é flutuante e pode ter se movido.
+
+## A guarda de build, testada antes de entrar
+
+| Teste | Pedido | Entregue | Resultado |
+|---|---|---|---|
+| 1 — default (produção) | `6.8.3` | `6.8.3` (db_version **60421**) | ✅ build passa |
+| 2 — homolog | `7.1.0` | `7.1` (db_version **61833**) | ✅ build passa (compara major.minor) |
+| 3 — **divergência forçada** | `7.1.0` | `6.8.3` | ✅ **build FALHA, código 1** |
+
+**O teste 2 é a prova que faltava para esta etapa:** a imagem `7.1.0` traz `db_version 61833` —
+**exatamente o que o banco de homolog já tem**. O rollout torna durável o que hoje só existe no
+`emptyDir`, sem migração nova.
+
+`docker build --check` no arquivo real: **"Check complete, no warnings found"**, e o metadata
+carregado foi `wordpress:6.8.3-php8.3-fpm` — o default resolve certo.
