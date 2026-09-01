@@ -1585,3 +1585,158 @@ possível: expor o `php-fpm status` (`listen.status_path`), coletar `active proc
 `listen queue`, e escalar por métrica externa. **Não resolve amanhã, e por isso não entra na
 janela de capacidade** — mas é o que faz a correção de hoje parar de ser um número escolhido a
 mão.
+
+---
+
+# 🛡️ DESENHO DA DEFESA CONTRA A RASPAGEM DE BUSCA — proposta, NÃO aplicada
+
+## As quatro perguntas do Albert, respondidas com medição
+
+### 1. Quem chega legitimamente de fora?
+
+```
+1.158 buscas em 3 h
+   10 com Referer   (6 de https://bahia.ba, 4 de paginas de materia)
+1.148 SEM Referer nenhum
+```
+
+**Busca legítima na caixa do site manda Referer** — é o que os 10 mostram. Link compartilhado,
+favorito e URL digitada **não mandam**, e cairiam na regra.
+
+**Quantos são?** Não dá para separá-los dos ~1.000 do pool no dado atual. **Mas dá para limitar o
+dano:** se a resposta ao caso suspeito for a **página de busca vazia**, e não um bloqueio, o
+usuário legítimo vê "nenhum resultado" em vez de um erro — degradação, não porta fechada.
+
+**E a ordem de grandeza da busca legítima é baixa:** 10 buscas com Referer em 3 h = **3,3 por
+hora**. Mesmo que as legítimas sem Referer sejam dez vezes isso, são **0,55 por minuto** — contra
+os **106 por minuto** do pico da rajada.
+
+### 2. E os buscadores?
+
+**A página de busca já é `noindex, follow`** — verificado na resposta:
+
+```html
+<meta name='robots' content='noindex, follow' />
+```
+
+**Bloquear a busca para rastreador não custa nada em SEO: o Google e o Bing não indexam essas
+páginas de qualquer forma.** O Bingbot fez 61 buscas em 3 h para nada.
+
+> 🔴 **E há um achado no caminho: `https://bahia.ba/robots.txt` responde 404. O site não tem
+> robots.txt.** Sem ele, nenhum rastreador recebe orientação — nem sobre a busca, nem sobre
+> qualquer outra coisa. **Um `Disallow: /?s=` num robots.txt resolveria os 61 do Bingbot sem uma
+> linha de nginx**, e é o controle mais padrão que existe.
+
+### 3. Qual resposta dar?
+
+| Resposta | O que diz a quem raspa | Custo de servir |
+|---|---|---|
+| `403` | "fui detectado" — convida a adaptar | baixo |
+| `429` | "há um limite" — convida a esperar e voltar | baixo |
+| **página de busca vazia, `200`** | **nada** | **~0 se vier do cache** |
+
+**A mais silenciosa é a melhor**, e neste caso também é a mais barata: uma página de "nenhum
+resultado" cacheada é um `HIT`, custa microssegundos, e não dá nenhum sinal de que houve detecção.
+
+### 4. 🔴 E quando perceberem e mandarem Referer?
+
+**`Referer` é cabeçalho do cliente. É forjável numa linha.** Quem já gira IP e user-agent vai
+girar o Referer assim que o volume cair. **A regra vale enquanto não repararem — e é preciso
+desenhar sabendo disso.**
+
+> **Por isso o Referer não pode ser a defesa principal. Ele é ganho de tempo.**
+
+**A defesa que NÃO se contorna é outra: limitar a taxa GLOBAL do endereço caro.**
+
+```nginx
+limit_req_zone $server_name zone=busca:10m rate=60r/m;   # global, nao por IP
+location / {
+    if ($arg_s != "") { limit_req zone=busca burst=10 nodelay; }
+}
+```
+
+**Por que é à prova de evasão:** ela **não tenta identificar o cliente**. Girar IP não ajuda,
+forjar user-agent não ajuda, forjar Referer não ajuda — o teto é do **recurso**, não do
+solicitante. Com 60/min o legítimo (0,55/min medido) tem **100× de folga**, e a rajada de 106/min
+bate no teto.
+
+**O preço, dito com todas as letras:** durante uma rajada, uma busca legítima pode ser recusada.
+**É a troca explícita — a busca degrada para que o site não caia.** E busca é recurso secundário
+num portal de notícias.
+
+## A proposta, em camadas
+
+| # | Controle | Custo | Contornável? |
+|---|---|---|---|
+| **1** | **`robots.txt` com `Disallow: /?s=`** | zero, e resolve o Bingbot | sim, por quem ignora robots |
+| **2** | **`limit_req` GLOBAL na busca, 60/min** | uma linha de nginx | **NÃO — não depende de identificar** |
+| 3 | Referer ausente → página vazia cacheada | uma linha | **sim**, e é por isso que é a camada 3 |
+| **4** | **Ligar a compressão** | item 9, já documentado | — reduz o custo do que passar |
+
+**A ordem importa:** 1 e 2 primeiro, porque 2 é a única que não se contorna. A 3 é bônus enquanto
+durar.
+
+---
+
+# 💸 O CUSTO EM DÓLAR — e ele não está onde eu esperava
+
+**Correção de premissa: o HTML NÃO passa pelo CloudFront.** `bahia.ba` resolve direto para os IPs
+do ALB (`54.147.10.11`, `52.204.147.62`); o CloudFront serve **só a mídia**
+(`d1x4bjge7r9nas.cloudfront.net`). O custo é transferência de saída do ALB/EC2.
+
+```
+ProcessedBytes do ALB, media de 7 dias : 92,34 GB/dia  ->  2.770 GB/mes
+saida estimada (assumindo 85% do processado): 2.355 GB/mes
+custo a 0,09 USD/GB (primeiros 10 TB)  : ~USD 212/mes
+```
+
+### A raspagem de busca
+
+```
+386 buscas/hora x 156 KB = 58 MB/h  ->  41 GB/mes
+custo: USD 3,65/mes   =   1,7% da banda de saida
+```
+
+**A raspagem custa quase nada em dólar.** O dano dela é worker, não fatura.
+
+### 🔴 O que custa de verdade: a compressão desligada
+
+Medido nas páginas reais:
+
+| Página | Hoje | Com gzip | Economia |
+|---|---|---|---|
+| Home | **575.135 B** | 93.622 B | **84%** |
+| Busca | 310.510 B | 61.645 B | **80%** |
+| Archive | 312.601 B | 59.051 B | **81%** |
+
+```
+custo hoje       : ~USD 212/mes
+custo com gzip   : ~USD  42/mes
+ECONOMIA         : ~USD 170/mes  =  USD 2.034/ano
+```
+
+**É o item 9 do `PENDENCIAS-gestores.md`, documentado em 18/08 e ainda aberto — agora com o número
+em dólar.** E o ganho não é só de fatura: quem paga em segundos de espera é o leitor no celular.
+
+> **Fui procurar o custo da raspagem e encontrei um custo 46× maior parado ao lado.**
+
+---
+
+# Os parâmetros que realmente exigem bypass de cache
+
+Em vez de `if ($query_string != "") { set $skip_cache 1; }`, que nega tudo:
+
+```nginx
+# so estes precisam de bypass — o resto pode cachear
+if ($arg_s != "")              { set $skip_cache 1; }   # busca
+if ($arg_doing_wp_cron != "")  { set $skip_cache 1; }   # cron
+if ($arg_redirect_to != "")    { set $skip_cache 1; }   # login
+if ($arg_preview != "")        { set $skip_cache 1; }   # previa de rascunho
+if ($arg_p != "")              { set $skip_cache 1; }   # permalink cru
+if ($arg_page_id != "")        { set $skip_cache 1; }
+if ($arg_replytocom != "")     { set $skip_cache 1; }   # resposta a comentario
+```
+
+**Recupera 1.817 requisições em 3 h — 8,0% das dinâmicas**, quase todas `oembed` com `url=` e
+`format=`. Os parâmetros de rastreio (`fbclid`, `gclid`) passariam a cachear também, mas são
+**18 ocorrências em 3 h**: o ganho ali é estrutural, não de volume.
