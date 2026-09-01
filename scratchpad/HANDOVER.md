@@ -1888,3 +1888,64 @@ Parente do §16.7, §24 e §26: em todos, o instrumento (ou a suposição) respo
 sobre algo que não tinha medido. Aqui a lição específica é mais dura, porque **a afirmação não
 verificada entrou no relatório antes da medição** — a ordem certa é medir e depois afirmar,
 inclusive quando a afirmação parece trivial.
+
+### A regra operacional que sai daqui
+
+> **Em qualquer remoção de instância, LISTAR explicitamente o que sobrevive e o que sai — com o
+> comando que prova cada item — ANTES de executar.** Não depois, não "a gente confere no fim".
+
+Não é uma lista mental nem uma frase no relatório: é um bloco escrito, item a item, com o comando
+ao lado. O que deveria ter existido antes do `delete-db-instance`:
+
+```bash
+# SOBREVIVE (provar antes):
+aws rds describe-db-snapshots --snapshot-type manual        # snapshots manuais: permanentes
+ls -la ~/BAHIABA-backups/dump-PRODUCAO-*.sql.gz             # dumps logicos locais
+
+# SAI (provar que se sabe que sai):
+aws rds describe-db-instance-automated-backups \
+    --db-instance-identifier <id>                           # PITR: sai por PADRAO da API
+aws rds describe-db-snapshots | grep <id>                   # snapshots automaticos: saem junto
+```
+
+**Padrões de API que apagam por omissão são a pior categoria de armadilha, porque o silêncio
+significa "sim".** Um comando destrutivo sem flag não é um comando conservador — é um comando que
+aceitou todos os padrões de quem escreveu a API, e esses padrões foram escolhidos para o caso
+comum, não para o seu. A revisão tem que ser dos parâmetros **ausentes**, que são invisíveis na
+linha de comando e por isso não aparecem em nenhuma leitura do que foi digitado.
+
+---
+
+## 28. Um evento isolado durante uma operação parece causado por ela
+
+**Onde apareceu.** Remoção do `rds-bahiaba-2023-old1`, 01/09/2026.
+
+A sonda contínua sobre produção registrou **um 502 às 06:51:16**, dezoito segundos antes do
+`delete-db-instance` e três segundos depois do `modify-db-instance`. Isolado, com esse
+posicionamento, ele tem todos os traços de causa: proximidade temporal, operação em andamento,
+única anomalia da janela.
+
+**A sonda continuou rodando depois que a operação terminou.** E às **07:01:33**, com a instância
+removida havia cinco minutos e nada acontecendo, veio **o segundo 502**.
+
+```
+DURANTE a remoção (136 amostras):   135 ok  |  1 erro
+DEPOIS, sem operação (277 amostras): 276 ok  |  1 erro
+```
+
+**O segundo evento é o contrafactual do primeiro.** Ele converte "a remoção causou um 502" em
+"produção tem uma taxa de fundo de 0,48% de 502, e um deles calhou de cair durante a operação".
+São conclusões opostas a partir do mesmo primeiro dado.
+
+> **A janela de medição tem que ultrapassar a operação, e por uma margem que permita ver o fundo.**
+> Uma sonda que começa com a operação e para com ela produz, por construção, um conjunto de dados
+> em que **tudo o que aparece está correlacionado com a operação** — não porque seja causado por
+> ela, mas porque não há nada fora dela para comparar.
+
+O erro que isto evita é caro nos dois sentidos: atribuir à mudança um defeito que já existia leva
+a reverter algo que estava certo; e o inverso, atribuir ao fundo um defeito real, deixa passar
+uma regressão. **A única defesa é ter medido o fundo — e o momento mais barato de fazer isso é
+deixar a sonda correndo mais quinze minutos.**
+
+Parente do §20 (sonda contínua vence amostra em marcos) e do §23 (aviso em ambiente novo não
+significa nada sem contrafactual). O §20 diz *como* medir; este diz *por quanto tempo*.
