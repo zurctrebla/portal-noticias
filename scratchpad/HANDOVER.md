@@ -2688,3 +2688,56 @@ conteúdo bom. **É vetor de SEO trabalhando contra o site**, não apenas consum
 de verificar **o que ele recebia de volta**. O status da resposta estava no mesmo log que eu já
 estava lendo. **Um padrão de requisição só se interpreta junto com a resposta que ele obtém** —
 sozinho, ele descreve metade da conversa, e a metade que falta é a nossa.
+
+---
+
+## 45. Duas falhas na mesma mudança: uma que não pegou, e uma que cegou a medição
+
+**Onde apareceu.** Aplicação das três correções de 404 em produção, 01/09/2026.
+
+### A) `fastcgi_cache_valid 404 5m` não teve efeito nenhum
+
+Medido depois: **`cache=MISS` em todos os 404**, e o tempo continuou em 1,4 s.
+
+**A causa, provada:**
+
+```
+wp_get_nocache_headers() do WordPress devolve:
+  Expires: Wed, 11 Jan 1984 05:00:00 GMT
+  Cache-Control: no-cache, must-revalidate, max-age=0, no-store, private
+
+e a config tem:
+  fastcgi_ignore_headers Set-Cookie;      <- SO Set-Cookie
+```
+
+**O nginx obedece ao `no-store` do upstream e recusa guardar.** O `fastcgi_cache_valid 404 5m`
+nunca chega a ser consultado — ele diz *por quanto tempo* guardar, não *se pode* guardar.
+
+> **`fastcgi_cache_valid` não vence `Cache-Control` do upstream.** Quem decide se pode guardar é
+> `fastcgi_ignore_headers`. **Eu escrevi uma diretiva que responde a segunda pergunta enquanto o
+> bloqueio estava na primeira** — e o `nginx -t` passou, porque a sintaxe estava certa.
+
+**O que faltou verificar antes:** eu havia testado o TTL na home (§ da compressão) e o cache
+segurou além de 130 s — e concluí que o upstream não interferia. **Mas o WordPress só emite
+`nocache_headers` em respostas de erro e páginas privadas, não na home.** Testei o caso onde o
+problema não existe e generalizei para o caso onde ele existe.
+
+**A correção seria `fastcgi_ignore_headers Cache-Control Expires Set-Cookie;` — e ela é mais larga
+do que parece**: passaria a ignorar o `Cache-Control` de **todas** as respostas, inclusive as que
+o WordPress marca como privadas por um motivo que o `$skip_cache` não cobre. **Não aplicada:
+precisa de análise própria, não de mais um rollout no fim de um dia com cinco.**
+
+### B) `access_log off` apagou a prova do que a mudança fez
+
+Nos dois blocos novos escrevi `access_log off`, para não inflar o log com tráfego de raspador.
+
+**Consequência: as requisições que passaram a ser 410 e 301 sumiram do log — e eram exatamente as
+que eu precisava contar para medir a redução.** Ao medir depois, os caminhos de spam e o sitemap
+aparecem com **zero requisições**, não porque pararam, mas porque não são mais registrados.
+
+> **Não desligue o registro do que você acabou de mudar.** O log de uma classe de tráfego é caro
+> só enquanto ela é grande — e ela ser grande é precisamente a razão de tê-la mudado. **Desligar
+> o log no mesmo gesto em que se corrige é destruir a linha de base do "depois".**
+
+Parente do §24 (o limiar que apaga a prova) e do §16.7. **Em todos, a informação foi descartada
+por uma decisão de eficiência tomada sem perguntar o que se perde.**
