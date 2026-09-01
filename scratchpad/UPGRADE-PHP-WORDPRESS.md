@@ -1207,3 +1207,91 @@ mesmo dia não foi seguida no deploy anterior de homolog, e isso estava valendo 
 
 Sabendo do §32, **contei com o rollout**: o `tf-apply.yml` reinicia os pods de forma incondicional.
 Custou mais um restart de homolog — e serviu como segunda prova de que a 7.1 sobrevive.
+
+---
+
+# 📦 PLANO DE LOTES — plugins em homolog sobre a 7.1
+
+**Levantamento em 01/09/2026, no pod de homolog rodando WordPress 7.1.**
+
+```
+31 plugins instalados · 24 ativos · 17 com atualizacao · 13 deles ATIVOS
+```
+
+## O que NÃO entra em lote nenhum
+
+| Grupo | Plugins | Por quê |
+|---|---|---|
+| **tagDiv** | Composer 5.4.5, Cloud Library 3.9.5, Social Counter 5.7 | **sem canal de atualização** — nenhum oferece update |
+| **Internos** | Coberturas, Posts do Dia, Relatórios, Vídeo de destaque, Push Notifications | são nossos |
+| **Premium sem licença** | AdRotate Professional 5.13.1 | sem licença no `adrotate_config`, sem canal |
+| **Já atuais** | Regenerate Thumbnails 3.1.6, PureDevs GDPR 1.0.3, Role Quick Changer 0.2.1 | não há versão nova |
+| **Inativos** | Akismet, All-in-One WP Migration, NextScripts, WPS Hide Login | **não rodam**; atualizar não muda comportamento. Decisão separada: atualizar ou **remover** |
+
+## 🔴 Portão prévio: ACF PRO está BLOQUEADO por licença
+
+```
+advanced-custom-fields-pro   6.2.1.1 -> 6.8.9
+   pacote: (VAZIO — exige licenca)
+   acf_pro_license          definida (176 chars)
+   acf_pro_license_status   (VAZIA)
+   acf_pro_get_license_key(): (VAZIA)
+```
+
+**O servidor da ACF responde** — ele sabe que existe a 6.8.9 e que ela foi testada na 7.1 — **mas
+não entrega o pacote.** A opção `acf_pro_license` tem conteúdo, e mesmo assim
+`acf_pro_get_license_key()` volta vazia e o status está em branco: **a chave não está válida.**
+
+**Consequência para o plano:** o plugin de maior salto (6 minors) e de dependência mais profunda
+(todo o modelo editorial: `subtitulo`, `imagem`, 5 grupos de campos) **não pode ser atualizado até
+a licença ser resolvida.** Isso é do Albert, não meu.
+
+> **E reordena tudo.** O certo seria ACF cedo, para que os outros 12 fossem validados já sobre a
+> versão final. Como não dá, **todos os lotes serão validados sobre o ACF 6.2.1.1**, e quando o
+> ACF finalmente subir ele muda debaixo de todos eles. **Isso terá de ser revalidado.**
+
+## Os lotes
+
+| # | Plugins | Salto | Por que juntos / sozinho |
+|---|---|---|---|
+| **1** | Post Type Switcher `4.0.0→4.0.1` · WP Twitter Auto Publish `1.7.6→1.7.7` · Site Kit `1.180.0→1.186.0` | patch | **Prova o procedimento com o menor custo.** Nenhum toca conteúdo, mídia ou renderização: dois são só admin e um é analytics. Se o processo estiver errado, descobre-se aqui |
+| **2** | Disable Comments `2.5.3→2.8.0` · Category Order `1.9.1→2.0` · OneSignal `3.5.0→3.9.2` · FooGallery `2.4.32→3.2.6` | minor a **major** | Periféricos com **sintomas distinguíveis entre si** — comentário, ordem de termo, push e galeria não se confundem. Category Order toca ordenação de taxonomia, e **editorias são CPTs**: merece olhar na navegação |
+| **3** | **WP Offload Media Lite** `3.2.11→3.3.1` | minor | **Sozinho, por pedido seu.** É o caminho de toda a mídia do site, e o bucket é **compartilhado com produção**. Bônus: as **244 depreciações de PHP 8.4 da Tarefa A** estão aqui — vale remedir depois |
+| **4** | **Smush** `3.22.1→4.3.2` | **major 3→4** | **Sozinho.** Mesmo pipeline do lote 3. Juntá-los destruiria a atribuição **exatamente onde ela mais importa**: se o upload quebrar, qual dos dois foi? |
+| **5** | **Co-Authors Plus** `3.6.6→4.1.1` | **major 3→4** | **Sozinho, por pedido seu.** Governa a autoria de toda matéria e a página de autor, que já teve incidente de desempenho (`author-archive-cap-lento`) |
+| **6** | **Yoast SEO** `27.7→28.3` | **major** | **Sozinho, por pedido seu.** Salto de major **com migração de indexáveis**: `wp_yoast_indexable` tem ~323 mil linhas. É o lote mais lento e o de maior escrita no banco |
+| **7** | **PublishPress Capabilities** `2.21.0→2.50.1` | 29 minors | **Sozinho.** Governa capacidades no admin e **é o principal suspeito da caixa Publicar ausente**. Por último de propósito: até aqui o editor já terá sido validado seis vezes, então uma mudança nele fica atribuída |
+
+**Sete lotes, 12 plugins.** O 13º — ACF PRO — fica fora até a licença.
+
+## Procedimento por lote (igual em todos)
+
+1. **`tar` dos diretórios do lote**, para fora do pod → rollback de arquivo em segundos
+2. **Dump do banco** antes dos lotes **2, 4, 5, 6 e 7** — os que fazem migração de dados
+3. Atualizar **pelo updater do WordPress**, no pod
+4. **Validar** (abaixo)
+5. **Extrair os arquivos para o repositório** e commitar — 1 commit por lote
+6. **Push** ao fim do lote: prova que sobrevive ao rollout, e é a diferença entre "funcionou no pod" e "está versionado"
+
+### Validação, em todos os lotes
+site · busca · **editor abrindo** · rascunho com ACF e coautoria · logs (fatais, depreciações, avisos normalizados por tráfego)
+
+### Validação extra, por lote
+- **2** — ordem das editorias na navegação; uma galeria FooGallery renderizando
+- **3 e 4** — **envio de mídia completo**: upload, 12 derivadas, S3, `srcset`, aparecer na matéria
+- **5** — página de autor e **tempo** dela (o incidente do CAP foi de desempenho, não de erro)
+- **6** — contagem de `wp_yoast_indexable` antes e depois, e o tempo da migração
+- **7** — a caixa Publicar, com **olho humano no navegador**
+
+## ⚠️ O que o rollback NÃO cobre
+
+**Arquivo volta fácil; migração de banco, não.** Os lotes 2, 4, 5, 6 e 7 têm salto de major ou
+salto grande e podem migrar dados. **Desfazer isso exige restaurar o dump inteiro de homolog** —
+não há rollback por plugin. Por isso o dump vem antes de cada um deles, e por isso eles são
+solitários: um dump restaurado apaga o trabalho de todo lote que estiver junto.
+
+## ⚠️ E o PHP é 8.3.33, não 8.3.28
+
+**Toda esta validação acontece sobre um patch de PHP diferente do de produção.** Não é bloqueante,
+mas se um plugin se comportar de forma inesperada, *"isso também acontece em 8.3.28?"* faz parte
+do diagnóstico — e **não pode ser respondido em homolog**. Ver a seção da separação do Dockerfile.
