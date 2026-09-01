@@ -330,6 +330,7 @@ campo ficar vazio. Está aqui para não se perder.
 | 5 | Limite de 70/160 caracteres | Nenhuma — só conferir após atualizar o tema | Informativa |
 | 6 | Anúncio novo demora 3h para aparecer | **Operacional** — deixar a data de início em branco | Média (perda de exibição paga) |
 | 7 | 13 descrições cortadas no meio | **Operacional, na PRODUÇÃO** — apagar o campo de descrição do Yoast nas 13 | Baixa |
+| 13 | **AdRotate vai parar de funcionar dentro do editor** | **Comercial/estratégica** — recuperar a licença, trocar de plugin, ou aceitar publicidade fora do editor | Média — **sem data, mas com direção anunciada pelo WordPress** |
 
 ---
 
@@ -603,3 +604,81 @@ Quando o banco ganhar um grupo próprio, este pode ser apagado. Está anotado no
 técnico de limpeza da AWS.
 
 **Nenhuma ação pendente da gestão neste item.**
+
+---
+
+## 13. O AdRotate vai parar de funcionar dentro do editor — e não há de onde receber a correção
+
+> **Acrescentado em 01/09/2026.** Este item **substitui** o registro anterior, que dizia apenas
+> *"plugin pago sem licença, risco de segurança"*. **A natureza do problema mudou quando o
+> mecanismo apareceu medido: não é um risco difuso, é um prazo.**
+
+### O que é
+
+O WordPress está fechando um caminho de compatibilidade, e **dois blocos do AdRotate dependem
+dele para funcionar**.
+
+Quando alguém edita uma matéria, o editor do WordPress precisa desenhar os blocos numa área
+isolada do resto da tela. Blocos escritos no padrão antigo não sabem funcionar nessa área
+isolada — então o WordPress, por enquanto, **desliga o isolamento** para não quebrá-los.
+
+Medido no ambiente de homologação em 01/09/2026, o próprio WordPress avisa, no console do
+navegador, três vezes por carregamento da tela de edição:
+
+```
+O bloco "adrotate/advert"       está registrado com a API versão 1
+O bloco "adrotate/group"        está registrado com a API versão 1
+O bloco "fooplugins/foogallery" está registrado com a API versão 1
+
+"Isto significa que o editor pode funcionar sem o isolamento. Como TODOS os
+ editores passarao a funcionar isolados no futuro, ajuste o campo apiVersion
+ para 3 e teste o bloco dentro do editor isolado."
+```
+
+**A frase que importa é "todos os editores passarão a funcionar isolados no futuro".** É um aviso
+de remoção, publicado pelo próprio WordPress. **Não há data anunciada — mas há direção anunciada.**
+
+### Por que este item é diferente de "atualizar um plugin"
+
+**O AdRotate Professional é pago, e a licença não está configurada.** Verificado no ambiente:
+não há licença registrada, e o plugin **não oferece nenhuma atualização**. Ou seja: mesmo que o
+fabricante já tenha corrigido isso, **a correção não tem por onde chegar até nós.**
+
+O mesmo vale, por outro motivo, para o tema **Newspaper e os três plugins tagDiv**: eles também
+enfileiram recursos de forma incompatível com a área isolada, e também **não têm canal de
+atualização configurado**.
+
+### Por que importa
+
+O AdRotate **é a publicidade do site inteiro** — os grupos, os agendamentos e a contagem de
+entrega que sustenta a comprovação ao anunciante. Quando o WordPress remover o caminho antigo:
+
+- os dois blocos do AdRotate **param de funcionar dentro do editor**
+- quem escreve deixa de conseguir inserir ou ajustar publicidade **pela tela de edição**
+- o que já está publicado continua aparecendo no site: **o problema é de operação, não de exibição**
+
+**Hoje nada está quebrado.** O que existe é um aviso com direção definida, e um caminho de
+correção que está fechado do nosso lado.
+
+### O que é preciso decidir
+
+**A pergunta deixou de ser "vale a pena renovar a licença?".** Ela agora é:
+
+> ### O que fazemos quando o AdRotate parar de funcionar dentro do editor?
+
+São três saídas, e todas custam alguma coisa:
+
+| | Saída | O que custa | O que resolve |
+|---|---|---|---|
+| **A** | **Recuperar a licença do AdRotate** | mensalidade/anuidade do fabricante | Reabre o canal de atualização. **Não garante** que o fabricante vá corrigir — mas é a única saída em que a correção pode simplesmente chegar |
+| **B** | **Trocar de plugin de publicidade** | projeto de migração: recadastrar peças, grupos e agendamentos, e **reconstruir o histórico de entrega** | Sai da dependência de um fornecedor sem canal. É a saída mais cara e a mais definitiva |
+| **C** | **Aceitar publicidade fora do editor** | mudança de rotina da redação: inserir anúncio por outro caminho, não pela tela de edição | Custo zero de dinheiro. Passa o custo para a operação diária, todos os dias |
+
+**Nenhuma das três é urgente esta semana.** As três ficam mais caras quanto mais tarde forem
+escolhidas — a **B** porque o histórico de entrega cresce, e a **C** porque a rotina se consolida.
+
+### O que já está encaminhado
+
+O **FooGallery**, o terceiro bloco da lista, **é gratuito e tem canal de atualização**. Ele entra
+no lote 2 da atualização de plugins, e há um teste objetivo: reabrir o editor e conferir se o
+aviso dele sumiu do console. **Se sumir, é um bloco legado a menos, sem decisão nenhuma de vocês.**

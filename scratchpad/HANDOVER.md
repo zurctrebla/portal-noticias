@@ -2177,3 +2177,35 @@ eu li **depois** da página carregar. Os avisos de carregamento nunca estiveram 
 > **Ordem correta: iniciar o rastreamento, recarregar, e só então ler.** Um contador que começa
 > depois do evento relata zero — e zero é a resposta mais convincente que a falta de medição pode
 > dar. Mesma família do §26 e do §30.
+
+### A generalização, que é maior que o caso
+
+**Função de framework chamada fora do contexto que ela pressupõe é a versão mais traiçoeira
+deste problema — porque não há sinal nenhum de que a resposta é de outra pergunta.**
+
+Compare com os vizinhos desta seção:
+
+| | O sintoma | O sinal disponível |
+|---|---|---|
+| §16.7 `DATA_FREE` | valor velho | nenhum — mas há uma fonte autoritativa ao lado |
+| §26 `performance_schema.accounts` | tabela vazia | uma variável a distância dizia `= 0` |
+| §30 log do nginx | zero 5xx | o tipo de falha não passa por aquele log |
+| **§34 `use_block_editor_for_post()`** | **`false`, com confiança total** | **NENHUM** |
+
+Nos três primeiros havia uma pista: um zero suspeito, um contador desligado, um tipo de erro que
+não se registra. **Aqui não há.** A função existe, é a função certa, recebe o argumento certo,
+devolve um booleano bem formado no tempo esperado. Ela responde **exatamente** o que foi
+perguntado — só que "este post usa o editor de blocos?" é, em CLI, uma pergunta sem o contexto que
+lhe dá sentido: não há `is_admin()`, não há tela corrente, não há os filtros que os plugins
+registram só no painel.
+
+> **Antes de usar o retorno de uma função de framework como fato, pergunte de que contexto ela
+> depende — e se você está nele.** `is_admin()`, `get_current_screen()`, `wp_doing_ajax()`,
+> capacidades, hooks de admin, tema ativo, locale: todos mudam a resposta sem mudar a assinatura.
+>
+> **E a regra prática que resolve o caso:** o que descreve *o que o usuário vê* mede-se **onde o
+> usuário está** — no navegador, com sessão real. CLI serve para dado, não para experiência.
+
+**O custo real deste erro nesta sessão:** a frase central de um relatório — *"o maior risco
+previsto da 7.1 não se aplica"* — era falsa, e ficou três dias de pé sustentando um
+dimensionamento de migração.
