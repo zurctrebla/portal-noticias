@@ -3017,3 +3017,128 @@ indexáveis do Yoast — transiente, contagem de anúncio e índice de SEO. **Ne
 | **C** | Aceitar o manual de 28/08 e apagar com `--skip-final-snapshot` | zero | Justificado pela medição: nenhuma matéria no intervalo |
 | **D** | Apagar **com** `--final-db-snapshot-identifier` numa chamada só | zero | **Falha sem efeito** se a permissão não cobrir: a AWS valida antes de agir, e a instância não é tocada |
 
+
+---
+
+# ✅ `rds-bahiaba-2023-old1` REMOVIDO — 01/09/2026, 06:56:04 UTC
+
+```
+06:51:13  modify-db-instance --no-deletion-protection   -> DeletionProtection=false
+06:51:34  delete-db-instance --skip-final-snapshot      -> status=deleting
+06:56:04  describe -> DBInstanceNotFound                -> REMOVIDA (4 min 30 s)
+```
+
+Restam duas instâncias, **ambas em 8.4.9 e ambas `PubliclyAccessible=false`**:
+`rds-bahiaba-2023` (db.m5.xlarge) e `rds-bahiaba-hml` (db.t3.micro).
+
+## Por que NÃO foi tirado snapshot final — decisão registrada, não esquecimento
+
+> **Isto está escrito para quem abrir o documento daqui a três meses e estranhar a ausência.**
+
+Havia um bloqueio e uma medição, e os dois apontaram para o mesmo lugar.
+
+**O bloqueio:** `rds:CreateDBSnapshot` e `rds:CopyDBSnapshot` estavam em `implicitDeny` para o
+`bahia-pipeline`. Saíram **de propósito** da `RdsEscritaUpgrade84` na revisão de 756 → 431
+caracteres, que abriu espaço para `CreateDBInstanceReadReplica` e `PromoteReadReplica` dentro do
+limite agregado de 2048 do IAM. Foi reportado ao Albert **antes de qualquer tentativa**.
+
+**A medição, que é o que decidiu:** o snapshot final seria **redundante**.
+
+| | |
+|---|---|
+| `bahia-prod-pre-upgrade-84-20260828` | manual, **permanente**, 8.0.42, tirado em **29/08 02:49:43** |
+| O azul congelou em | **29/08 05:49:20** (`UPDATE_TIME` máximo do schema `prod`) |
+| Diferença | **3 horas** |
+| `UPDATE_TIME` de `wp_posts` | **29/08 01:51:33** — *anterior ao snapshot* |
+
+**Nenhuma matéria mudou nessas 3 horas.** O que se moveu entre 02:49 e 05:49 foi `wp_postmeta`,
+`wp_options`, `wp_adrotate_*` e os indexáveis do Yoast — transiente, contagem de anúncio e índice
+de SEO. **O snapshot de 02:49 e um snapshot de 05:49 teriam o mesmo conteúdo editorial.**
+
+Sem a medição, "3 horas de diferença" pareceria lacuna. Com ela, é redundância.
+
+## 🔴 Correção: os backups automáticos foram apagados, e o erro foi meu
+
+**Eu afirmei, ao rodar o comando, que omitir `--delete-automated-backups` os manteria. É o
+contrário: o padrão da API é `DeleteAutomatedBackups = true`.** Omitir a flag **executa** a
+remoção. Verificado depois:
+
+```
+describe-db-instance-automated-backups --db-instance-identifier rds-bahiaba-2023-old1
+  -> DBInstanceAutomatedBackupNotFound
+
+describe-db-snapshots --db-snapshot-identifier rds:rds-bahiaba-2023-old1-2026-09-01-04-10
+  -> DBSnapshotNotFound
+
+snapshots restantes com "old1" no nome: 0
+```
+
+Os três snapshots diários do `old1` (30/08, 31/08, 01/09), que iam expirar entre 06 e 08/09,
+**saíram junto com a instância**. A rede que o Albert chamou de dupla é **simples**.
+
+### O que de fato resta em 8.0.42
+
+| Artefato | Tipo | Quando | Validade |
+|---|---|---|---|
+| **`bahia-prod-pre-upgrade-84-20260828`** | snapshot **manual** | 29/08 02:49 | **permanente** |
+| `bahia-prod-pre-virada-newspaper-20260819` | snapshot **manual** | 19/08 06:06 | **permanente** |
+| `dump-PRODUCAO-20260819-0711.sql.gz` | dump lógico local, 573 MB | 19/08 | permanente |
+| `dump-PRODUCAO-20260818-0707.sql.gz` | dump lógico local, 575 MB | 18/08 | permanente |
+
+**O artefato em que a decisão se apoiou está intacto e é permanente.** O que se perdeu foi a
+segunda camada e a possibilidade de PITR do azul — que já valia pouco, porque voltar ao 8.0.42
+hoje significaria descartar tudo publicado desde 29/08. **Mas foi perda não intencional, e é
+diferente de perda escolhida.**
+
+## Produção durante e depois — sonda contínua, não amostra pontual
+
+```
+cobertura: 06:51:07 -> 07:06:03 UTC   (15 min, 413 amostras a ~1 Hz)
+DURANTE a remoção (136 amostras):  135 ok  |  1 erro
+DEPOIS,   sem operação (277):      276 ok  |  1 erro
+```
+
+**Os dois 502 e o que eles provam:**
+
+```
+06:51:16  502   (durante)
+07:01:33  502   (depois, com NADA acontecendo)
+```
+
+**O segundo é o contrafactual do primeiro.** Um 502 durante a operação, isolado, teria virado
+"a remoção afetou produção". O segundo, com a operação encerrada há 5 minutos, mostra que a taxa
+é de fundo: **2 em 413 amostras (0,48%)**, distribuída, sem relação com a remoção. Nenhum evento
+de pod às 06:51:16 (a rotação do HPA foi às 06:45 e 06:54), zero reinícios, mesmo ReplicaSet
+`75f4fdcf7f` e mesma imagem `prod-804c68f0…`.
+
+Tempos das 411 respostas boas: mediana **0,965 s**, p90 **1,238 s**, máximo 5,904 s.
+
+## Escrita real de teste em produção
+
+Rascunho, não publicado — exercita o caminho de escrita sem expor nada ao leitor:
+
+```
+siteurl = https://bahia.ba        banco = rds-bahiaba-2023…    MySQL 8.4.9
+MAX(ID) antes  = 9.002.413
+INSERT  ok -> ID=9.002.414   79 ms
+META    ok -> carimbo-…       9 ms
+UPDATE  ok -> titulo alterado 72 ms
+LEITURA do disco apos wp_cache_flush() -> ID=9002414 status=draft   (nao veio do cache)
+DELETE  ok                   100 ms
+residuo: wp_posts=0  wp_postmeta=0   (limpo)
+```
+
+## Fechamento dos riscos que a instância carregava
+
+| Risco | Estado |
+|---|---|
+| Escrita perdida num banco que ninguém lê | **encerrado** — nada escrevia, e agora não existe |
+| `PubliclyAccessible=true` com dado de produção | **encerrado** |
+| SG antigo compartilhado (`MySQL`) em vez do dedicado | **encerrado** |
+| ~US$ 241/mês de db.m5.xlarge ocioso | **encerrado** |
+
+## Pendente imediato
+
+**Remover a `RdsEscritaUpgrade84`** — o Albert faz no console, e a conferência por
+`simulate-principal-policy` volta neste documento. **A ordem foi respeitada: instância primeiro,
+política depois** — sem ela, o `DeleteDBInstance` teria sido perdido.

@@ -1849,3 +1849,42 @@ reforça a impressão errada de que o subsistema está de pé.
 Parente do §16.7 (`DATA_FREE` devolvendo o valor de antes do `OPTIMIZE`) e do §24 (o limiar que
 apaga a prova): as três são falhas em que **o instrumento respondeu, e a resposta não era sobre o
 que eu perguntei**.
+
+---
+
+## 27. Omitir uma flag destrutiva pode ser a escolha destrutiva
+
+**Onde apareceu.** Remoção do `rds-bahiaba-2023-old1`, 01/09/2026.
+
+Rodei `delete-db-instance --skip-final-snapshot` **sem** `--delete-automated-backups`, e anunciei
+em voz alta que a omissão manteria os três snapshots automáticos como segunda rede de
+recuperação.
+
+**Estava errado. O padrão da API é `DeleteAutomatedBackups = true`.** Não passar a flag **executa**
+a remoção dos backups. Os três snapshots do azul saíram junto com a instância:
+
+```
+describe-db-instance-automated-backups -> DBInstanceAutomatedBackupNotFound
+describe-db-snapshots                  -> DBSnapshotNotFound
+snapshots restantes com "old1" no nome: 0
+```
+
+**O modelo mental que falhou:** "se eu não passar a flag, nada a mais acontece". Numa API de
+remoção esse modelo é perigoso, porque o verbo já é destrutivo e as flags frequentemente escolhem
+**o que preservar**, não o que destruir. `--skip-final-snapshot` e `--delete-automated-backups`
+parecem simétricas e não são: a primeira precisa ser pedida, a segunda vem ligada.
+
+> **Antes de rodar um comando destrutivo, leia o padrão documentado de cada parâmetro que você
+> NÃO está passando.** O nome da flag descreve o que ela faz quando presente — não diz nada sobre
+> o que acontece na ausência dela.
+
+**E o segundo erro, que é o que dói:** eu não só apliquei o padrão errado, eu **narrei** a
+garantia errada no mesmo fôlego em que rodava o comando, sem ter verificado. Uma afirmação sobre
+um ativo de recuperação é do tipo que só é conferida no momento em que se precisa dele — e aí é
+tarde. **O que salvou foi verificar depois**, por `describe-db-instance-automated-backups`, que
+eu só rodei porque quis confirmar a rede antes de reportar.
+
+Parente do §16.7, §24 e §26: em todos, o instrumento (ou a suposição) respondeu com confiança
+sobre algo que não tinha medido. Aqui a lição específica é mais dura, porque **a afirmação não
+verificada entrou no relatório antes da medição** — a ordem certa é medir e depois afirmar,
+inclusive quando a afirmação parece trivial.
