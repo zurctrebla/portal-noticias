@@ -2275,3 +2275,25 @@ limite sem medir a demanda troca o valor do teto, não a existência dele.**
 **O que não sei:** por que hoje foi pior que 31/08 (3 minutos contra 1; 11,4 s contra 3,6 s).
 Segunda-feira contra domingo é o candidato óbvio, e não tenho como separar isso do PHP 8.3 com os
 dados desta janela.
+
+### A incerteza que fica em aberto, escrita como incerteza
+
+Hoje (01/09, PHP 8.3) foi **3× pior** que 31/08 (PHP 8.2): 3 minutos no teto contra 1, e resposta
+média de 11,41 s contra 3,61 s.
+
+**Não consigo separar "segunda-feira contra domingo" de "PHP 8.3" com os dados desta janela.**
+As duas variáveis mudaram juntas. Segunda de manhã é o pico natural da redação; e foi também o
+primeiro dia em 8.3.
+
+> **O teste que decide já está marcado, e é o próprio calendário:**
+> - se **amanhã (02/09, terça) repetir na mesma magnitude** de hoje → é **dia da semana**, e o PHP
+>   está fora
+> - se **piorar** → o PHP 8.3 **volta à mesa** como suspeito
+>
+> Medir: `DatabaseConnections` máximo, minutos em ≥55, e `TargetResponseTime` médio máximo na
+> janela 09:00–10:10 UTC. Comparar com 28/08 (25), 29/08 (29), 31/08 (60/1min/3,61s) e
+> 01/09 (60/3min/11,41s).
+
+**Isto é registro de incerteza, não de conclusão.** A tentação é fechar a causa no dia da mudança,
+porque é a explicação mais disponível — e foi exatamente contra isso que o contrafactual de 31/08
+serviu.
