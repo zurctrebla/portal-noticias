@@ -1949,3 +1949,56 @@ deixar a sonda correndo mais quinze minutos.**
 
 Parente do §20 (sonda contínua vence amostra em marcos) e do §23 (aviso em ambiente novo não
 significa nada sem contrafactual). O §20 diz *como* medir; este diz *por quanto tempo*.
+
+---
+
+## 29. `maxUnavailable: 0` sem `readinessProbe` não promete o que parece prometer
+
+**Onde apareceu.** Subida do PHP 8.3 em produção, 01/09/2026.
+
+A estratégia do Deployment de produção é `maxSurge: 1, maxUnavailable: 0`. Lida ao pé da letra,
+ela diz: *nunca haverá menos réplicas disponíveis que o desejado*. Foi com base nisso que a
+expectativa era **zero indisponibilidade** no rollout.
+
+**Medido:**
+
+| Janela | Requisições | Falhas | Taxa |
+|---|---|---|---|
+| Durante o rollout (3 min 28 s) | 1.459 | **35** | **2,40%** |
+| Fora dele | 3.991 | 4 | **0,10%** |
+
+**24× a taxa de fundo**, e a sonda externa a 1 Hz deu 0 erros nas 78 amostras antes e 0 nas 432
+depois — os erros são **exclusivos** da janela.
+
+**Por que a promessa não vale.** `maxUnavailable` conta pods **disponíveis** no sentido do
+Kubernetes, e sem `readinessProbe` um pod é considerado pronto **assim que o contêiner sobe** —
+não quando o processo aceita conexão. O contrato que o campo expressa é sobre a contagem de pods,
+e o que o leitor precisa é sobre a capacidade de servir. **Os dois só coincidem se existir uma
+prova de prontidão.** Sem ela, `maxUnavailable: 0` é uma afirmação sobre um número, não sobre o
+serviço.
+
+E há a outra ponta, igualmente aberta: sem `preStop`, o pod que está sendo derrubado continua
+recebendo tráfego enquanto a desregistração no balanceador não termina.
+
+**A prova de que a falha é de conexão, e não da aplicação**, veio de separar quem gerou o erro:
+
+```
+HTTPCode_ELB_502_Count     29   <- o balanceador nao obteve resposta do alvo
+HTTPCode_Target_5XX_Count   6   <- um pod respondeu 5xx
+5xx no log de nginx dos pods novos: 0
+```
+
+> **Cuidado com a leitura do log limpo:** nginx **não registra conexão recusada**. O log vazio dos
+> pods novos é **consistente** com a falha, não a refuta. Quando o erro é de conexão, a ausência
+> de registro é o que se espera — e tratá-la como prova de inocência inverte o sinal.
+
+Foi preciso a métrica do balanceador para atribuir. **`HTTPCode_ELB_5XX` e `HTTPCode_Target_5XX`
+respondem perguntas diferentes**, e só a primeira enxerga o erro que nunca chegou à aplicação.
+
+**Regra:** antes de afirmar que um rollout não causa indisponibilidade, verifique se existe
+`readinessProbe`. Se não existir, a estratégia declarada no manifesto **não descreve o
+comportamento** — e a única medição válida é a sonda externa, com a janela ultrapassando a
+operação dos dois lados (§28).
+
+Parente do §21 (o orquestrador registra exatamente o caso errado) e do §26 (resultado vazio é uma
+afirmação sobre o instrumento antes de ser sobre o mundo).

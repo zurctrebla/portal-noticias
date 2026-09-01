@@ -776,3 +776,166 @@ amostragem de 30 pontos — a média é a mesma (§22: um pico de poucas amostra
 
 > **Veredito: a 7.1 deixou de ser o obstáculo. O obstáculo é a dívida de plugins, que já existia
 > e que este teste tornou visível.**
+
+---
+
+# ✅ PRODUÇÃO EM PHP 8.3 — 01/09/2026
+
+```
+07:24:22  push na main (fast-forward 804c68f0 -> e090c731)
+07:26:24  primeiro pod na imagem nova
+07:29:52  workflow verde, 5/5 pods na imagem nova   (3 min 28 s de rollout)
+```
+
+**Uma variável só.** A `main` está **47 commits atrás** da `develop` de propósito; um merge traria
+tudo. Foi para lá **um commit, um arquivo, uma linha funcional**:
+
+```diff
+-FROM wordpress:6.8-php8.2-fpm
++FROM wordpress:6.8-php8.3-fpm
+```
+
+Do commit `fd15e6f3` da `develop` veio **só o `Dockerfile`** — a parte que tocava
+`deploy-homolog.yml` ficou de fora (é comentário, e é de homolog). Verificado antes: o
+`Dockerfile` das duas pontas difere **exatamente** nessa linha mais o bloco de comentário, e o
+`php/php.ini` é idêntico.
+
+| | Antes | Depois |
+|---|---|---|
+| Imagem | `prod-804c68f0…` | **`prod-e090c731de4c158c106f72e542dc9ea8d27d452e`** |
+| ReplicaSet | `75f4fdcf7f` | **`7f9b96ffcc`** |
+| PHP | 8.2.29 × 5 | **8.3.28 × 5** |
+| Extensões | 41, hash `321dd9e4` | **41, hash `321dd9e4` — idêntico** |
+
+## 🔴 DESTAQUE: o core caiu de 6.8.8 para 6.8.3, e isso é do ROLLOUT, não do PHP
+
+**Antes, produção NÃO estava uniforme:**
+
+| Pod | WP | core mtime |
+|---|---|---|
+| `75f4fdcf7f-44bzk` | **6.8.8** | **2026-08-30 14:15:59** |
+| os outros quatro | 6.8.3 | 2025-09-30 17:30:38 |
+
+**Um dos cinco pods servia 6.8.8** — cerca de 20% do tráfego. E os dois pods de 29/08 tinham a
+**mesma idade e versões diferentes**: o WP-Cron disparou num e não no outro.
+
+**Depois: cinco pods em 6.8.3, `mtime` 2025-09-30, uniformes.** O `emptyDir` morreu com os pods
+antigos e levou junto a auto-atualização. **Isto não tem relação com o PHP** — aconteceria em
+qualquer deploy. A `db_version` do banco não se moveu: **60421** antes e depois.
+
+> **O rollout consertou a divergência por acidente e por algumas horas.** O WP-Cron vai
+> reatualizar pod a pod, e a divergência volta. É a Tarefa B, e continua de pé.
+
+## 🟡 ACHADO: todo rollout de produção derruba ~2,4% das requisições
+
+**O portão do Albert era explícito: "com `maxSurge 1` / `maxUnavailable 0` não deve haver
+indisponibilidade; se houver, é achado."** Houve.
+
+Sonda externa a 1 Hz, com a janela ultrapassando a operação nos dois lados (HANDOVER §28):
+
+| Janela | Amostras | Erros |
+|---|---|---|
+| **Antes** do rollout | 78 | **0** — 0,00% |
+| **Durante** | 85 | **3** — 3,53% |
+| **Depois** | 432 | **0** — 0,00% |
+
+E o número real, do CloudWatch do ALB, minuto a minuto:
+
+| | Requisições | Falhas | Taxa |
+|---|---|---|---|
+| **Durante o rollout (07:26–07:29)** | 1.459 | **35** | **2,40%** |
+| Fora dele (07:20–07:45) | 3.991 | 4 | **0,10%** |
+
+**24× a taxa de fundo. Trinta e cinco requisições de leitor real falharam.**
+
+### O mecanismo: falha de CONEXÃO, não da aplicação
+
+```
+HTTPCode_ELB_502_Count     29 durante o rollout   <- o ALB nao obteve resposta do alvo
+HTTPCode_Target_5XX_Count   6 durante o rollout   <- um pod respondeu 5xx
+HTTPCode_ELB_503_Count      0
+5xx no log de nginx dos pods NOVOS: 0
+```
+
+**29 das 35 falhas foram geradas pelo balanceador**, não pela aplicação — o ALB mandou requisição
+para um alvo que não aceitou a conexão. Nginx não registra conexão recusada, e por isso o log dos
+pods novos está limpo: **a ausência de registro é consistente com a falha, não a contradiz.**
+
+**A causa está no manifesto, e já era conhecida:**
+
+```
+readinessProbe : NAO      em ambos os conteineres
+livenessProbe  : NAO
+preStop        : NAO
+strategy       : maxSurge 1, maxUnavailable 0
+```
+
+**Sem `readinessProbe`, `maxUnavailable: 0` não promete o que parece prometer.** O Kubernetes
+considera o pod disponível assim que o contêiner sobe — não quando o PHP-FPM aceita conexão. E
+sem `preStop`, o pod que está sendo derrubado continua recebendo tráfego durante a
+desregistração. **As duas pontas do ciclo de vida estão abertas**, e os dados não permitem separar
+qual delas contribuiu mais: dos três 502 da sonda, dois caem 3–4 s depois de um pod novo subir, e
+o pico do CloudWatch cobre também as terminações.
+
+> **Isto não é regressão do PHP 8.3. É propriedade de todo deploy de produção**, e sempre foi.
+> Este deploy só foi o primeiro medido com sonda contínua dos dois lados. Casa com o item
+> "Probes do Deployment de produção — levantamento no Anexo D, **não implementado**", que estava
+> na lista de pendências sem número.
+
+**A correção é conhecida e barata:** `readinessProbe` HTTP em ambos os contêineres e
+`preStop: sleep 10`. Não foi feita nesta janela — o Albert autorizou **uma** variável.
+
+## Validação
+
+| Camada | Resultado |
+|---|---|
+| Site (home, 3 archives, 3 singles, autor, 3 buscas, Quem Somos, 404, painel) | **14 de 14** |
+| **Busca — MATCH direto**, 10 termos | **10 de 10**, 1–10 ms, índice com **259.094** linhas, `FULLTEXT ft (post_title, post_excerpt)` |
+| **Busca — `WP_Query`**, os mesmos 10 | **10 de 10**, 23–98 ms |
+| Rascunho com ACF + coautoria | **subtítulo, imagem (CloudFront) e 2 coautores** lidos de volta após `wp_cache_flush()`; não publicado; **removido sem resíduo** |
+| mu-plugins | **58** carregados |
+| **Fatais / depreciações / notices** | **0 / 0 / 0** |
+
+### Avisos, normalizados por tráfego
+
+| | PHP 8.2 | PHP 8.3 |
+|---|---|---|
+| Avisos em 15 min | 52 | **11** |
+| Requisições na janela | 6.494 | 2.973 |
+| **Avisos por mil** | **8,01** | **3,70** |
+| Razão | — | **0,46×** |
+
+Mesmas **duas** origens nos dois lados, e uma mudou de texto com a versão:
+
+```
+PHP 8.2:  Attempt to read property "user_nicename" on bool
+PHP 8.3:  Attempt to read property "user_nicename" on false
+```
+
+**Mesmo defeito, mensagem diferente.** Quem procurar pela string antiga num alerta não vai achar.
+
+> ⚠️ **Não afirmo que o 8.3 reduziu os avisos.** O tráfego caiu pela metade entre as duas janelas
+> e a linha de base tinha 38 respostas 503 que sumiram depois. O que a medição sustenta é
+> **ausência de aumento** — e isso, com 0 fatais e 0 depreciações, é o que o portão pedia.
+
+### Portões de carga
+
+| | T+7 min (cache frio) | T+13 min (após descanso) | Referência: virada do 8.4 |
+|---|---|---|---|
+| Códigos | **30× 200** | **30× 200** | 30× 200 |
+| Mediana | **4,72 s** | **4,90 s** | 5,05–6,07 s |
+| p90 | **5,84 s** | 7,83 s | 5,96–8,12 s |
+| **`Threads_running` pico** | **8** | **9** | 7–9 |
+
+**Nenhum passou de 10.** Ambos na mesma faixa das medições sob PHP 8.2 — sem regressão.
+
+## Erros meus nesta janela, para o registro
+
+1. **Sonda de busca com a coluna errada.** Usei `MATCH(post_title, post_content)`; a tabela-sombra
+   de produção é `(post_title, post_excerpt)`. Deu "0 resultados em 10 termos" — que parecia
+   falha de produção e era do meu script. O `WP_Query` no mesmo bloco já mostrava 501 resultados
+   em 92 ms, e foi o que denunciou.
+2. **Fatal no ACF causado por colisão de variável global.** Script de topo tem variáveis em escopo
+   **global**: meu `$acf = function_exists(...)` sobrescreveu o objeto `$acf` do plugin com `true`,
+   e `acf()->init()` estourou. **Não foi PHP 8.3.** Deixou um rascunho órfão (`9002416`),
+   removido na corrida seguinte; zero rascunhos de teste no banco ao final.
