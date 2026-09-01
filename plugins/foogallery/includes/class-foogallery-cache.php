@@ -1,4 +1,9 @@
 <?php
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Class used to cache gallery HTML output to save requests to the database
  * Date: 20/03/2017
@@ -149,7 +154,7 @@ if ( ! class_exists( 'FooGallery_Cache' ) ) {
 
 			if ( !empty( $gallery_cache ) && is_string( $gallery_cache ) ) {
 				//output the cached gallery html
-				echo $gallery_cache;
+				echo $gallery_cache; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cached HTML output
 				return true; //return that we will override
 			} else {
 				//we should cache the result for next time
@@ -198,7 +203,7 @@ if ( ! class_exists( 'FooGallery_Cache' ) ) {
 		function render_settings( $args ) {
 			if ('clear_gallery_cache_button' === $args['type'] ) { ?>
 				<div id="foogallery_clear_html_cache_container">
-					<input type="button" data-nonce="<?php echo esc_attr( wp_create_nonce( 'foogallery_clear_html_cache' ) ); ?>" class="button-primary foogallery_clear_html_cache" value="<?php _e( 'Clear Gallery HTML Cache', 'foogallery' ); ?>">
+					<input type="button" data-nonce="<?php echo esc_attr( wp_create_nonce( 'foogallery_clear_html_cache' ) ); ?>" class="button-primary foogallery_clear_html_cache" value="<?php esc_attr_e( 'Clear Gallery HTML Cache', 'foogallery' ); ?>">
 					<span id="foogallery_clear_html_cache_spinner" style="position: absolute" class="spinner"></span>
 				</div>
 			<?php }
@@ -210,10 +215,16 @@ if ( ! class_exists( 'FooGallery_Cache' ) ) {
 		function ajax_clear_all_caches() {
 			if ( check_admin_referer( 'foogallery_clear_html_cache' ) ) {
 
+				if ( ! current_user_can( 'manage_options' ) ) {
+					wp_send_json_error( array(
+						'message' => __( 'You do not have permission!', 'foogallery' ),
+					), 403 );
+				}
+
 				$this->clear_all_gallery_caches();
 
-				_e('The cache for all galleries has been cleared!', 'foogallery' );
-				die();
+				esc_html_e('The cache for all galleries has been cleared!', 'foogallery' );
+				wp_die( '', '', array( 'response' => null ) );
 			}
 		}
 

@@ -204,8 +204,6 @@
                                   
                                 jQuery(".save-order").bind( "click", function() {
                                         
-                                        jQuery(this).parent().find('img').show();
-                                    
                                         var mySortable = new Array();
                                         jQuery(".sortable").each(  function(){
                                             
@@ -228,12 +226,72 @@
                                         
                                         //serialize the array
                                         var serialize_data = JSON.stringify( convArrToObj(mySortable));
-                                                                                                    
-                                        jQuery.post( ajaxurl, { action:'update-taxonomy-order', order: serialize_data, nonce : '<?php echo esc_attr ( wp_create_nonce( 'update-taxonomy-order' ) ); ?>' }, function() {
-                                            jQuery("#ajax-response").html('<div class="message updated fade"><p><?php esc_html_e ( "Items Order Updated", 'taxonomy-terms-order' ) ?></p></div>');
-                                            jQuery("#ajax-response div").delay(3000).hide("slow");
+                                                              
+                                        var $button = jQuery(this);
+
+                                        if ($button.data('tto-saving')) {
+                                            return;
+                                        }
+                                        
+                                        jQuery(".save-order").data('tto-saving', true)
+                                            .addClass('disabled')
+                                            .attr('aria-disabled', 'true')
+                                            .css('pointer-events', 'none');
+
+                                        $button.parent().find('img').show();
+
+                                        jQuery.ajax({
+                                            url: ajaxurl,
+                                            type: 'POST',
+                                            dataType: 'json',
+                                            data: {
+                                                action: 'update-taxonomy-order',
+                                                taxonomy: <?php echo wp_json_encode( $taxonomy ); ?>,
+                                                order: serialize_data,
+                                                nonce: <?php echo wp_json_encode( wp_create_nonce( 'update-taxonomy-order' ) ); ?>
+                                            }
+                                        })
+                                        .done(function(response) {
+                                            var message = response && response.data && response.data.message
+                                                ? response.data.message
+                                                : '';
+
+                                            if (!message) {
+                                                return;
+                                            }
+
+                                            jQuery('#ajax-response').empty().append(
+                                                jQuery('<div>', { class: response.success ? 'notice notice-success' : 'notice notice-error' }).append(
+                                                    jQuery('<p>').text(message)
+                                                )
+                                            );
+                                        })
+                                        .fail(function(response) {
+                                            var response = response.responseJSON || {};
+                                            var message = response.data && response.data.message
+                                                ? response.data.message
+                                                : '';
+
+                                            if (!message) {
+                                                return;
+                                            }
+
+                                            jQuery('#ajax-response').empty().append(
+                                                jQuery('<div>', { class: 'notice notice-error' }).append(
+                                                    jQuery('<p>').text(message)
+                                                )
+                                            );
+                                        })
+                                        .always(function() {
                                             jQuery('img.pto_ajax_loading').hide();
+
+                                            jQuery(".save-order").data('tto-saving', false)
+                                                .removeClass('disabled')
+                                                .removeAttr('aria-disabled')
+                                                .css('pointer-events', '');
                                         });
+                                        
+                                        
                                     });
                                 
               

@@ -3,9 +3,9 @@ Contributors: Asif2BD, priyomukul, wpdevteam, re_enter_rupok, alimuzzamanalim, s
 Donate link: https://wpdeveloper.com/
 Tags: Disable Comments, Stop Spam, Delete Comments, Remove Comments, Spam Protection
 Requires at least: 5.0
-Tested up to: 6.8
-Requires PHP: 5.6
-Stable tag: 2.5.3
+Tested up to: 7.0
+Requires PHP: 7.0
+Stable tag: 2.8.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -47,6 +47,7 @@ https://www.youtube.com/watch?v=J9AteKzQpPs
 * **[New]** Fully Multi-site Network supported.
 * **[New]** Manage multiple website network-specific subsites or entire network comments in advance.
 * **[New]** Exclude Disable Comments Settings based on user roles.
+* **[New]** AI-agent ready: supports the WordPress Abilities API (WP 6.9+), so AI assistants and MCP clients can read your comment settings.
 
 https://www.youtube.com/watch?v=FBq3-W-p-DM
 
@@ -191,6 +192,28 @@ Go to the tools page for the Disable Comments plugin and utlize the Delete Comme
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 This will be maintained from August 19, 2020 - @asif2bd
+
+= [2.8.0] - 2026-07-27 =
+* New Feature: WordPress Abilities API support (WordPress 6.9+) — AI assistants, the command palette and MCP clients can now ask the site where comments are disabled, via the read-only `disable-comments/get-status` ability
+* Fixed: Page caches are now purged when settings are saved or comments are deleted — previously a cached page kept serving the comment form after comments were disabled
+* Compatible with WordPress 7.0
+
+= [2.7.1] - 2026-07-22 =
+* Improvement: General improvements
+
+= [2.7.0] - 2026-04-05 =
+* Improvement: Improved overall performance and stability
+
+= [2.6.2] - 2026-01-20 =
+* Fixed: An issue where deleting Notes in WordPress 6.9+ throws an error
+
+= [2.6.1] - 2025-12-02 =
+* Compatible with WordPress 6.9
+* Added: Introduced the “Enable Certain Comment Types” setting, allowing you to exclude the new Block Editor “Notes” comment type introduced in WordPress 6.9
+
+= [2.6.0] - 2025-11-05 =
+* New Feature: Show Existing Comments
+* Improved: Security Enhancements
 
 = [2.5.3] - 2025-09-14 =
 * Enhancement: Introduced a function to retrieve settings details ([#f16cee5](https://github.com/WPDevelopers/disable-comments/commit/f16cee5a4f939bcf8bb1f1d98e5b27103dc632ee))

@@ -677,8 +677,20 @@ São três saídas, e todas custam alguma coisa:
 **Nenhuma das três é urgente esta semana.** As três ficam mais caras quanto mais tarde forem
 escolhidas — a **B** porque o histórico de entrega cresce, e a **C** porque a rotina se consolida.
 
-### O que já está encaminhado
+### ✅ Um dos três já saiu — restam só os do AdRotate
 
-O **FooGallery**, o terceiro bloco da lista, **é gratuito e tem canal de atualização**. Ele entra
-no lote 2 da atualização de plugins, e há um teste objetivo: reabrir o editor e conferir se o
-aviso dele sumiu do console. **Se sumir, é um bloco legado a menos, sem decisão nenhuma de vocês.**
+O **FooGallery**, o terceiro bloco da lista, era gratuito e tinha canal de atualização.
+**Atualizado em 01/09/2026, de 2.4.32 para 3.2.6**, e medido no editor logo depois:
+
+```
+antes : 3 blocos legados — adrotate/advert, adrotate/group, fooplugins/foogallery
+depois: 2 blocos legados — adrotate/advert, adrotate/group
+        fooplugins/foogallery agora registra apiVersion 3, o que o WordPress pedia
+```
+
+De **126 blocos** registrados no editor, **restam exatamente dois em padrão antigo, e os dois são
+do AdRotate.** Foi resolvido sem nenhuma decisão de vocês, porque havia por onde a correção chegar.
+
+> **É o contraste que define este item.** O FooGallery custou uma atualização de rotina. Os dois
+> do AdRotate não têm por onde ser corrigidos enquanto a licença não existir — e é por isso que
+> eles viraram decisão de vocês, e o FooGallery não.

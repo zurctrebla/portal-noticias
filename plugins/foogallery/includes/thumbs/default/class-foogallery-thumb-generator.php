@@ -1,4 +1,9 @@
 <?php
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Class that performs all thumbnail generation within FooGallery
  */
@@ -88,6 +93,89 @@ if ( ! class_exists( 'FooGallery_Thumb_Generator' ) ) {
 		}
 
 		/**
+		 * Returns the scheme that should be used for frontend image URLs.
+		 *
+		 * @return string|null
+		 */
+		private static function get_frontend_url_scheme() {
+			if ( 'on' === foogallery_get_setting( 'force_https' ) ) {
+				return 'https';
+			}
+
+			$scheme = wp_parse_url( get_option( 'home' ), PHP_URL_SCHEME );
+
+			if ( 'https' === $scheme || is_ssl() ) {
+				return 'https';
+			}
+
+			if ( 'http' === $scheme ) {
+				return 'http';
+			}
+
+			return null;
+		}
+
+		/**
+		 * Returns the frontend home URL using the configured home URL scheme.
+		 *
+		 * @return string
+		 */
+		private static function get_frontend_home_url() {
+			return home_url( '', self::get_frontend_url_scheme() );
+		}
+
+		/**
+		 * Returns scheme variants for a URL.
+		 *
+		 * @param string $url URL to vary.
+		 *
+		 * @return array
+		 */
+		private static function get_url_scheme_variants( $url ) {
+			$url  = trim( $url );
+			$urls = array( $url );
+
+			if ( preg_match( '#^(?:https?:)?//#i', $url ) ) {
+				$without_scheme = preg_replace( '#^(?:https?:)?//#i', '', $url );
+
+				$urls[] = 'http://' . $without_scheme;
+				$urls[] = 'https://' . $without_scheme;
+				$urls[] = '//' . $without_scheme;
+			}
+
+			return array_values( array_unique( $urls ) );
+		}
+
+		/**
+		 * Maps an image URL under a local URL prefix back to a filesystem path.
+		 *
+		 * @param string $image_url URL to map.
+		 * @param string $base_url  Local URL prefix.
+		 * @param string $base_path Local filesystem prefix.
+		 *
+		 * @return string|null
+		 */
+		private static function map_url_to_path( $image_url, $base_url, $base_path ) {
+			$base_path = untrailingslashit( $base_path );
+
+			foreach ( self::get_url_scheme_variants( $base_url ) as $url ) {
+				$url = untrailingslashit( $url );
+
+				if ( $image_url === $url ) {
+					return $base_path;
+				}
+
+				$url = trailingslashit( $url );
+
+				if ( strpos( $image_url, $url ) === 0 ) {
+					return trailingslashit( $base_path ) . substr( $image_url, strlen( $url ) );
+				}
+			}
+
+			return null;
+		}
+
+		/**
 		 * Returns the path of an image URL
 		 *
 		 * @param $image_url
@@ -104,25 +192,24 @@ if ( ! class_exists( 'FooGallery_Thumb_Generator' ) ) {
 
 				$upload_dir = wp_upload_dir();
 
-				$base_url = set_url_scheme( $upload_dir['baseurl'] );
+				$image_path = self::map_url_to_path( $image_url, $upload_dir['baseurl'], $upload_dir['basedir'] );
 
-				if ( strpos( $image_url, $base_url ) !== false ) {
-					//it's in the uploads folder
-					$image_path = str_replace( $base_url, $upload_dir['basedir'], $image_url );
-				} else {
-
-					$image_path = str_replace( trailingslashit( home_url() ), self::get_home_path(), $image_url );
+				if ( null !== $image_path ) {
+					return strtok( $image_path, '?#' );
 				}
 
-				//check if the file is local
-				if ( strpos( $image_url, trailingslashit( home_url() ) ) === 0 ) {
+				$image_path = self::map_url_to_path( $image_url, self::get_frontend_home_url(), self::get_home_path() );
+
+				if ( null !== $image_path ) {
 					//strip all querystring params
-					$image_path = strtok( $image_path, '?' );
+					$image_path = strtok( $image_path, '?#' );
 
 					//check it exists
 					if ( !file_exists( $image_path ) ) {
 						return false;
 					}
+				} else {
+					$image_path = $image_url;
 				}
 			}
 
@@ -321,7 +408,7 @@ if ( ! class_exists( 'FooGallery_Thumb_Generator' ) ) {
 		 */
 		public function get_image_extension() {
 
-			$filename = parse_url( $this->image_url, PHP_URL_PATH );
+			$filename = wp_parse_url( $this->image_url, PHP_URL_PATH );
 
 			$ext = pathinfo( $filename, PATHINFO_EXTENSION );
 
@@ -376,9 +463,17 @@ if ( ! class_exists( 'FooGallery_Thumb_Generator' ) ) {
 			$upload_dir = wp_upload_dir();
 
 			if ( strpos( $path, $upload_dir['basedir'] ) !== false ) {
-				return str_replace( $upload_dir['basedir'], set_url_scheme( $upload_dir['baseurl'] ), $path );
+				return str_replace(
+					$upload_dir['basedir'],
+					set_url_scheme( $upload_dir['baseurl'], self::get_frontend_url_scheme() ),
+					$path
+				);
 			} else {
-				return str_replace( self::get_home_path(), trailingslashit( home_url() ), $path );
+				return str_replace(
+					self::get_home_path(),
+					trailingslashit( self::get_frontend_home_url() ),
+					$path
+				);
 			}
 		}
 
@@ -437,18 +532,24 @@ if ( ! class_exists( 'FooGallery_Thumb_Generator' ) ) {
 			$height = $this->get_arg( 'height', 150 );
 			$resize = $this->get_arg( 'resize', true );
 
-			// Cropping
-			if ( $crop && $crop_from_position && $crop_from_position !== array( 'center', 'center' ) ) {
-				$this->crop_from_position( $editor, $width, $height, $crop_from_position, $resize );
-			} elseif ( $crop === true && $resize === true ) {
-				$editor->resize( $width, $height, true );
-			} elseif ( $crop === true && $resize === false ) {
-				$this->crop_from_center( $editor, $width, $height );
-			} else {
-				$editor->resize( $width, $height );
+			// Cropping and resizing are optional so post-processing effects can run at the original dimensions.
+			if ( $width > 0 || $height > 0 ) {
+				if ( $crop && $crop_from_position && $crop_from_position !== array( 'center', 'center' ) ) {
+					$this->crop_from_position( $editor, $width, $height, $crop_from_position, $resize );
+				} elseif ( $crop === true && $resize === true ) {
+					$editor->resize( $width, $height, true );
+				} elseif ( $crop === true && $resize === false ) {
+					$this->crop_from_center( $editor, $width, $height );
+				} else {
+					$editor->resize( $width, $height );
+				}
 			}
 
-			apply_filters( 'foogallery_thumb_image_post', $editor, $this->args );
+			$editor = apply_filters( 'foogallery_thumb_image_post', $editor, $this->args );
+			if ( is_wp_error( $editor ) ) {
+				$this->error = $editor;
+				return;
+			}
 
 			$editor->save( $new_filepath );
 

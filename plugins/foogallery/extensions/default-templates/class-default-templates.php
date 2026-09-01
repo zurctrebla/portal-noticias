@@ -1,4 +1,9 @@
 <?php
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Class to include and init default templates.
  * The templates are no longer an extension and are built in and included by default
@@ -40,13 +45,20 @@ if ( ! class_exists( 'FooGallery_Default_Templates' ) ) {
          * @param $hook_suffix
          */
         function enqueue_assets( $hook_suffix ){
-            if( in_array( $hook_suffix, array( 'post.php', 'post-new.php' ) ) ) {
-                $screen = get_current_screen();
+            $screen = get_current_screen();
 
-                if ( is_object( $screen ) && FOOGALLERY_CPT_GALLERY == $screen->post_type ){
+            if ( is_object( $screen ) && FOOGALLERY_CPT_GALLERY == $screen->post_type ){
 
-                    // Register, enqueue scripts and styles here
-                    wp_enqueue_style( 'foogallery-core-admin-settings', FOOGALLERY_DEFAULT_TEMPLATES_EXTENSION_SHARED_URL  . 'css/admin-foogallery.css', array(), FOOGALLERY_VERSION );
+                // Register, enqueue scripts and styles here
+                wp_enqueue_style( 'foogallery-core-admin-settings', FOOGALLERY_DEFAULT_TEMPLATES_EXTENSION_SHARED_URL  . 'css/admin-foogallery.css', array(), FOOGALLERY_VERSION );
+
+                if ( foogallery_wp_version_major() >= 7 ) {
+                    wp_enqueue_style(
+                        'foogallery-core-admin-modern',
+                        FOOGALLERY_URL . 'css/admin-foogallery-modern.css',
+                        array( 'foogallery-core-admin-settings' ),
+                        FOOGALLERY_VERSION
+                    );
                 }
             }
         }

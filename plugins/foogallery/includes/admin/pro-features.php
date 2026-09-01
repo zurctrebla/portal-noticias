@@ -1,9 +1,13 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 return array(
     'gallery_templates' => array(
-        'title' => foogallery__( 'PRO Gallery Templates','foogallery' ),
-        'desc' => foogallery__( '3 more advanced gallery templates to help you showcase your photography, including Slider PRO, Grid PRO and Polaroid PRO.', 'foogallery' ),
+        'title' => foogallery__( 'PRO Gallery Layouts','foogallery' ),
+        'desc' => foogallery__( '4 more advanced gallery layouts to help you showcase your photography, including Slider PRO, Grid PRO, Polaroid PRO, and Spotlight PRO.', 'foogallery' ),
         'link' => 'https://fooplugins.com/foogallery-wordpress-gallery-plugin/gallery-templates/',
         'utm_content' => 'gallery_templates',
         'link_text' => foogallery__( 'Learn More','foogallery' ),
@@ -22,8 +26,8 @@ return array(
         'plans' => array( FOOGALLERY_PRO_PLAN_STARTER, FOOGALLERY_PRO_PLAN_EXPERT, FOOGALLERY_PRO_PLAN_COMMERCE ),
     ),
     'image_filter_effects' => array(
-        'title' => foogallery__( 'Image Filter Effects','foogallery' ),
-        'desc' => foogallery__( 'Mage your galleries pop, by adding one of 12 image filter effects to your thumbnails, just like you can do with Instagram. Make your galleries stand out from the competition!', 'foogallery' ),
+        'title' => foogallery__( 'Thumbnail Effects','foogallery' ),
+        'desc' => foogallery__( 'Make your galleries pop, by adding one of 12 thumbnail effects to your images, just like you can do with Instagram. Make your galleries stand out from the competition!', 'foogallery' ),
         'link' => 'https://fooplugins.com/foogallery-wordpress-gallery-plugin/filter-effects/',
         'utm_content' => 'filter_effects',
         'link_text' => foogallery__( 'Learn More','foogallery' ),
@@ -101,6 +105,16 @@ return array(
         'plan' => FOOGALLERY_PRO_PLAN_EXPERT,
         'plans' => array( FOOGALLERY_PRO_PLAN_EXPERT, FOOGALLERY_PRO_PLAN_COMMERCE ),
     ),
+    'imagegallery_schema' => array(
+        'title' => foogallery__( 'ImageGallery SEO Schema','foogallery' ),
+        'desc' => foogallery__( 'Output opt-in ImageGallery JSON-LD schema for pages and posts that use FooGallery, with per-gallery fields for names, descriptions, keywords, authors, licenses, and dates.', 'foogallery' ),
+        'link' => 'https://fooplugins.com/foogallery-wordpress-gallery-plugin/pro-expert',
+        'utm_content' => 'imagegallery_schema',
+        'link_text' => foogallery__( 'Learn More','foogallery' ),
+        'image' => 'https://assets.fooplugins.com/foogallery/plugin/foogallery-admin-help-pro-exif.png',
+        'plan' => FOOGALLERY_PRO_PLAN_EXPERT,
+        'plans' => array( FOOGALLERY_PRO_PLAN_EXPERT, FOOGALLERY_PRO_PLAN_COMMERCE ),
+    ),
     'bulk_copy' => array(
         'title' => foogallery__( 'Bulk Copy Gallery Settings','foogallery' ),
         'desc' => foogallery__( 'Copy settings from one gallery to other galleries in bulk.', 'foogallery' ),
@@ -132,8 +146,8 @@ return array(
         'plans' => array( FOOGALLERY_PRO_PLAN_COMMERCE ),
     ),
     'product_gallery' => array(
-        'title' => foogallery__( 'Product Gallery Template','foogallery' ),
-        'desc' => foogallery__( 'We created a new gallery template specifically for showcasing products, with all the default settings you need to take the most advantage of the commerce features.', 'foogallery' ),
+        'title' => foogallery__( 'Product Gallery Layout','foogallery' ),
+        'desc' => foogallery__( 'We created a new gallery layout specifically for showcasing products, with all the default settings you need to take the most advantage of the commerce features.', 'foogallery' ),
         'link' => 'https://fooplugins.com/foogallery-wordpress-gallery-plugin/woocommerce-integration/#product-gallery',
         'utm_content' => 'product_gallery',
         'link_text' => foogallery__( 'Learn More','foogallery' ),
@@ -143,13 +157,23 @@ return array(
     ),
     'protection' => array(
         'title' => foogallery__( 'Watermarking &amp; Protection','foogallery' ),
-        'desc' => foogallery__( 'Protect your images by not allowing visitors to right click, and also by adding watermarks to images in your galleries. Beautiful looking repeating watermarks are built-in, or use your own custom image.', 'foogallery' ),
+        'desc' => foogallery__( 'Protect your images by not allowing visitors to right click, and also by adding watermarks to images in your galleries. Beautiful looking repeating watermarks are built-in, or use your own custom image. Also available as a stand-alone add-on.', 'foogallery' ),
         'link' => 'https://fooplugins.com/foogallery-wordpress-gallery-plugin/photo-watermark/',
         'utm_content' => 'protection',
         'link_text' => foogallery__( 'Learn More','foogallery' ),
         'image' => 'https://assets.fooplugins.com/foogallery/plugin/foogallery-admin-help-pro-watermarking.png',
         'plan' => FOOGALLERY_PRO_PLAN_COMMERCE,
         'plans' => array( FOOGALLERY_PRO_PLAN_COMMERCE ),
+    ),
+    'colors' => array(
+        'title' => foogallery__( 'Color Extraction &amp; Sorting','foogallery' ),
+        'desc' => foogallery__( 'Extract dominant colors and palettes from your gallery images, edit attachment colors, and prepare galleries for color-based sorting.', 'foogallery' ),
+        'link' => 'https://fooplugins.com/foogallery-wordpress-gallery-plugin/color-sorting-gallery/',
+        'utm_content' => 'colors',
+        'link_text' => foogallery__( 'Learn More','foogallery' ),
+        'image' => 'https://assets.fooplugins.com/foogallery/plugin/foogallery-admin-help-pro-watermarking.png',
+        'plan' => FOOGALLERY_PRO_PLAN_STARTER,
+        'plans' => array( FOOGALLERY_PRO_PLAN_STARTER, FOOGALLERY_PRO_PLAN_EXPERT, FOOGALLERY_PRO_PLAN_COMMERCE ),
     ),
     'lightbox_product_info' => array(
         'title' => foogallery__( 'Lightbox Product Info','foogallery' ),
@@ -193,7 +217,7 @@ return array(
     ),
     'whitelabeling' => array(
         'title' => foogallery__( 'White Labeling','foogallery' ),
-        'desc' => foogallery__( 'Rebrand FooGallery to whatever you like for your clients. Move or hide menu items too. Ideal for freelancers and agencies.', 'foogallery' ),
+        'desc' => foogallery__( 'Rebrand FooGallery to whatever you like for your clients. Move or hide menu items too. Ideal for freelancers and agencies. Also available as a stand-alone add-on.', 'foogallery' ),
         'link' => 'https://fooplugins.com/documentation/foogallery/pro-commerce/white-labeling/',
         'utm_content' => 'cta_white_labeling',
         'link_text' => foogallery__( 'Learn More','foogallery' ),

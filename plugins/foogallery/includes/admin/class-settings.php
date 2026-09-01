@@ -1,5 +1,9 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 
 	/**
@@ -16,6 +20,7 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 
 			// Ajax calls.
 			add_action( 'wp_ajax_foogallery_clear_css_optimizations', array( $this, 'ajax_clear_css_optimizations' ) );
+			add_action( 'wp_ajax_foogallery_clear_thumbnail_cache', array( $this, 'ajax_clear_thumbnail_cache' ) );
 			add_action( 'wp_ajax_foogallery_thumb_generation_test', array( $this, 'ajax_thumb_generation_test' ) );
 			add_action( 'wp_ajax_foogallery_apply_retina_defaults', array( $this, 'ajax_apply_retina_defaults' ) );
 			add_action( 'wp_ajax_foogallery_uninstall', array( $this, 'ajax_uninstall' ) );
@@ -52,6 +57,7 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 			$settings[] = array(
 				'id'      => 'clear_css_optimizations',
 				'title'   => __( 'Clear CSS Cache', 'foogallery' ),
+				/* translators: %s: Value inserted at runtime. */
 				'desc'    => sprintf( __( '%s optimizes the way it loads gallery stylesheets to improve page performance. This can lead to the incorrect CSS being loaded in some cases. Use this button to clear all the CSS optimizations that have been cached across all galleries.', 'foogallery' ), foogallery_plugin_name() ),
 				'type'    => 'clear_optimization_button',
 				'tab'     => 'general',
@@ -66,11 +72,21 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 
 			$settings[] = array(
 				'id'      => 'gallery_template',
-				'title'   => __( 'Default Gallery Template', 'foogallery' ),
-				'desc'    => __( 'The default gallery template to use for new galleries', 'foogallery' ),
+				'title'   => __( 'Default Gallery Layout', 'foogallery' ),
+				'desc'    => __( 'The default gallery layout to use for new galleries', 'foogallery' ),
 				'default' => foogallery_get_default( 'gallery_template' ) ,
 				'type'    => 'select',
 				'choices' => $gallery_templates_choices,
+				'tab'     => 'general',
+				'section' => __( 'Gallery Defaults', 'foogallery' )
+			);
+
+			$settings[] = array(
+				'id'      => 'default_gallery_attachments',
+				'title'   => __( 'Default Gallery Items', 'foogallery' ),
+				'desc'    => __( 'The default attachments to use for new galleries. Provide a comma separated list of attachment IDs.', 'foogallery' ),
+				'default' => '' ,
+				'type'    => 'text',
 				'tab'     => 'general',
 				'section' => __( 'Gallery Defaults', 'foogallery' )
 			);
@@ -154,12 +170,25 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 
 			$settings[] = array(
 				'id'      => 'hide_gallery_template_help',
-				'title'   => __( 'Hide Gallery Template Help', 'foogallery' ),
-				'desc'    => __( 'Some gallery templates show helpful tips, which are useful for new users. You can choose to hide these tips.', 'foogallery' ),
+				'title'   => __( 'Hide Gallery Settings Tips', 'foogallery' ),
+				'desc'    => __( 'Some gallery settings show helpful tips, which are useful for new users. You can choose to hide these tips.', 'foogallery' ),
 				'type'    => 'checkbox',
 				'tab'     => 'general',
 				'section' => __( 'Admin', 'foogallery' )
 			);
+
+			$settings[] = array(
+				'id'      => 'minimize_gallery_settings_help',
+				'title'   => __( 'Minimize Gallery Settings Help Text', 'foogallery' ),
+				'desc'    => __( 'By default, help text is displayed under each gallery setting. You can choose to minimize this and rather show a help icon that opens the help text in a tooltip.', 'foogallery' ),
+				'type'    => 'checkbox',
+				'tab'     => 'general',
+				'section' => __( 'Admin', 'foogallery' )
+			);
+
+			if ( ! function_exists( 'get_editable_roles' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/user.php';
+			}
 
 			$roles        = get_editable_roles();
 			$role_choices = array(
@@ -182,20 +211,40 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 
 			$settings[] = array(
 				'id'      => 'hide_editor_button',
-				'title'   => __( 'Hide Classic Editor Button', 'foogallery' ),
-				'desc'    => sprintf( __( 'If enabled, this will hide the "Add %s" button in the Classic editor.', 'foogallery' ), foogallery_plugin_name() ),
-				'type'    => 'checkbox',
+				'title'   => __( 'Classic Editor Button', 'foogallery' ),
+				/* translators: %s: Value inserted at runtime. */
+				'desc'    => sprintf( __( 'Either show or hide the "Add %s" button in the Classic editor.', 'foogallery' ), foogallery_plugin_name() ),
+				'default' => foogallery_get_default( 'hide_editor_button', 'on' ),
+				'type'    => 'select',
+				'choices' => array(
+					'on'  => __( 'Hidden', 'foogallery' ),
+					'off' => __( 'Visible', 'foogallery' )
+				),
 				'tab'     => 'general',
 				'section' => __( 'Admin', 'foogallery' )
 			);
 
 			$settings[] = array(
 				'id'      => 'advanced_attachment_modal',
-				'title'   => __( 'Enable Advanced Attachment Modal', 'foogallery' ),
+				'title'   => __( 'Advanced Attachment Modal', 'foogallery' ),
 				'desc'    => __( 'If enabled, this will use the advanced attachment modal which allows for faster and easier editing of attachment details, when creating your galleries.', 'foogallery' ),
-				'type'    => 'checkbox',
-				'default' => 'on',
+				'type'    => 'select',
+				'default' => foogallery_get_default( 'advanced_attachment_modal', 'on' ),
 				'tab'     => 'general',
+				'section' => __( 'Admin', 'foogallery' ),
+				'choices' => array(
+					'on'  => __( 'Enabled', 'foogallery' ),
+					'off' => __( 'Disabled', 'foogallery' )
+				)
+			);
+
+			$settings[] = array(
+				'id'    => 'limit_gallery_selector_block_editor',
+				'type'  => 'text',
+				'title' => __( 'Limit Galleries (Block Editor)', 'foogallery' ),
+				'desc'  => __( 'Limit the number of galleries that are returned in the block editor when choosing a gallery.', 'foogallery' ),
+				'tab'   => 'general',
+				'class' => 'foogallery_settings_short_text',
 				'section' => __( 'Admin', 'foogallery' )
 			);
 
@@ -203,24 +252,7 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 
 			// region Album Tab.
 			$tabs['albums'] = __( 'Albums', 'foogallery' );
-			$roles         = get_editable_roles();
-			$role_choices = array(
-				'inherit' => __( 'Inherit from gallery creator role', 'foogallery' ),
-			);
-
-			foreach ( $roles as $role_slug => $role_data ) {
-				$role_choices[ $role_slug ] = $role_data['name'];
-			}
-
-			$settings[] = array(
-				'id'      => 'album_creator_role',
-				'title'   => __( 'Album Creator Role', 'foogallery' ),
-				'desc'    => __( 'Set the default role for album creators.', 'foogallery' ),
-				'type'    => 'select',
-				'choices' => $role_choices,
-				'default' => 'inherit',
-				'tab'     => 'albums',
-			);
+			
 			// end of album region.
 
 			//region Images Tab
@@ -249,6 +281,7 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 				$settings[] = array(
 					'id'    => 'thumb_image_library',
 					'title' => __( 'Thumbnail Image Library', 'foogallery' ),
+					/* translators: %s: Value inserted at runtime. */
 					'desc'  => sprintf( __( 'Currently active : %s.<br />Imagick supported : %s.<br />GD supported : %s.', 'foogallery' ), '<strong>' . $image_editor . '</strong>', $imagick_supported, $gd_supported ),
 					'type'  => 'html',
 					'tab'   => 'thumb'
@@ -264,8 +297,17 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 					'default' => '90',
 					'tab'     => 'thumb'
 				);
+
+				$settings[] = array(
+					'id'      => 'clear_thumbnail_cache',
+					'title'   => __( 'Clear Thumbnail Cache', 'foogallery' ),
+					'desc'    => __( 'Clear all the previously cached thumbnails that have been generated across every gallery on your site.', 'foogallery' ),
+					'type'    => 'clear_thumbnail_cache_button',
+					'tab'     => 'thumb'
+				);
 			}
 
+			/* translators: %s: Value inserted at runtime. */
 			$image_optimization_html = sprintf( __('We recommend %s! An easy-to-use, lightweight WordPress plugin that optimizes images & PDFs.', 'foogallery'),
 				'<a href="https://shortpixel.com/homepage/affiliate/foowww" target="_blank">' . __('ShortPixel Image Optimizer' , 'foogallery') . '</a>' );
 
@@ -305,18 +347,19 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 			if ( foogallery_thumb_active_engine()->has_local_cache() ) {
 				$settings[] = array(
 					'id'    => 'thumb_resize_upscale_small',
-					'title' => __( 'Upscale Small Images', 'foogallery' ),
-					'desc'  => __( 'If the original image is smaller than the thumbnail size, then upscale the image thumbnail to match the size.', 'foogallery' ) . '<br/>' . __( 'PLEASE NOTE : this is only supported if your server supports the GD image library and it is currently active.', 'foogallery' ),
+					'title' => __( 'Background Fill', 'foogallery' ),
+					'desc'  => __( 'If the image is smaller than the thumbnail size, then use a background color to fill the space. (Previously called Upscale Small Images)', 'foogallery' ),
+					'default' => 'on',
 					'type'  => 'checkbox',
 					'tab'   => 'thumb'
 				);
 
 				$settings[] = array(
 					'id'      => 'thumb_resize_upscale_small_color',
-					'title'   => __( 'Upscale Background Color', 'foogallery' ),
+					'title'   => __( 'Background Fill Color', 'foogallery' ),
 					'desc'    => __( 'The background color to use for upscaled images. You can also use "transparent" or "auto".', 'foogallery' ),
 					'type'    => 'text',
-					'default' => 'rgb(0,0,0)',
+					'default' => 'auto',
 					'tab'     => 'thumb'
 				);
 			}
@@ -327,6 +370,7 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 				$settings[] = array(
 					'id'    => 'thumb_generation_test',
 					'title' => __( 'Thumbnail Generation Test', 'foogallery' ),
+					/* translators: %s: Value inserted at runtime. */
 					'desc'  => sprintf( __( 'Test to see if %s can generate the thumbnails it needs. %s', 'foogallery' ), foogallery_plugin_name(), $thumb_test_html ),
 					'type'  => 'thumb_generation_test',
 					'tab'   => 'thumb'
@@ -400,6 +444,46 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 			);
 
 			$settings[] = array(
+				'id'      => 'language_carousel_previous_text',
+				'title'   => __( 'Carousel "Previous" Text', 'foogallery' ),
+				'desc'    => __( 'The text that is shown when you hover over the previous arrow in the carousel.'), 
+				'type'    => 'text',
+				'default' => __( 'Previous', 'foogallery' ),
+				'section' => __( 'Carousel Template', 'foogallery' ),
+				'tab'     => 'language'
+			);
+
+			$settings[] = array(
+				'id'      => 'language_carousel_next_text',
+				'title'   => __( 'Carousel "Next" Text', 'foogallery' ),
+				'desc'    => __( 'The text that is shown when you hover over the next arrow in the carousel.'), 
+				'type'    => 'text',
+				'default' => __( 'Next', 'foogallery' ),
+				'section' => __( 'Carousel Template', 'foogallery' ),
+				'tab'     => 'language'
+			);
+
+			$settings[] = array(
+				'id'      => 'language_carousel_bullet_text',
+				'title'   => __( 'Carousel "Bullet" Text', 'foogallery' ),
+				'desc'    => __( 'The text that is shown when you hover over the bullet in the carousel.'), 
+				'type'    => 'text',
+				'default' => __( 'Item {ITEM}', 'foogallery' ),
+				'section' => __( 'Carousel Template', 'foogallery' ),
+				'tab'     => 'language'
+			);
+
+			$settings[] = array(
+				'id'      => 'language_carousel_bullet_active_text',
+				'title'   => __( 'Carousel "Bullet" Active Text', 'foogallery' ),
+				'desc'    => __( 'The text that is shown when you hover over the bullet in the carousel that is currently active.'), 
+				'type'    => 'text',
+				'default' => __( 'Item {ITEM} - Current', 'foogallery' ),
+				'section' => __( 'Carousel Template', 'foogallery' ),
+				'tab'     => 'language'
+			);
+
+			$settings[] = array(
 				'id'      => 'language_images_count_none_text',
 				'title'   => __( 'Image Count None Text', 'foogallery' ),
 				'type'    => 'text',
@@ -421,6 +505,7 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 				'id'      => 'language_images_count_plural_text',
 				'title'   => __( 'Image Count Many Text', 'foogallery' ),
 				'type'    => 'text',
+				/* translators: %s: Value inserted at runtime. */
 				'default' => __( '%s images', 'foogallery' ),
 				'section' => __( 'Admin', 'foogallery' ),
 				'tab'     => 'language'
@@ -430,15 +515,6 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 
 			//region Advanced Tab
 			$tabs['advanced'] = __( 'Advanced', 'foogallery' );
-
-            $settings[] = array(
-                'id'      => 'enable_custom_ready',
-                'title'   => __( 'Custom Ready Event', 'foogallery' ),
-                'desc'    => sprintf( __( 'There are sometimes unavoidable javascript errors on the page, which could result in the gallery not initializing correctly. Enable this setting to use a built-in custom ready event to overcome this problem if needed.', 'foogallery' ), foogallery_plugin_name() ),
-                'type'    => 'checkbox',
-                'tab'     => 'advanced',
-                'default' => 'on'
-            );
 
             $settings[] = array(
                 'id'      => 'add_media_button_start',
@@ -467,14 +543,24 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
             $settings[] = array(
                 'id'      => 'enqueue_polyfills',
                 'title'   => __( 'Enqueue Polyfills', 'foogallery' ),
+                /* translators: %s: Value inserted at runtime. */
                 'desc'    => sprintf( __( '%s uses modern JavaScript API\'s which may not be supported in older browsers. Enable the enqueueing of polyfills for better backwards compatibility.', 'foogallery' ), foogallery_plugin_name() ),
                 'type'    => 'checkbox',
                 'tab'     => 'advanced'
             );
 
 			$settings[] = array(
+				'id'      => 'force_legacy_runtime_scripts',
+				'title'   => __( 'Force Legacy Runtime Loading', 'foogallery' ),
+				'desc'    => __( 'Always enqueue the FooGallery runtime scripts through WordPress immediately instead of using delayed runtime loading. Existing sites upgraded from older FooGallery versions keep this enabled automatically. Disable it to opt in to delayed runtime loading.', 'foogallery' ),
+				'type'    => 'checkbox',
+				'tab'     => 'advanced'
+			);
+
+			$settings[] = array(
 				'id'      => 'uninstall',
 				'title'   => __( 'Full Uninstall', 'foogallery' ),
+				/* translators: %s: Value inserted at runtime. */
 				'desc'    => sprintf( __( 'Run a full uninstall of %s, which includes removing all galleries, settings and metadata. This basically removes all traces of the plugin from your system. Please be careful - there is no undo!', 'foogallery' ), foogallery_plugin_name() ),
 				'type'    => 'uninstall',
 				'tab'     => 'advanced'
@@ -538,6 +624,14 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 				);
 			}
 
+			$settings[] = array(
+				'id'    => 'enable_trial_mode',
+				'title' => __( 'Admin Trial Mode', 'foogallery' ),
+				'desc'  => __( 'Enables trial mode in the admin, which will highlight features that are only available in the Pro version.', 'foogallery' ),
+				'type'  => 'checkbox',
+				'tab'   => 'advanced'
+			);
+
 			//endregion Advanced Tab
 
 			//region Custom JS & CSS
@@ -595,20 +689,72 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 		function render_custom_setting_types( $args ) {
 			if ( 'clear_optimization_button' === $args['type'] ) { ?>
 				<div id="foogallery_clear_css_optimizations_container">
-					<input type="button" data-nonce="<?php echo esc_attr( wp_create_nonce( 'foogallery_clear_css_optimizations' ) ); ?>" class="button-primary foogallery_clear_css_optimizations" value="<?php _e( 'Clear CSS Optimization Cache', 'foogallery' ); ?>">
+					<input type="button" data-nonce="<?php echo esc_attr( wp_create_nonce( 'foogallery_clear_css_optimizations' ) ); ?>" class="button-primary foogallery_clear_css_optimizations" value="<?php esc_attr_e( 'Clear CSS Optimization Cache', 'foogallery' ); ?>">
 					<span id="foogallery_clear_css_cache_spinner" style="position: absolute" class="spinner"></span>
+				</div>
+			<?php } else if ( 'clear_thumbnail_cache_button' === $args['type'] ) { ?>
+				<div id="foogallery_clear_thumbnail_cache_container">
+					<input type="button" data-nonce="<?php echo esc_attr( wp_create_nonce( 'foogallery_clear_thumbnail_cache' ) ); ?>" class="button-primary foogallery_clear_thumbnail_cache" value="<?php esc_attr_e( 'Clear Thumbnail Cache', 'foogallery' ); ?>">
+					<span id="foogallery_clear_thumbnail_cache_spinner" style="position: absolute" class="spinner"></span>
 				</div>
 			<?php } else if ( 'uninstall' === $args['type'] ) { ?>
 				<div id="foogallery_uninstall_container">
-					<input type="button" data-nonce="<?php echo esc_attr( wp_create_nonce( 'foogallery_uninstall' ) ); ?>" class="button-primary foogallery_uninstall" value="<?php _e( 'Run Full Uninstall', 'foogallery' ); ?>">
-					<span id="foogallery_uninstall_spinner" style="position: absolute" class="spinner"></span>
+					<?php
+					// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+					echo $this->get_uninstall_markup();
+					?>
 				</div>
 			<?php } else if ( 'thumb_generation_test' === $args['type'] ) { ?>
 				<div id="foogallery_thumb_generation_test_container">
-					<input type="button" data-nonce="<?php echo esc_attr( wp_create_nonce( 'foogallery_thumb_generation_test' ) ); ?>" class="button-primary foogallery_thumb_generation_test" value="<?php _e( 'Run Tests', 'foogallery' ); ?>">
+					<input type="button" data-nonce="<?php echo esc_attr( wp_create_nonce( 'foogallery_thumb_generation_test' ) ); ?>" class="button-primary foogallery_thumb_generation_test" value="<?php esc_attr_e( 'Run Tests', 'foogallery' ); ?>">
 					<span id="foogallery_thumb_generation_test_spinner" style="position: absolute" class="spinner"></span>
 				</div>
 			<?php }
+		}
+
+		/**
+		 * Build the uninstall control markup.
+		 *
+		 * @param bool   $show_confirmation Whether to include the confirmation UI.
+		 * @param string $error_message Optional validation error to show in the danger zone.
+		 *
+		 * @return string
+		 */
+		private function get_uninstall_markup( $show_confirmation = false, $error_message = '' ) {
+			ob_start();
+			?>
+			<input type="button" data-nonce="<?php echo esc_attr( wp_create_nonce( 'foogallery_uninstall' ) ); ?>" class="button-primary foogallery_uninstall" value="<?php esc_attr_e( 'Run Full Uninstall', 'foogallery' ); ?>">
+			<span id="foogallery_uninstall_spinner" style="position: absolute" class="spinner"></span>
+			<?php if ( $show_confirmation ) { ?>
+				<div class="foogallery-uninstall-danger-zone">
+					<p class="foogallery-uninstall-danger-zone__title"><?php esc_html_e( 'Danger Zone', 'foogallery' ); ?></p>
+					<p class="description"><?php esc_html_e( 'Type UNINSTALL to confirm permanent removal of all FooGallery galleries, settings, and metadata.', 'foogallery' ); ?></p>
+					<?php if ( ! empty( $error_message ) ) { ?>
+						<p class="foogallery-uninstall-danger-zone__error"><?php echo esc_html( $error_message ); ?></p>
+					<?php } ?>
+					<label class="screen-reader-text" for="foogallery_uninstall_confirmation"><?php esc_html_e( 'Type UNINSTALL to confirm the full uninstall.', 'foogallery' ); ?></label>
+					<input type="text" id="foogallery_uninstall_confirmation" class="regular-text foogallery-uninstall-danger-zone__input" value="" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="<?php echo esc_attr__( 'UNINSTALL', 'foogallery' ); ?>">
+					<input type="button" data-nonce="<?php echo esc_attr( wp_create_nonce( 'foogallery_uninstall' ) ); ?>" class="button button-secondary foogallery_uninstall_confirm" value="<?php esc_attr_e( 'Confirm Full Uninstall', 'foogallery' ); ?>">
+				</div>
+			<?php }
+
+			return ob_get_clean();
+		}
+
+		/**
+		 * Build the uninstall success message markup.
+		 *
+		 * @return string
+		 */
+		private function get_uninstall_success_markup() {
+			ob_start();
+			?>
+			<div class="notice notice-success inline">
+				<p><?php esc_html_e( 'All traces of the plugin were removed from your system!', 'foogallery' ); ?></p>
+			</div>
+			<?php
+
+			return ob_get_clean();
 		}
 
 		function after_render_setting( $args ) {
@@ -624,7 +770,7 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 				}
 				$nonce = wp_create_nonce( 'foogallery_apply_retina_defaults' );
 				?><div id="foogallery_apply_retina_support_container">
-					<input type="button" data-inputs="<?php echo implode( ',', $input_ids ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>" class="button-primary foogallery_apply_retina_support" value="<?php _e( 'Apply Defaults to all Galleries', 'foogallery' ); ?>">
+					<input type="button" data-inputs="<?php echo esc_attr( implode( ',', $input_ids ) ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>" class="button-primary foogallery_apply_retina_support" value="<?php esc_attr_e( 'Apply Defaults to all Galleries', 'foogallery' ); ?>">
 					<span id="foogallery_apply_retina_support_spinner" style="position: absolute" class="spinner"></span>
 				</div>
 			<?php }
@@ -634,76 +780,217 @@ if ( ! class_exists( 'FooGallery_Admin_Settings' ) ) {
 		 * AJAX endpoint for clearing all CSS optimizations
 		 */
 		function ajax_clear_css_optimizations() {
-			if ( check_admin_referer( 'foogallery_clear_css_optimizations' ) ) {
-				foogallery_clear_all_css_load_optimizations();
-
-				_e('The CSS optimization cache was successfully cleared!', 'foogallery' );
-				die();
+			if ( ! check_ajax_referer( 'foogallery_clear_css_optimizations', '_wpnonce', false ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Invalid security token.', 'foogallery' ) ),
+					403
+				);
 			}
+
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Insufficient permissions.', 'foogallery' ) ),
+					403
+				);
+			}
+
+			foogallery_clear_all_css_load_optimizations();
+
+			wp_send_json_success(
+				array( 'html' => esc_html__( 'The CSS optimization cache was successfully cleared!', 'foogallery' ) )
+			);
+		}
+
+		/**
+		 * AJAX endpoint for clearing thumbnail cache across all galleries.
+		 */
+		function ajax_clear_thumbnail_cache() {
+			if ( ! check_ajax_referer( 'foogallery_clear_thumbnail_cache', '_wpnonce', false ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Invalid security token.', 'foogallery' ) ),
+					403
+				);
+			}
+
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Insufficient permissions.', 'foogallery' ) ),
+					403
+				);
+			}
+
+			$engine = foogallery_thumb_active_engine();
+			if ( ! $engine->has_local_cache() ) {
+				wp_send_json_success(
+					array( 'html' => esc_html__( 'There was no thumbnail cache to clear.', 'foogallery' ) )
+				);
+			}
+
+			$galleries = foogallery_get_all_galleries(
+				false,
+				array(
+					'post_status' => 'any',
+				)
+			);
+
+			$gallery_clear_count = 0;
+			foreach ( $galleries as $gallery ) {
+				FooGallery_Admin_Gallery_MetaBoxes::clear_gallery_thumbnail_cache( $gallery );
+				$gallery_clear_count++;
+			}
+
+			if ( 0 === $gallery_clear_count ) {
+				wp_send_json_success(
+					array( 'html' => esc_html__( 'There were no galleries found to clear.', 'foogallery' ) )
+				);
+			}
+
+			/* translators: %s: number of galleries cleared. */
+			$message = sprintf(
+				/* translators: %s: Value inserted at runtime. */
+				_n(
+					'1 gallery successfully cleared of cached thumbnails.',
+					'%s galleries successfully cleared of cached thumbnails.',
+					$gallery_clear_count,
+					'foogallery'
+				),
+				absint( $gallery_clear_count )
+			);
+
+			wp_send_json_success(
+				array( 'html' => esc_html( $message ) )
+			);
 		}
 
 		/**
 		 * AJAX endpoint for testing thumbnail generation
 		 */
 		function ajax_thumb_generation_test() {
-			if ( check_admin_referer( 'foogallery_thumb_generation_test' ) ) {
-				foogallery_output_thumbnail_generation_results();
-				die();
+			if ( ! check_ajax_referer( 'foogallery_thumb_generation_test', '_wpnonce', false ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Invalid security token.', 'foogallery' ) ),
+					403
+				);
 			}
+
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Insufficient permissions.', 'foogallery' ) ),
+					403
+				);
+			}
+
+			ob_start();
+			foogallery_output_thumbnail_generation_results();
+			$html = ob_get_clean();
+
+			wp_send_json_success( array( 'html' => $html ) );
 		}
 
 		/**
 		 * AJAX endpoint for applying the retina defaults to all galleries
 		 */
 		function ajax_apply_retina_defaults() {
-			if ( check_admin_referer( 'foogallery_apply_retina_defaults' ) ) {
+			if ( ! check_ajax_referer( 'foogallery_apply_retina_defaults', '_wpnonce', false ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Invalid security token.', 'foogallery' ) ),
+					403
+				);
+			}
 
-				$defaults = $_POST['defaults'];
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Insufficient permissions.', 'foogallery' ) ),
+					403
+				);
+			}
 
-				//extract the settings using a regex
-				$regex = '/foogallery\[default_retina_support\|(?<setting>.+?)\]/';
+			$defaults = isset( $_POST['defaults'] ) ? sanitize_text_field( wp_unslash( $_POST['defaults'] ) ) : '';
 
-				preg_match_all($regex, $defaults, $matches);
+			//extract the settings using a regex
+			$regex = '/foogallery\[default_retina_support\|(?<setting>.+?)\]/';
 
-				$gallery_retina_settings = array();
+			preg_match_all( $regex, $defaults, $matches );
 
-				if ( isset( $matches[1] ) ) {
-					foreach ( $matches[1] as $match ) {
-						$gallery_retina_settings[$match] = "true";
-					}
+			$gallery_retina_settings = array();
+
+			if ( isset( $matches[1] ) ) {
+				foreach ( $matches[1] as $match ) {
+					$gallery_retina_settings[ $match ] = 'true';
 				}
+			}
 
-				//go through all galleries and update the retina settings
-				$galleries = foogallery_get_all_galleries();
-				$gallery_update_count = 0;
-				foreach ( $galleries as $gallery ) {
-					update_post_meta( $gallery->ID, FOOGALLERY_META_RETINA, $gallery_retina_settings );
-					$gallery_update_count++;
-				}
+			//go through all galleries and update the retina settings
+			$galleries = foogallery_get_all_galleries();
+			$gallery_update_count = 0;
+			foreach ( $galleries as $gallery ) {
+				update_post_meta( $gallery->ID, FOOGALLERY_META_RETINA, $gallery_retina_settings );
+				$gallery_update_count++;
+			}
 
-				echo sprintf( _n(
+			/* translators: %s: number of galleries updated. */
+			$message = sprintf(
+				/* translators: %s: Value inserted at runtime. */
+				_n(
 					'1 gallery successfully updated to use the default retina settings.',
 					'%s galleries successfully updated to use the default retina settings.',
-					$gallery_update_count, 'foogallery' ), $gallery_update_count );
+					$gallery_update_count,
+					'foogallery'
+				),
+				absint( $gallery_update_count )
+			);
 
-				die();
-			}
+			wp_send_json_success( array( 'html' => esc_html( $message ) ) );
 		}
 
 		function ajax_uninstall() {
-			if ( check_admin_referer( 'foogallery_uninstall' ) && current_user_can( 'install_plugins' ) ) {
-				foogallery_uninstall();
-
-				_e('All traces of the plugin were removed from your system!', 'foogallery' );
-				die();
+			if ( ! check_ajax_referer( 'foogallery_uninstall', '_wpnonce', false ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Invalid security token.', 'foogallery' ) ),
+					403
+				);
 			}
+
+			if ( ! current_user_can( 'install_plugins' ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Insufficient permissions.', 'foogallery' ) ),
+					403
+				);
+			}
+
+			$confirmation = '';
+			if ( isset( $_POST['confirmation'] ) ) {
+				$confirmation = sanitize_text_field( wp_unslash( $_POST['confirmation'] ) );
+				$confirmation = trim( $confirmation );
+			}
+
+			if ( '' === $confirmation ) {
+				wp_send_json_success(
+					array( 'html' => $this->get_uninstall_markup( true ) )
+				);
+			}
+
+			if ( 'UNINSTALL' !== $confirmation ) {
+				wp_send_json_error(
+					array(
+						'html'    => $this->get_uninstall_markup(
+							true,
+							__( 'Type UNINSTALL exactly to confirm the full uninstall.', 'foogallery' )
+						),
+						'message' => __( 'Type UNINSTALL exactly to confirm the full uninstall.', 'foogallery' ),
+					),
+					400
+				);
+			}
+
+			foogallery_uninstall();
+
+			wp_send_json_success(
+				array( 'html' => $this->get_uninstall_success_markup() )
+			);
 		}
 
 		function generate_assets( $old_value, $value, $option) {
-			if ( !is_admin() ) {
-				return;
-			}
-
 			if ( !current_user_can( 'manage_options' ) ) {
 				return;
 			}

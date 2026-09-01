@@ -108,6 +108,22 @@ class FooGallery extends stdClass {
 	}
 
 	/**
+	 * Apply template field defaults when no saved settings are available.
+	 *
+	 * Dynamic galleries do not have persisted post meta, so they need to
+	 * synthesize their initial settings from the template field definitions.
+	 */
+	private function apply_default_settings_from_template() {
+		if ( empty( $this->gallery_template ) || ! empty( $this->settings ) ) {
+			return;
+		}
+
+		$this->settings = foogallery_build_default_settings_for_gallery_template( $this->gallery_template );
+		$this->settings = apply_filters( 'foogallery_default_settings-' . $this->gallery_template, $this->settings, $this );
+		$this->settings = apply_filters( 'foogallery_settings_override', $this->settings, $this->gallery_template, $this );
+	}
+
+	/**
 	 * private function to load a gallery by an id
 	 *
 	 * @param $post_id
@@ -160,6 +176,8 @@ class FooGallery extends stdClass {
 		if ( $default_gallery_id > 0 ) {
 			$gallery->load_meta( $default_gallery_id );
 		}
+
+		$gallery->apply_default_settings_from_template();
 
 		return $gallery;
 	}
@@ -241,6 +259,11 @@ class FooGallery extends stdClass {
 	 * @return mixed|null
 	 */
 	function get_setting( $key, $default ) {
+		$override_setting = apply_filters( 'foogallery_instance_get_setting', null, $key, $default, $this );
+		if ( null !== $override_setting ) {
+			return $override_setting;
+		}
+
 		return $this->get_meta( "{$this->gallery_template}_$key", $default );
 	}
 
@@ -349,7 +372,17 @@ class FooGallery extends stdClass {
 	public function attachments() {
 		//lazy load the attachments for performance
 		if ( $this->_attachments === false ) {
-			$this->_attachments = $this->apply_datasource_filter( 'attachments', array() );
+			$attachments = $this->apply_datasource_filter( 'attachments', array() );
+            $attachments = apply_filters( 'foogallery_attachments_pre_sort', $attachments, $this );
+			if ( ! empty( $attachments ) && $this->apply_datasource_filter( 'must_sort', true ) ) {
+				$sort        = foogallery_sorting_get_effective_sort( $this );
+				$orderby     = foogallery_sorting_get_posts_orderby_arg( $sort );
+				$order       = foogallery_sorting_get_posts_order_arg( $sort );
+				$attachments = foogallery_sort_attachments( $attachments, $orderby, $order, $sort );
+				$attachments = foogallery_sorting_apply_deferred_query_args( $attachments, $sort );
+				$attachments = apply_filters( 'foogallery_attachments', $attachments, $this );
+			}
+			$this->_attachments = $attachments;
 		}
 
 		return $this->_attachments;
@@ -392,6 +425,7 @@ class FooGallery extends stdClass {
 	public function image_count() {
 		$no_images_text = esc_html( foogallery_get_setting( 'language_images_count_none_text', __( 'No images', 'foogallery' ) ) );
 		$singular_text  = esc_html( foogallery_get_setting( 'language_images_count_single_text', __( '1 image', 'foogallery' ) ) );
+		/* translators: %s: Value inserted at runtime. */
 		$plural_text    = esc_html( foogallery_get_setting( 'language_images_count_plural_text', __( '%s images', 'foogallery' ) ) );
 
 		$count = $this->item_count();
@@ -404,6 +438,7 @@ class FooGallery extends stdClass {
 				$count_text = $singular_text === false ? __( '1 image', 'foogallery' ) : $singular_text;
 				break;
 			default:
+				/* translators: %s: Value inserted at runtime. */
 				$count_text = sprintf( $plural_text === false ? __( '%s images', 'foogallery' ) : $plural_text, $count );
 		}
 
@@ -416,6 +451,7 @@ class FooGallery extends stdClass {
 	 * @return string
 	 */
 	public function safe_name() {
+		/* translators: %s: Value inserted at runtime. */
 		return empty( $this->name ) ? sprintf( __( '%s #%s', 'foogallery' ), foogallery_plugin_name(), $this->ID ) : $this->name;
 	}
 

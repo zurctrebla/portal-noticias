@@ -1,202 +1,194 @@
-=== Responsive Photo Gallery Plugin - FooGallery ===
+=== Gallery : FooGallery ===
 Contributors: fooplugins, bradvin, steveush
 Donate link: https://fooplugins.com
-Tags: gallery, image gallery, photo gallery, responsive gallery, wordpress gallery plugin
+Tags: gallery, image-gallery, photo-gallery, responsive-gallery, wordpress-gallery-plugin
 Requires at least: 5.3
-Tested up to: 6.8
-Stable tag: 2.4.32
+Requires PHP: 7.0
+Tested up to: 7.1
+Stable tag: 3.2.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Photo gallery plugin for WordPress — responsive image galleries with lightbox, masonry, justified grid, carousel, albums, slider, and more.
+FooGallery is a fast, responsive photo gallery and image gallery plugin with 7 gallery layouts, built-in lightbox, albums, and SEO optimization.
 
 == Description ==
 
-= WordPress Gallery Plugin =
+= Photo & Image Gallery =
 
-FooGallery is a powerful and easy-to-use WordPress gallery plugin that lets you create stunning photo galleries, image viewers, Justified & Masonry grids, Carousels and image portfolios. With advanced customization options and beautiful pre-built templates, FooGallery is perfect for creating responsive image galleries with lightbox effects for any website.
+FooGallery makes it easy to create stunning photo and image galleries using drag and drop in minutes. It’s responsive, retina-ready, SEO-friendly, and optimized for performance. With beautiful gallery layouts, live gallery previews, a built-in lightbox, and deep customization options, FooGallery is a complete gallery solution for modern WordPress websites.
 
-[Launch Your Own FooGallery Demo](https://app.instawp.io/launch?t=foogallery-free&d=v2)
+https://www.youtube.com/watch?v=WNM6b1HUdog
 
-FooGallery is an easy-to-use image gallery plugin, with stunning pre-built gallery layouts and a focus on performance and SEO.
-It is also responsive, retina-ready and supports lazy loading for lightning fast photo galleries.
+[Launch Your Own FooGallery Demo (Backend included)](https://app.instawp.io/launch?t=foogallery-free&d=v2)
 
-Live previews are available while creating an image gallery, and also within the Gutenberg block editor with our FooGallery Block.
-
-FooGallery was built to be highly configurable and extendable for developers or freelancers.
+FooGallery gives you live previews as you design your galleries, includes a visual gallery layout selector, and integrates seamlessly with the WordPress block editor and shortcodes. It’s developer-friendly, performance-focused, and fully extendable.
 
 [Visit the FooGallery Homepage](https://fooplugins.com/foogallery-wordpress-gallery-plugin/)
 
-= WordPress Gallery Plugin Features =
+[All FooGallery Demos](https://fooplugins.com/foogallery-wordpress-gallery-plugin/demos/)
 
-*	7 Beautiful Image Gallery templates
-	*	Responsive Image Gallery - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/responsive-image-gallery/)
+= Key Features =
+
+*	7 Beautiful Free Gallery layouts:
+	*	Responsive Gallery - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/responsive-image-gallery/)
 	*	Image Viewer Gallery - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/image-viewer-gallery/)
 	*	Masonry Gallery - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/masonry-gallery/)
-	*	Simple Portfolio - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/wordpress-portfolio-gallery/)
+	*	Portfolio Gallery - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/wordpress-portfolio-gallery/)
 	*	Justified Gallery - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/justified-gallery/)
 	*	Single Thumbnail Gallery - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/single-thumbnail-gallery/)
-	*	Carousel Gallery - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/wordpress-carousel/)
-*   Lightbox built-in!
-    *   Adjust lightbox colors, transitions and more!
-    *   Includes thumb strip, fullscreen mode and auto progress control
-    *   Override captions shown in lightbox
-*   Easy to customize!
-    *   Adjust thumbnail size, spacing & alignment
-    *   Adjust border size, rounded corners, drop shadows, inner shadows
-    *   Choose from a selection of loading icons
-	*	Animated loaded effects - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/animated-loaded-effects/)
-    *   Awesome hover effects - adjust colors, scaling and icons
-	*	Complete control over captions
-*	Focus on Performance
-	*	Lazy Loading options
-	*	Simple pagination [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/gallery-pagination/)
-	*	Optimized code
-	*	Reduced content layout shift
-*	Focus on SEO
-	*	ALT and title attributes on all images
-	*	Yoast SEO sitemap integration
-	*	Rank Math SEO sitemap integration
-	*	AIOSEO sitemap integration
-*   Albums built-in! (just activate the albums feature)
+	*	Carousel - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/wordpress-carousel/)
+*   Built-in Lightbox:
+    Adjust colors, transitions, captions, and controls with fullscreen, thumb strip, auto progress, prev/next, and download button support.
+*   Advanced Customization:
+    Control thumbnail sizes, spacing, hover effects, caption line limits, mobile columns, background fill, custom attributes, and more.
+*   Visual Gallery Builder:
+    Use the gallery layout selector, live preview device switcher, drag-and-drop uploads, advanced attachment modal, and shortcode helpers to build galleries faster.
+*   Block Editor & Shortcodes:
+    Add galleries with the WordPress block editor, preview them live while editing, and fine-tune output with shortcode arguments and page/offset controls.
+*	Performance Optimized:
+	Lazy loading, pagination, reduced layout shifts, fingerprinted assets, and broad compatibility with image optimization and caching plugins for fast loading times.
+*	SEO-Ready:
+	ALT and title attributes, attachment descriptions, and full integration with Yoast, Rank Math, and AIOSEO.
+*   Albums built-in:
 	*	Responsive album layout - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/wordpress-album-gallery/)
 	*	All-in-one Stack album - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/wordpress-album-gallery/#all-in-one)
-*   Import / Export galleries between WP installs - [docs](https://fooplugins.com/documentation/foogallery/getting-started-foogallery/import-export/)
-*	Gutenberg ready (Gallery previews inside the new editor!)
-*	Live previews as you make changes!
-*	Retina thumbnail support
-*	Gallery Widget
-*	Use built-in media library to manage images
+	*	(just activate the albums feature)
+*   Import / Export galleries between WP installs, with progress and resume support for large imports - [docs](https://fooplugins.com/documentation/foogallery/getting-started-foogallery/import-export/)
 *	Drag n Drop reordering of images and galleries
+*   Drag n Drop images into gallery to upload into gallery (and media library)
 *	Custom CSS for both galleries and albums
-*	Copy to clipboard shortcodes
 *	One-click gallery page creation
-*	FooGallery Migrator - easily migrate from your existing gallery solution
+*	FooGallery Migrator - easily migrate from Envira / NextGen / Modula
 *	Multisite Support
+*	Password protected image galleries
 
-= PRO Gallery Features =
+= PRO Features =
 
-There are 3 PRO plans available, that will work with any budget:
+FooGallery PRO adds professional-level features and integrations for photographers, agencies, and eCommerce users.
 
-[PRO Starter](https://fooplugins.com/foogallery-wordpress-gallery-plugin/#pro-starter-features) | [PRO Expert](https://fooplugins.com/foogallery-wordpress-gallery-plugin/#pro-expert-features) | [PRO Commerce](https://fooplugins.com/foogallery-wordpress-gallery-plugin/#pro-commerce-features)
+**PRO Starter Plan**
 
-**PRO Starter Features**
+Our PRO Starter plan is our most affordable plan and includes features that take your WordPress galleries to the next level! PRO Starter is mostly for photographers or website owners that want better-looking galleries and lightboxes.
 
-*   3 more beautiful PRO responsive gallery templates:
-    *   Polaroid gallery template - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/polaroid-gallery/)
-    *   Grid gallery template - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/grid-gallery/)
-    *	Slider gallery template - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/slider-gallery/)
-*   11 beautiful hover effect presets - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/hover-presets/)
-*   12 CSS thumbnail filters (Instagram) - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/filter-effects/)
+[View PRO Starter Details](https://fooplugins.com/foogallery-wordpress-gallery-plugin/pro-starter) 
 
-**PRO Expert Features**
+*   4 additional gallery layouts:
+    *   Polaroid - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/polaroid-gallery/)
+    *   Grid - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/grid-gallery/)
+    *	Slider - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/slider-gallery/)
+    *   Spotlight - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/spotlight-gallery/)
+*   11 hover effect presets - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/hover-presets/)
+*   12 CSS thumbnail effects (Instagram-style) - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/filter-effects/)
+*   Colors and color sorting:
+    Extract dominant colors from images, sort galleries by color, and apply opaque or tinted backgrounds for a more art-directed look.
 
-*   Video Support - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/video-gallery/)
-	*	Import video from Youtube, Vimeo and others
-	*	Self-hosted videos
-*	Filtering
-	*	Add filters using Media Tags or Categories - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/filtering/)
-	*	Multi-level filtering for galleries [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/filtering/#multi-level)
-	*	Bulk media tags and category management for attachments
-*	Dynamic Galleries (load images from other sources):
-	*	Load from a folder on the server [docs](https://fooplugins.com/documentation/foogallery/pro-expert/loading-galleries-server-folders/)
-	*	Load from a collection from Adobe Lightroom (using WP/LR Sync) [docs](https://fooplugins.com/documentation/foogallery/pro-expert/dynamic-gallery-from-lightroom-collection/)
-	*	Load all attachments with Media Tags [docs](https://fooplugins.com/documentation/foogallery/pro-expert/loading-galleries-media-tags/)
-	*	Load all attachments with Media Categories [docs](https://fooplugins.com/documentation/foogallery/pro-expert/loading-galleries-media-categories/)
-	*	Load from a folder in Real Media Library [docs](https://fooplugins.com/documentation/foogallery/pro-expert/loading-galleries-real-media-library/)
-	*	Load featured images from a post/page/custom post type - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/post-query-gallery/)
-*	Advanced Pagination
-	*   Numbered pagination - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/pagination/#numbered)
-	*   "Load More" pagination - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/pagination/#load-more)
-	*   Infinite scroll image gallery - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/pagination/#infinite-scroll)
-*	Advanced Custom Captions - [demo](hhttps://fooplugins.com/foogallery-wordpress-gallery-plugin/custom-captions/)
-*	EXIF metadata gallery - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/exif-data/)
-*   Bulk Copy Gallery Settings - [more info](https://fooplugins.com/bulk-copy-foogallery-pro/)
-*	Deeplinking support for pages and filters
+**PRO Expert Plan**
+
+Our PRO Expert plan unlocks exactly what you would expect – expert-level features! Our most popular plan is for professional photographers and website owners who want to invest in how their galleries look and work.
+
+[View PRO Expert Details](https://fooplugins.com/foogallery-wordpress-gallery-plugin/pro-expert) 
+
+*   Video Galleries:
+	Import from YouTube, YouTube Shorts, Vimeo, or self-hosted sources [demos](https://fooplugins.com/foogallery-wordpress-gallery-plugin/video-gallery/)
+*	Filtering & Tagging:
+	Filter by Media Tags or Categories with multi-level filtering, search, dropdown filter styles, and advanced selection modes [demos](https://fooplugins.com/foogallery-wordpress-gallery-plugin/filtering/)
+*	Dynamic Galleries:
+	Load images from folders, Lightroom, Real Media Library, [Infinite Uploads](https://infiniteuploads.com/?via=fooplugins), or posts, with support for ACF fields and richer post query controls. [demos](https://fooplugins.com/foogallery-wordpress-gallery-plugin/dynamic-galleries/)
+*	Advanced Pagination:
+	Load More, Infinite Scroll, and Numbered pagination [demos](https://fooplugins.com/foogallery-wordpress-gallery-plugin/pagination/)
+*	Advanced Custom Captions
+	Create captions using placeholders & custom HTML [demos](https://fooplugins.com/foogallery-wordpress-gallery-plugin/custom-captions/)
+*	EXIF metadata
+	Showcase your photo metadata in the Lightbox [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/exif-data/)
+*   Media Category Folders
+    Browse and work with media category folders directly inside the attachment modal.
+*   Bulk Copy
+	Easily copy gallery settings to other galleries [more info](https://fooplugins.com/bulk-copy-foogallery-pro/)
+*   ImageGallery SEO Schema
+    Output opt-in ImageGallery JSON-LD schema for pages that use FooGallery, with per-gallery schema overrides for richer image discovery.
 
 **PRO Commerce Features**
 
-*	Image Protection
-	*	Photo watermarking - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/photo-watermark/)
-	*	No right-click protection - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/photo-watermark/)
-*	Deep WooCommerce integration - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/woocommerce-integration/#product-gallery)
-	*	Create a dynamic gallery from your WooCommerce products in seconds!
-	*	Filter using WooCommerce product categories
-	*	Show sales ribbons for products on sale
-	*	Show ribbons for featured products, products that are out of stock, or products on backorder
-	*	Add-to-cart buttons on thumbnails
-	*	Support for product variations
-	*	Show product details (including variations) in Lightbox
-*	Sell your images online - [demo](https://footest.tastewp.com/)
-	*	Link all your gallery items to a single master product
-	*	Supports variations, e.g. sell images of different sizes
-	*   Supports file downloads, e.g. customers can download different sized images
+Our PRO Commerce plan is for the photographers who make a living from selling their photos online. We have integrated with WooCommerce, to bring you innovative tools to help you sell more with hardly any effort.
+
+[View PRO Commerce Details](https://fooplugins.com/foogallery-wordpress-gallery-plugin/pro-commerce) 
+
+*	WooCommerce integration:
+	Sell your photos or create dynamic product galleries with sorting, filtering, ratings, stock status controls, and deeper WooCommerce integration. [more info](https://fooplugins.com/foogallery-wordpress-gallery-plugin/woocommerce-integration/)
+*	Image Protection:
+	Watermarking and no right-click options [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/photo-watermark/)
+*	Master Product Setup:
+	No more separate products for each image - link all your photos to a single master product.
+	Supports variations, file downloads, WooCommerce blocks, and guided product setup tools.
 *   Buttons and Ribbons
-    *   Add custom buttons to your images
-    *   Add custom ribbons to your images to attract attention
+    Add custom buttons, download buttons, styled call-to-actions, and attention-grabbing ribbons to your images. [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/sale-ribbons-and-buttons/)
+*   Product Info in Lightbox
+    Show product details, price, stock messaging, add-to-cart, checkout, view product, and download actions directly in the lightbox.
 *	Gallery Blueprints
-    *   Set a gallery as a blueprint and then all galleries who use that blueprint will inherit all settings from the blueprint - [docs](https://fooplugins.com/documentation/foogallery/pro-commerce/use-master-gallery/)
-*   White Labeling
-    *   Rebrand FooGallery to whatever you like for your clients. Ideal for freelancers and agencies. [docs](https://fooplugins.com/documentation/foogallery/pro-commerce/white-labeling/)
+    Create Gallery Templates that share settings across galleries for faster gallery management - [docs](https://fooplugins.com/documentation/foogallery/pro-commerce/use-master-gallery/)
+
+**PRO Addons**
+
+We also have a collection of powerful add-ons available to enhance your gallery experience. All the Addons work with the FREE version too!
+
+*   User Uploads Addon:
+    Allow visitors to upload images & videos into galleries. Includes image moderation, form field customization, email notifications and more. [more info](https://fooplugins.com/foogallery-wordpress-gallery-plugin/user-uploads/)
+*   Social Addon:
+    Increase visitor engagement by allowing them to like, comment and share images in your galleries. [more info](https://fooplugins.com/foogallery-wordpress-gallery-plugin/social/)
+*   Whitelabel:
+    Allow power users to rename or rebrand "FooGallery", modify the shortcode, menu, and disable features. [more info](https://fooplugins.com/foogallery-wordpress-gallery-plugin/whitelabel/)
+*   Client Proofing:
+    Create a private proofing page where your clients can select or reject images in the galleries. (Coming soon!)
+*   3D Splat Viewer:
+    Create emmersive 3D walk-throughs for showcasing products or real-estate. (Coming soon!)
 
 [See More Demos](https://fooplugins.com/foogallery-wordpress-gallery-plugin/demos/)
 
-**Test Drive**
+**How to Create a Photo Gallery in WordPress**
 
-Take FooGallery for a test drive! Spin up your very own WP instance with FooGallery pre-installed:
+1.	Install and activate FooGallery from the Plugins menu.
+2.	Click Add Gallery and choose your layout.
+3.	Upload or select images from your Media Library.
+4.	Customize captions, hover effects, and lightbox settings.
+5.	Publish and embed your gallery using a block or shortcode.
 
-[Start FooGallery Test Drive!](https://app.instawp.io/launch?t=foogallery-free&d=v2)
+**Integrations and Compatibility**
+
+*	Works seamlessly in the Block Editor / Gutenberg.
+*	WooCommerce integration to sell photos online.
+*	Lightbox plugins : FooBox, dFactory.
+*	Page builders : Elementor.
+*	SEO Plugins: Yoast, Rank Math, AIOSEO.
+*	Caching Plugins: WP Rocket, W3 Total Cache, Autoptimize, WPOptimize.
+*	Media Tools: ShortPixel, Imagify, Real Media Library, and [Infinite Uploads](https://infiniteuploads.com/?via=fooplugins).
+*	Others : Jetpack, Polylang.
 
 **Documentation**
 
 *	[FooGallery Documentation](https://fooplugins.com/documentation/foogallery/)
 
-**Gutenberg**
-
-FooGallery includes a really simple-to-use Gutenberg block to add your existing FooGallery image galleries in seconds. And it includes live previews of the image gallery too!
-
-**GDPR**
-
-When you install FooGallery for the first time, the plugin asks you (the website admin) to opt-in so that we can track your usage of the plugin and provide a better service (send you update emails for new version releases and security updates etc). *This is optional and not required in order to use the plugin.*
-
-From your website point of view, FooGallery never collects or stores any visitor information at all, when someone visits your website.
-
-**PHP 8 Compatible**
-
-FooGallery has been tried and tested on servers running up to PHP 8
-
-**Retina Support**
-
-FooGallery is a responsive gallery with built-in support for higher quality thumbnails on retina-enabled displays. No more blurry thumbnails, just crisp thumbnails so that your image galleries look amazing on all devices.
-
-**Video Gallery**
-
-FooGallery PRO Expert allows you to create a video gallery in seconds! Import from YouTube, Vimeo, Facebook, TED and Dailymotion, or import a self-hosted video from any online source (eg. S3 bucket).
-You can also easily create mixed galleries with both images and videos!
-
-**WooCommerce**
-
-Sell your photographs online with our full WooCommerce integration, available in PRO Commerce. You can either create a dynamic gallery from your existing products, or you can sell images in a gallery by linking them to a single master product. With full support for variations. Highlight products for sale with ribbons. Add call-to-action buttons to your images, for example Add to Cart buttons.
-
-**Albums Built In**
-
-Albums are built in as an feature. Simply head over to the Features page and activate the albums feature. A new menu item will appear that allows you to add albums just as easily as galleries.
-
-**Built For Developers**
-
-FooGallery was designed to be the most developer-friendly image gallery plugin available for WordPress. It was also built on top of a solid extension framework, which means different functionality is separated out into different areas in the codebase. It also means the core plugin is lightweight, but still allowing for the most flexibility.
-
-**Special Thanks**
-
-Thanks to Fortinet FortiGuard Labs for the security testing conducted on the plugin. FooGallery is a safer plugin thanks to them.
-
 == Installation ==
 
 1. Upload `foogallery` folder to the `/wp-content/plugins/` directory
 2. Activate the plugin through the 'Plugins' menu in WordPress
-3. You will be redirected to the FooGallery Help page to get started with the best gallery plugin
+3. You will be redirected to the FooGallery Help page to get started
 
 == Frequently Asked Questions ==
+
+= Is FooGallery The Best Wordpress Gallery Plugin? =
+
+FooGallery has been optimized for performance and has a ton of features in the free version. Read our blog post where we compare FooGallery to other WordPress gallery plugins:
+
+[Best WordPress Gallery Plugins Compared](https://fooplugins.com/best-wordpress-gallery-plugin/)
+
+= Can I add videos to my galleries? =
+
+Yes, video galleries are supported in [FooGallery PRO Expert](https://fooplugins.com/foogallery-wordpress-gallery-plugin/pro-expert). You can import from YouTube, YouTube Shorts, Vimeo or use self-hosted videos.
+
+= Can I sell my photography online? =
+
+Yes, that is why we built [FooGallery PRO Commerce](https://fooplugins.com/foogallery-wordpress-gallery-plugin/pro-commerce-features) - it integrates deeply with WooCommerce.
+You can build galleries from WooCommerce products, or link every image to a master product. Sell with variations, ribbons, custom buttons, lightbox product info, checkout flows, and image file downloads.
 
 = My galleries are not working. Thumbnails are greyed out and not loading when I scroll down the page. =
 
@@ -212,6 +204,12 @@ In order for FooGallery to function properly, the theme needs to have:
     * A call to wp_footer(); in the footer.php file.
 
 One way to check if the theme is the problem, is by switching to one of the built-in WordPress themes, and then see if the gallery loads.
+
+= I am getting a 503 server error whenever I try to edit galleries from the admin =
+
+Some versions of PHP have issues with the Imagick Image library, which FooGallery uses to generate thumbnails.
+To fix this problem, goto FooGallery Settings -> Images, and ensure "Force GD Library" is checked and save settings.
+This will force your server to rather use the GD image library to avoid the 503 errors.
 
 = After updating, my galleries no longer work! What should I do? =
 
@@ -232,18 +230,12 @@ First thing to do is restore your site to it's previous working state.
     * What error was shown when your site was broken?
     * What plugins and theme are you using?
 
-= Is FooGallery The Best Wordpress Gallery Plugin? =
-
-We certainly think so, but do not take our word for it. We did the research. FooGallery has the best performance and has the most features out of any free WordPress gallery plugin. Read our blog post about it:
-
-[What is the Best WordPress Gallery Plugin?](https://fooplugins.com/best-wordpress-gallery-plugin/)
-
-= Do you care for Google's Core Web Vitals? =
+= Do you care about Google's Core Web Vitals? =
 
 A faster gallery now means a more favourable ranking in Google!
-FooGallery has been specifically optimized to score better for Google's Core Web Vitals update in 2021.
-We have focused on the speed of our javascript code, and also improved the visual stability of all gallery layouts.
-This has led to dramatically better scores for the 3 key lighthouse factors including:
+FooGallery continues to be optimized for Core Web Vitals with faster client-side code, lazy loading, improved layout stability, and broader compatibility with performance plugins.
+We focus on the speed of our javascript code and the visual stability of all gallery layouts.
+This helps improve the 3 key Lighthouse factors including:
 
 *   Largest Contentful Paint - galleries load and appear quicker for your visitors
 *   First Input Delay - you can interact with the gallery sooner
@@ -259,19 +251,6 @@ If it still does not work, then please contact our support to help further.
 = Why are my thumbnails so blurry? =
 
 Have you enabled retina support for your galleries? To enable retina support, edit the gallery and locate the Retina Support metabox.
-
-= Can I add videos to my galleries? =
-
-Yes, video is supported in [FooGallery PRO Expert](https://fooplugins.com/foogallery-wordpress-gallery-plugin/#pro-expert-features)!
-
-= Can I sell my photography online with this plugin? =
-
-Yes, that is why we built [FooGallery PRO Commerce](https://fooplugins.com/foogallery-wordpress-gallery-plugin/#pro-commerce-features)!
-You can choose to create a gallery based off your existing WooCommerce products, or you can link all images in a gallery to a master product. This allows you complete control over how you want to run your image store and how they are sold on your website.
-
-= Do I need to install a separate plugin to show a lightbox? =
-
-No, we have built in a uniquely beautiful lightbox!
 
 = How do I import galleries from another install? =
 
@@ -291,533 +270,109 @@ Simply go to the FooGallery Features page and activate the Albums feature.
 
 Yes, our PRO Commerce plan includes image watermarking.
 
+= Can I allow my visitors to comment or like images in a gallery? =
+
+Yes, with the Social Addon [more info](https://fooplugins.com/foogallery-wordpress-gallery-plugin/social/)
+
+= I want visitors to be able to upload their own images to my gallery, including moderation. Do you support this feature? =
+
+Yes, with the User Uploads Addon [more info](https://fooplugins.com/foogallery-wordpress-gallery-plugin/user-uploads/)
+
 = Can I add external links to items in the gallery? =
 
 Yes, you can link to any external website by choosing "Custom URL" for the Thumbnail Link setting. You also then need to set a custom URL for the items in your gallery, which is done by editing the attachment.
 
 = How do I turn off all the PRO Promotions in the admin? =
 
-Goto FooGallery Settings -> Advanced Tab and check "Disable PRO Promotions" and then save your settings.
+If you are getting annoyed with our upsell admin messages, and they do not seem to go away, even after dismissing then, then goto FooGallery Settings -> Advanced Tab and check "Disable PRO Promotions" and then save your settings.
+
+= Is FooGallery GDPR Compliant? =
+
+Yes. FooGallery does not collect visitor data, and admin tracking is optional.
+
+= Does FooGallery Support WordPress Abilities? =
+
+Yes. FooGallery registers the following abilities:
+- Create Gallery
+- Get gallery
+- List Galleries
+- List Gallery Layouts
+- Update Gallery attachments
+- Update Gallery
+- Get Gallery Layout Schema
+- Media Search
+
+= Where do I report security bugs found in this plugin? =
+
+Please report security bugs found in the source code of the FooGallery plugin through the [Patchstack Vulnerability Disclosure Program](https://patchstack.com/database/vdp/11375ddc-f925-4200-883e-282cda64fec4). The Patchstack team will assist you with verification, CVE assignment, and notify the developers of this plugin.
 
 == Screenshots ==
 
-1. Gallery Edit Page
-2. Visual Shortcodes
-3. Gallery Picker
-4. Frontend example with default template
-5. Album Edit Page
+1. Gallery edit page
+2. Gallery edit live preview
+3. Frontend example with responsive layout
+4. Frontend example with image viewer layout
+5. Frontend example with justified layout
+6. Frontend example with masonry layout
+7. Frontend example with portfolio layout
+8. Frontend example with single thumbnail layout
+9. Frontend example with carousel layout
+10. Lightbox
 
 == Upgrade Notice ==
 
-Please update in order for FooGallery to work in WP 5.5+!
+Please update in order for FooGallery to work effectively.
 
 == Changelog ==
 
-= 2.4.32 =
-* Date Updated : 03 Jul 2025
-* Update : FooGallery client side 2.1.4
-* Fix : Added support for Elementor Page Transition module to prevent page transition when clicking on a gallery image.
-* Fix : Enhanced sanitization for gallery caption attributes.
-* Fix : When gallery settings are saved - all text and textarea settings are sanitized to remove unwanted keywords.
-* Fix : Added HTML parsing to client side, where gallery captions are parsed to strip unwanted attributes.
+= 3.2.6 =
 
-= 2.4.31 =
-* Date Updated : 18 May 2025
-* Fix : Fixed bug with early translation PHP warnings in debug mode.
-* Update : Freemius SDK update 2.12.0
-[//]: # fs_premium_only_begin
-* New : [Commerce Plan] Added ability to bulk assign galleries to a Blueprint.
-[//]: # fs_premium_only_end
+* Date Updated : 6 Aug 2026
+* Fix : Added descriptive alternative text to images throughout the FooGallery admin interface.
+* Update : Improved performance when loading and managing sites with many galleries.
+* Fix : Prevented direct access to FooGallery PHP files.
+* Fix : Hardened gallery, album, media search, attachment lookup, and uninstall database queries.
+* Fix : Preserved settings sanitization by removing a duplicate legacy settings registration.
+* Fix : Improved attachment file-size handling across supported WordPress versions.
+* Update : Improved translation context and corrected text domains throughout FooGallery.
+* Update : Replaced deprecated API usage and native URL and random helpers with supported WordPress equivalents.
+* Update : Improved release Plugin Check tooling and kept development-only files out of release scans and ZIPs.
 
-= 2.4.30 =
-* Date Updated : 04 Mar 2025
-* Added checks in attachment modal to ensure the user can edit the attachment.
-* Improved escaping for albums to avoid dodgy inputs, and bad actors.
+= 3.2.5 =
 
-= 2.4.29 =
-* Date Updated : 25 Jan 2025
-* New : added setting to limit galleries when editing an album.
-* Updated to Freemius SDK 2.11.0
+* Date Updated : 4 Aug 2026
+* Update : Added a reusable core API for creating galleries and atomically retrieving, replacing, adding, or removing Media Library attachments.
+* Update : Unified gallery attachment validation, cache clearing, save hooks, datasource enforcement, and video-count maintenance across core and WordPress Abilities.
 
-= 2.4.27 =
-* Date Updated : 24 Nov 2024
-* Update : Freemius SDK update 2.9.0
-* Fix : Fixed bug with early translation PHP warnings in debug mode.
-* Fix : When in trial mode, do not load the promotion gallery templates.
-* Fix : Gallery creator permissions will now work with custom roles, like Shop Manager.
-[//]: # fs_premium_only_begin
-* New : [Expert Plan] Added new selection mode setting to taxonomy datasource to allow for AND or OR selections.
-* Fix : [Expert Plan] Added check for folder datasource, to ensure only files within WP root are included.
-[//]: # fs_premium_only_end
+= 3.2.4 =
 
-= 2.4.25 =
-* Date Updated : 19 Oct 2024
-* Fix : Fixed bug with gallery and album capabilities being incorrectly set.
-* Fix : Fixed bug with custom JS and CSS not being double escaped.
+* Date Updated : 4 Aug 2026
 
-= 2.4.22 =
-* Date Updated : 21 Sep 2024
-* Update : Freemius SDK update 2.8.1
+= 3.2.3 =
 
-= 2.4.20 =
-* Date Updated : 20 Aug 2024
-* Update : Freemius SDK update 2.7.4
-[//]: # fs_premium_only_begin
-* fix : [Commerce Plan] force cache to be disabled if product info is shown in lightbox.
-* fix : [Commerce Plan] fixed watermark generation with galleries using a product datasource.
-[//]: # fs_premium_only_end
+* Date Updated : 3 Aug 2026
 
-= 2.4.19 =
-* Date Updated : 20 Aug 2024
-[//]: # fs_premium_only_begin
-* New : [Commerce Plan] Added new setting to show price in the product info within lightbox.
-* Fix : [Commerce Plan] Fix caching bug with product datasource (settings were being "reset").
-[//]: # fs_premium_only_end
+= 3.2.2 =
 
-= 2.4.18 =
-* Date Updated : 4 Aug 2024
-* Update : Gallery and album creator roles now inherit privileges.
-[//]: # fs_premium_only_begin
-* Fix : Fix bug with video count throwing fatal error when a gallery has been deleted.
-[//]: # fs_premium_only_end
+* Date Updated : 3 Aug 2026
 
-= 2.4.17 =
-* Date Updated : 7 July 2024
-* Update : Freemius SDK update 2.7.3
+= 3.2.1 =
 
-= 2.4.16 =
-* Date Updated : 9 June 2024
-* Fix : enhanced sanitization for album settings in admin.
-* Update : FooGallery client side 2.1.3
-* Update : Freemius SDK update 2.7.2
+* Date Updated : 19 Jul 2026
+* Fix : Registered the legacy block categories filter only on WordPress versions below 5.8.
 
-= 2.4.15 =
-* Date Updated : 23 March 2024
-* Fix : disabled the Custom Attributes setting under advanced gallery settings as it was unsafe.
-* Fix : ensured all output is escaped within Advanced Attachment Modal.
-* New : added 2 new settings under advanced gallery settings - "Custom Attribute Key" and "Custom Attribute Value" which is a safer alternative to the original "Custom Attributes" setting.
+= 3.2.0 =
 
-= 2.4.14 =
-* Date Updated : 21 Feb 2024
-* Fix : fix for albums showing html in "back to album" text.
-* NOTE : You only need to update if you use albums!!
+* Date Updated : 18 Jul 2026
+* Update : Increased the minimum supported PHP version to 7.0.
+* Update : Improved compatibility across PHP 7 through PHP 8.5 and WordPress 5.3 and newer.
+* Fix : Hardened remote imports, attachment metadata, datasource settings, and related gallery editing workflows.
+* Update : Improved delayed loading, Infinite Scroll, jQuery compatibility, Gutenberg assets, and CSP handling.
+* Update : Added album descriptions and extension APIs, with safer nested rendering, routing, and saving.
+* Update : Improved thumbnail generation, effects, cache URLs, HTTPS handling, lazy loading, and ShortPixel compatibility.
+* Update : Updated to Freemius SDK v2.13.4.
+* Update : Added Image Viewer autoplay, lightbox Auto Progress controls, SEO fallbacks, optional ImageGallery schema, Polylang support, and improved paged-gallery search.
+* Fix : Improved safe attachment captions, mobile in-app downloads, and lightbox scrolling on Firefox for Android.
 
-= 2.4.13 =
-* Date Updated : 17 Feb 2024
-* New : Advanced attachment modal is enabled by default now.
-* Fix : small bug fixes in the advanced attachment modal.
-* Fix : enhanced sanitization for language settings.
-* Fix : Stack album layout issues in certain scenarios.
-* Fix : Lightbox double-click close button bug.
-* Update : FooGallery client side 2.1.2
 
-= 2.4.9 =
-* Date Updated : 27 Jan 2024
-* Fix : enhanced sanitization for advanced gallery settings.
-* Update : Freemius SDK update 2.6.2
-
-= 2.4.7 =
-* Date Updated : 21 Dec 2023
-* Fix : fixed paging not showing anymore!
-
-= 2.4.6 =
-* Date Updated : 17 Dec 2023
-* Update : Freemius SDK update 2.6.1
-* Fix : fixed PHP 8.1 warnings
-* New : Overhauled features listing, and added a bunch of features to the list, which can be activated/deactivated like plugins.
-* Fix : added sanitization to advanced gallery settings.
-[//]: # fs_premium_only_begin
-* Update : Renamed Master Galleries to Gallery Blueprints.
-[//]: # fs_premium_only_end
-
-= 2.3.4 =
-* Date Updated : 6 Sep 2023
-* Fix : fixed bug with demo galleries not using the default lightbox
-
-= 2.3.3 =
-* Date Updated : 6 Sep 2023
-* Fix : fixed bug showing incorrect lightbox option in admin
-
-= 2.3.2 =
-* Date Updated : 6 Sep 2023
-* New : Lightbox is now included in FREE!
-* New : Added settings to control which role can manage galleries and albums
-* Fix : Added nonce checks and extra sanitisation to extensions page.
-* Update : FooGallery client side 2.1.0
-* Update : Updated to Freemius SDK 2.5.12
-
-= 2.2.44 =
-* Date Updated : 1 July 2023
-* Update : Updated to Freemius SDK 2.5.10
-[//]: # fs_premium_only_begin
-* Fix : fixed bug where server folders datasource would load max 100 images.
-[//]: # fs_premium_only_end
-
-= 2.2.42 =
-* Date Updated : 31 May 2023
-* Update : Updated to Freemius SDK 2.5.8
-* Fix : Attachment custom target bug in attachment modal.
-* Update : Improved UX : when changing gallery template, settings tab state is remembered.
-[//]: # fs_premium_only_begin
-* Update : [Commerce Plan] Improved UX : watermarks can be generated on new galleries without needing page to refresh.
-* Update : [Expert Plan] Added EXIF descriptions and examples to attachment modal.
-[//]: # fs_premium_only_end
-
-= 2.2.41 =
-* Date Updated : 10 Apr 2023
-* Update : Updated to Freemius SDK 2.5.6
-* Update : FooGallery client side 2.0.45
-* Fix : Minor bug and styling fixes in advanced attachment modal.
-* Fix : Minor security issue fixed on the FooGallery edit page (logged in administrators only).
-[//]: # fs_premium_only_begin
-* New : [Commerce Plan] Added support for file downloads when using a master product!
-* New : [Commerce Plan] Added settings to add a ribbon to out of stock, backorder and featured products when using product datasource.
-* New : [Commerce Plan] Added ability to include icons (dashicons) within ribbons.
-* New : [Commerce Plan] Added new ribbon option type (bottom, full-width, grey).
-[//]: # fs_premium_only_end
-
-= 2.2.35 =
-* Date Updated : 4 Mar 2023
-* Update : Updated to Freemius SDK 2.5.3
-* Update : FooGallery client side 2.0.44
-* Update : Updated package.json to latest dependencies. Updated Gutenberg block build process.
-* Update : Updated translation POT file.
-* New : Multiple improvements to Attachment Modal.
-* New : Added new setting to enqueue polyfills JS, if you require more browser backwards compatability.
-* Fix : Fixed album shortcode bug when gallery shortcode is changed with the white-labelling feature.
-[//]: # fs_premium_only_begin
-* New : [Expert Plan] Support for YouTube shorts in both video importer and the lightbox.
-* New : [Commerce Plan] Added modal for easily selecting master product.
-* New : [Commerce Plan] Created Generate Master Product button on modal to easily generate a working Master Product, that is configured correctly.
-* New : [Commerce Plan] Added validation to the master product, so you can see what changes are needed.
-* Update : [Commerce Plan] Enhanced lightbox checkout layout on mobile
-[//]: # fs_premium_only_end
-
-[//]: # fs_premium_only_begin
-= 2.2.28 =
-* Date Updated : 2023-01-02
-* Fix : Added check for thumb overrides within woocommerce in some setups, causing errors.
-
-= 2.2.27 =
-* Date Updated : 2022-11-19
-* Fix : Re-release of 2.2.26 but with smaller zip, which was causing problems.
-[//]: # fs_premium_only_end
-
-= 2.2.26 =
-* Date Updated : 2022-11-12
-* Fix : import/export include error on some installs.
-* Fix : fixed a few bugs with new edit attachment modal.
-
-= 2.2.22 =
-* Date Updated : 2022-10-22
-* New : Added new BETA attachment modal on gallery edit page, which is an easier way to edit attachment info. (Turned on from settings)
-* Update : FooGallery client side 2.0.39
-[//]: # fs_premium_only_begin
-* Fix : Fix for watermarks not generating when Shortpixel engine is chosen.
-[//]: # fs_premium_only_end
-
-= 2.2.20 =
-* Date Updated : 2022-09-05
-* Fix : Fixed Justified last row + filter bug.
-* Fix : Fixed iOS swipe bug.
-* Fix : Fixed PHP warning when using taxonomy datasource originating from woocommerce product linking.
-* Update : FooGallery client side 2.0.38
-[//]: # fs_premium_only_begin
-* Fix : Fix for lightbox woocommerce cart issue, where cart button was always greyed out in some scenarios.
-[//]: # fs_premium_only_end
-
-= 2.2.16 =
-* Date Updated : 2022-08-16
-* New : Added Import/Export feature, so you can export galleries on one install, and import into another.
-* New : Added settings to hide nav/paging/progress for Carousel.
-* New : Added filter 'foogallery_render_template_template_override' which allows developers to override the gallery template.
-* New : Renamed Extensions page to Features. This will allow core plugin features to move to Features which can be toggled on/off.
-* Fix : Fixed layout issues with Carousel gallery.
-* Fix : Fixed custom JS & CSS being saved as double encoded (for real this time).
-* Fix : Better integration with FooBox and FooGallery.
-* Fix : Removed PHP warnings in albums extension.
-* Update : FooGallery client side 2.0.35
-* Update : Updated to Freemius SDK 2.4.5
-[//]: # fs_premium_only_begin
-* New : [Commerce Plan] Added White Labeling feature, so you can rename 'FooGallery' to anything you want.
-* New : Added setting (Server Folder Root) which allows you to choose your server folder root on some server setups.
-* New : Added new min/max price filter for the product datasource
-* Fix : Undid previous server folder root change which broke server folder galleries on some installs.
-* Update : made the FooGallery attachment taxonomies non public
-[//]: # fs_premium_only_end
-
-= 2.2.8 =
-* Date Updated : 2022-05-01
-* Fix : Fixed custom JS & CSS being saved as double encoded
-* Fix : Removed filter support for older AIOSEO versions.
-[//]: # fs_premium_only_begin
-* Fix : Fixed server folders not finding files on some server setups.
-[//]: # fs_premium_only_end
-
-= 2.2.7 =
-* Date Updated : 2022-04-15
-* Fix : Fixed carousel not working when no lightbox is available
-* Fix : Fixed RTL styles on FooGallery admin pages
-* Update : FooGallery client side 2.0.32
-
-= 2.2.6 =
-* Date Updated : 2022-03-31
-* New : Added new gallery template : Carousel
-* Fix : Fixed bug with captions showing alternatives when using paging
-* Fix : Fixed conflict with image lazy loading in Safari 15.4, by adding loading=eager
-* Update : FooGallery client side 2.0.30
-[//]: # fs_premium_only_begin
-* New : Added Master Gallery feature, which allows you to create templates from galleries that other galleries can inherit settings from.
-* New : Added setting to filtering to hide the default "All" tag.
-* New : Added setting to filtering to auto select first filter when "All" tag is hidden.
-[//]: # fs_premium_only_end
-
-= 2.1.35 =
-* Date Updated : 2022-03-08
-* Fix : Fixed PHP warning on Widget Editor page in admin
-[//]: # fs_premium_only_begin
-* Fix : Fixed bug where Bulk Copy feature was removed.
-[//]: # fs_premium_only_end
-
-= 2.1.34 =
-* Date Updated : 2022-03-01
-* Fix : Fixed bug where WebP images could not be uploaded when using the GD image editor
-* Fix : Security Fix in wp-admin
-* Update : Update to Freemius SDK
-
-= 2.1.33 =
-* Date Updated : 2022-01-15
-* Update : FooGallery client side 2.0.24
-* Fix : Ensure gallery layout is triggered in certain scenarios.
-* Fix : Updated the hover effects and presets to trigger on focus for better accessibility.
-* Fix : il8n bug where il8n script was not being included in page in some scenarios.
-* Fix : Removed Gutenberg editor warnings when using the FooGallery block.
-[//]: # fs_premium_only_begin
-* New : [Commerce Plan] Added FooGallery tab to product data metabox, to allow overrides for buttons and ribbons per product (when using the product datasource)
-* New : [Expert Plan] Added sort order option for server folder datasource.
-* Fix : [Expert Plan] Fixed PHP warning when using gallery search.
-[//]: # fs_premium_only_end
-
-= 2.1.28 =
-* Date Updated : 2021-10-27
-* Fix : Fixed issue when no attachments being saved when updating gallery, in some scenarios.
-* Update : Updated features on help page. Updated links to correct URL's.
-[//]: # fs_premium_only_begin
-* Fix : [Expert Plan] Fix for self hosted videos not playing in lightbox on mobiles.
-* Update : [Expert Plan] Moved search settings into it's own tab under Filtering within gallery settings.
-[//]: # fs_premium_only_end
-
-= 2.1.24 =
-* Date Updated : 2021-10-16
-[//]: # fs_premium_only_begin
-* New : [Expert Plan] Added a search input so that visitors can filter by their own search term.
-* New : [Commerce Plan] Added sort to product datasource to sort products by date, price, popularity and rating.
-* New : [Commerce Plan] Added stock status filter to product datasource to filter by in stock, out of stock and backordered.
-* Fix : [Expert Plan] Fixed layout issue with Polaroid gallery in certain scenarios.
-* Fix : [Commerce Plan] Improved way of including WC scripts on gallery pages.
-* Fix : [Commerce Plan] Product datasource only loads products that have an attachment set.
-* Fix : [Commerce Plan] Only use categories and tags from a product if the product was loaded using the product datasource.
-[//]: # fs_premium_only_end
-
-= 2.1.18 =
-* Date Updated : 2021-09-01
-* Update : FooGallery client side 2.0.20
-* Update : Updated FooGallery Help page in admin to match new branding
-* Update : Updated internal promotions to match plans
-* Fix : fixed bug in WP 5.8 when not all attachments showing in media modal
-* Fix : Added custom CSS for 3 gallery templates, to avoid incorrect thumb widths with certain themes and SVG thumbnails.
-* Fix : Added logic to generate unique ID's for the gallery container if the gallery is included more than once on a page.
-* New : Added custom pagination theme
-[//]: # fs_premium_only_begin
-* New : [Commerce Plan] Introduced new Ecommerce features
-* New : [Commerce Plan] Deep integration with WooCommerce
-* New : [Commerce Plan] Gallery item ribbons
-* New : [Commerce Plan] Gallery item buttons
-* New : [Commerce Plan] Product Gallery template
-* New : [Commerce Plan] Master Product feature
-* New : [Expert Plan] Added Bulk Taxonomy Manager to galleries using tag/category datasource
-* Fix : [Commerce Plan] Fixed watermarks not generating on some installs.
-* Fix : [Expert Plan] Using attachments with the post query datasource now works.
-[//]: # fs_premium_only_end
-
-= 2.0.39 =
-* Date Updated : 2021-06-12
-* Fix : Changed how attachment full size image details are determined, when there are issues in certain setups
-* Fix : jQuery backwards compatibility
-* Fix : Fixed issues with thumb widths for certain theme css
-* Fix : Updated lazyload placeholder SVG to include width and height attributes
-* Fix : Updated help page demo's to use correct placeholders
-* Update : FooGallery client side 2.0.16
-[//]: # fs_premium_only_begin
-* New : [Commerce Plan] Introduced new Protection feature (No right click and watermark generation for images)
-[//]: # fs_premium_only_end
-
-= 2.0.35 =
-* Date Updated : 2021-05-20
-* New : Added lazyload compatibility for Imagify (replace img tags with picture tags)
-* Fix : updated how gallery usage is determined
-* Fix : sanitised gallery custom CSS and global custom CSS & JS admin settings
-* Fix : only show rating admin message after 5 galleries have been created (was showing always!)
-* Update : FooGallery client side 2.0.13
-
-= 2.0.30 =
-* Date Updated : 2021-05-03
-* New : Added lazyload compatibility for Jetpack, Jetpack Boost, WPMU Smush, EWWW Image Optimizer, W3 Total Cache, WP Optimize
-* New : Added "Enable Gallery Descriptions" setting for Albums
-* New : Galleries used in albums will now show a link to the album in the Usage column on the gallery listing page
-* New : output gallery debug info when debugging setting is enable
-* Update : FooGallery client side 2.0.12
-* Update : Updated the thumbnail generation test image to use a local image within the plugin
-* Update : Added "Last Row" gallery setting back for Justified Galleries
-* Fix : Fixed bug with custom URL's not working for Single Thumbnail galleries
-[//]: # fs_premium_only_begin
-* New : Added advanced setting "Item ID Attribute" which changes how deeplinking will work with opening an item in PRO lightbox
-* Fix : Fixed bug with images set as custom URL's opening in iframe in lightbox
-[//]: # fs_premium_only_end
-
-= 2.0.24 =
-* Date Updated : 2021-18-04
-* Update : FooGallery client side 2.0.11
-* Fix : Fixed compatibility with WPRocket and rendering inline script of gallery items json
-[//]: # fs_premium_only_begin
-* Fix : Fixed issue with empty collections in WP/LR Sync returning back all attachments in the media library!
-* Fix : Fixed bug wrt Safari/iOS Webview CSS Grid issue, with slider and grid templates
-* Fix : Fixed bug with filtering to work with Slider PRO
-* Fix : Fixed bug with filtering and pagination
-[//]: # fs_premium_only_end
-
-= 2.0.20 =
-* Date Updated : 2021-11-04
-* New : Major performance improvements for all gallery templates (improving scores for Core Web Vitals)
-* New : Added "Mobile Columns" gallery setting for Responsive Galleries
-* New : Added 6 Columns option for Masonry gallery layout
-* New : Added "Horizontal Layout" gallery setting for Masonry galleries, to try maintain left-to-right order of images
-* New : Made all image loaded effects in PRO now available in free!!
-* New : Added first-class support for ShortPixel Adaptive Images as a thumbnail engine. (can be changed from settings)
-* New : Added "Alignment" gallery setting under "Captions" tab for changing horizontal alignment of thumbnail captions
-* New : Added "Image Title Attribute" gallery setting under "Advanced" tab for disabling the title attribute added to thumbnail img tags
-* New : Added gallery settings to change the lightbox captions when FooBox is the selected lightbox
-* New : Added ability to refresh gallery preview when editing by clicking preview button again
-* New : Added lazyload support to stack album, giving a major performance boost to very large albums!
-* New : Overhauled Help page when plugin is activated, including the ability create demo gallery content and view inline demos
-* New : Added ability to override captions for FooBox
-* Update : FooGallery client side 2.0.9
-* Update : Simplified extensions admin page and removed all build-your-own logic
-* Update : Updated the Justified gallery template. Removed "Max Row Height" and "Last Row" settings.
-* Update : Updated the Thumbnail gallery template. Removed "Thumbnail Crop" setting.
-* Fix : Updated styling for FooGallery Block to look correct in latest version of Gutenberg
-* Fix : JSON objects get built using all attributes needed
-* Fix : Could not add images to the gallery for some installs, due to no thumbnail sizes being returned. Made the logic more resilient.
-* Fix : Compatible with WP Rocket Lazy loading
-* Fix : Javascript error with Masonry related to script dependencies when using script minifiers
-[//]: # fs_premium_only_begin
-* New : Added "Mobile Layout" gallery setting under "Lightbox -> General" to choose which lightbox layout will be used on mobile devices
-* New : Added "Thumbnail Strip Button" gallery setting under "Lightbox -> Controls" to show/hide the thumbnail strip button inside the lightbox
-* New : Added "Prev/Next Buttons" gallery setting under "Lightbox -> Controls" to show/hide Prev/Next navigation buttons within the lightbox
-* New : Added "Thumbnail Strip Button" gallery setting under "Slider -> Controls" to show/hide the thumbnail strip button inside the slider
-* New : Added "Prev/Next Buttons" gallery setting under "Slider -> Controls" to show/hide Prev/Next navigation buttons within the slider
-* New : Added "Alignment" gallery setting under "Lightbox -> Captions" for changing horizontal alignment of lightbox captions
-* New : Added "Thumbnail Caption Alignment" gallery setting under "Lightbox -> Thumbnails" for changing the alignment of the captions within the lightbox thumbnail strip
-* New : Added "Video Thumbnail Directory" global setting under "Video" tab to override the directory that video thumbnails are stored in
-* New : Added taxonomy lists to available dynamic placeholders in custom captions, e.g. {{taxonomy.foogallery_attachment_tag}}
-* Fix : Show the "Minimum" and "Limit" gallery settings under "Filtering" when "Multi-Level" filtering is chosen
-* Fix : fixed bug when setting a caption description length and descriptions not being shown if below that length
-* Fix : fixed WP/LR datasource modal content
-* Fix : fixed YouTube video search and playlist import. A Youtube API Key is now required.
-* Fix : fixed a bug with Grid PRO gallery maximised lightbox not being fixed
-* Fix : fixed incompatibility issue with videos that are not positioned correctly with themes that include FitVidJS library
-[//]: # fs_premium_only_end
-
-= 1.10.0 =
-* Date Updated : 2021-18-02
-* Update : Removed WPThumb library completely
-* Update : Updated to Freemius SDK 2.4.2
-* Fix : updated FooGallery block category to 'media'
-[//]: # fs_premium_only_begin
-* New : Added new "Captions Enabled" setting which allows you to set the caption to be initially hidden
-* Fix : fixed bug where EXIF data was not showing for items on pages 2 or more
-[//]: # fs_premium_only_end
-
-= 1.9.8 =
-* Date Updated : 2020-03-08
-* New : Added RankMath compatibility - sitemap image indexing.
-* New : Added new setting under Hover Effects : Invert Color. Invert the caption icon colors from dark to light.
-* New : All hover and loading icons converted to SVG format.
-* New : Lazy load gallery images when editing a gallery (improved performance for large galleries in the admin).
-[//]: # fs_premium_only_begin
-* New : FooGallery PRO Lightbox added!!
-* New : Lightbox settings tab for PRO lightbox, including thumb slider, autoprogress and many more!
-* New : Added new setting under Advanced : Thumbnail Cropping. Allow for background fill with a custom color and no cropping.
-* New : Added new setting under Captions : Caption Type. Allow for custom captions.
-[//]: # fs_premium_only_end
-* Fix : Previews not updating in some cases.
-* Update : FooGallery client side 1.4.0 (MAJOR UPDATE).
-
-= 1.8.8 =
-* New : Implemented the Datasource architecture within the plugin
-* Fix : PHP Warnings when previewing galleries
-* Fix : Simple Portfolio thumbnails cut off in certain scenarios
-* Fix : Updated Gutenberg block to work in latest Gutengerg release
-* Update : FooGallery client side 1.2.10
-
-= 1.7.4 =
-* New : Major performance enhancements for all galleries
-* New : Performance enhancements with FooBox
-* New : Force HTTPS setting for migrated sites
-* New : FooGallery Gutenberg block gallery search
-* Fix : fixed scroll blocking violation warnings in dev tools
-* Fix : fixed Wistia video import issues
-* Update : FooGallery client side 1.2.2
-
-= 1.6.1 =
-* New : Gutenberg FooGallery block (including live gallery previews!)
-* Fix : foogallery shortcode not rendering in certain cases
-* Fix : disabling lazy loading via settings was being ignored
-* Update : Freemius SDK 2.1.3 (which fixes fatal Multisite bug)
-
-= 1.5.8 =
-* Major version bump to correspond with FooGallery PRO which includes video support
-* New : Upgrade offer to FooGallery PRO for FooVideo customers
-* New : Language setting for load more pagination
-* Update : FooGallery client side 1.1.2
-* Update : Freemius SDK 2.1.1
-* Fix : Pagination + Filtering bugs
-* Fix : PHP 7.1 compatibility tests failing for clone
-* Fix : better paging + filtering support
-* Fix : better RTL support in media modal
-* Multiple bug fixes and improvements
-
-= 1.4.3 =
-
-* Fix : Justify gallery template issues
-* Fix : Masonry gallery template issues
-* Fix : Caption description not hidden when supposed to
-* Fix : Complete rework of thumbnail dimension logic!
-* Fix : Redirection bug on activation
-* Fix : Added checks for galleries causing PHP warnings
-* Fix : Multisite warnings on activation
-* New : Last Row setting in Justify gallery template
-* New : Alignment setting in Simple Portfolio gallery template
-* New : Added more checks after load to ensure gallery layout is correct
-* New : Added lazy loading advanced setting
-* Updated to Freemius SDK 1.2.2.10
-* Updated to latest client side JS and CSS
-
-= 1.3.6 =
-
-* New : Freemius integration!
-* New : Added support for the Responsive Lightbox by dFactory
-* New : New custom class field for an attachment
-* New : Added more system info for better debugging when there are server issues
-* Fix : Visual editor FooGallery edit button
-* Fix : Image Viewer hover effect none now works as expected
-* Fix : Disable HTML caching for randomly ordered galleries
-
-= 1.2.0 =
-* Added albums extension
-* Added custom CSS metaboxes
-* Updated Nextgen importer
-* Fixed many bugs
-
-= 1.1.7 =
-* first version!
+For the complete release history, see the [FooGallery changelog](https://fooplugins.com/changelog/foogallery/).

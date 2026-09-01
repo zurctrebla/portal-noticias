@@ -1478,3 +1478,67 @@ rollback de arquivo em segundos. **Sem dump de banco**: nenhum dos três migra d
 **Nota de contagem:** o registro anterior dizia "11 avisos"; são **9 advertências mais 2 logs
 informativos** (`JQMIGRATE` e `api-fetch preload`). Corrigido acima, porque este número é a
 linha de base de comparação dos próximos lotes e precisa estar exato.
+
+---
+
+## ✅ LOTE 2 — concluído em 01/09/2026
+
+| Plugin | De | Para | Salto |
+|---|---|---|---|
+| Disable Comments | 2.5.3 | **2.8.0** | minor |
+| Category Order and Taxonomy Terms Order | 1.9.1 | **2.0** | **major** |
+| OneSignal Push Notifications | 3.5.0 | **3.9.2** | minor |
+| FooGallery | 2.4.32 | **3.2.6** | **major** |
+
+Os quatro continuam **ativos**.
+
+**Rede antes:** dump do banco **verificado** — 578.906.249 bytes (552 MiB), `gzip -t` OK, rodape
+`Dump completed on 2026-09-01 9:31:27`, **92 `CREATE TABLE` × 92 tabelas no banco**, 233
+ocorrências do `siteurl` de homolog, SHA-256 gravado ao lado, arquivo em `444`. Mais o `tar` dos
+quatro diretórios (9.008.164 bytes, 716 entradas).
+
+> **A lição de 29/08 aplicada:** o dump saiu **sem `--rm`** no `kubectl run`, e por isso **não há
+> a linha `pod "..." deleted` dentro do gzip**. Conferido explicitamente: *"ruído do kubectl no
+> fim: nenhum (limpo)"*.
+
+### Migração de dados: houve, e era esperada
+
+```
+Disable Comments  db_version  7 -> 8     <- migrou, e preservou remove_everywhere=true
+comentarios       318 -> 318             <- intactos
+Terms Order       term_order<>0: 0 de 76.562 -> 0 de 76.562   <- sem ordenacao propria, nada a migrar
+OneSignal         86 chaves -> 86 chaves
+FooGallery        24 galerias -> 24 galerias
+```
+
+### Validação
+
+| Camada | Resultado |
+|---|---|
+| Site | **6 de 6** em 200 |
+| Busca | índice 242.864 · **10 de 10** termos |
+| **Galeria renderizando** | `[foogallery id="547226"]` devolveu **4.656 bytes com `<img>`**, sem erro |
+| Rascunho com ACF + coautoria | subtítulo, imagem, **2 coautores**, removido sem resíduo |
+| Logs | **0 fatais · 0 depreciações · 0 notices** · 2 avisos, mesmas origens conhecidas |
+| Editor no navegador | canvas em iframe, **0 blocos inválidos**, Salvar habilitado, 8 campos ACF, 11 metaboxes, 0 avisos do editor |
+
+### 🎯 O teste objetivo — passou, e confirmado na causa
+
+```
+console ANTES : 9 advertencias, incluindo "fooplugins/foogallery ... API version 1"
+console DEPOIS: 8 advertencias — a do foogallery SUMIU
+```
+
+E a causa, medida direto no registro de blocos em vez de inferida da ausência do aviso:
+
+```
+wp.blocks.getBlockType('fooplugins/foogallery').apiVersion  ->  3
+blocos legados restantes, de 126 registrados:
+   adrotate/advert   apiVersion 1
+   adrotate/group    apiVersion 1
+```
+
+> **Um bloco legado a menos, e agora o problema tem tamanho exato: dois blocos, um plugin, sem
+> canal de correção.** O item 13 do `PENDENCIAS-gestores.md` foi atualizado com esse contraste —
+> o FooGallery custou uma atualização de rotina; o AdRotate virou decisão porque não há por onde
+> a correção chegar.
