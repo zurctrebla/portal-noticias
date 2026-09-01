@@ -2002,3 +2002,99 @@ operação dos dois lados (§28).
 
 Parente do §21 (o orquestrador registra exatamente o caso errado) e do §26 (resultado vazio é uma
 afirmação sobre o instrumento antes de ser sobre o mundo).
+
+---
+
+## 30. Ausência de erro num log que não registra aquele erro não é evidência de ausência
+
+**Onde apareceu.** Atribuição dos 502 do rollout de produção, 01/09/2026.
+
+A sonda externa viu três 502. Fui aos logs do nginx dos pods novos procurando a origem:
+
+```
+5xx no log de nginx dos pods novos: 0   (em 3.877 linhas)
+```
+
+**Zero.** A leitura tentadora — e eu cheguei a formulá-la — é "não foram os pods novos".
+
+**Mas nginx não registra conexão recusada.** O log de acesso descreve requisições que o nginx
+**aceitou**. Uma conexão TCP que nunca foi estabelecida, porque o processo ainda não escutava na
+porta, não produz linha nenhuma. **Quando o erro é de conexão, a ausência de registro é
+exatamente o que se espera.**
+
+O que resolveu foi a métrica do balanceador, que conta os dois casos separadamente:
+
+```
+HTTPCode_ELB_502_Count     29   <- o ALB nao obteve resposta do alvo
+HTTPCode_Target_5XX_Count   6   <- um pod respondeu 5xx
+```
+
+**29 de 35 nunca chegaram à aplicação.** O log limpo era **consistente** com a falha, não a
+refutava.
+
+> **Antes de usar um log vazio como prova, pergunte: este log registraria o evento que estou
+> procurando?** Se a resposta for não — ou "depende do modo de falha" —, o vazio não é dado, é
+> silêncio. E silêncio não decide nada.
+
+Irmão do §26 (tabela vazia porque o instrumento estava desligado): lá o instrumento não media;
+aqui ele mede outra coisa. **Nos dois, o resultado vazio é uma afirmação sobre o instrumento antes
+de ser sobre o mundo.**
+
+---
+
+## 31. A mensagem do aviso muda com a versão da linguagem; o defeito não
+
+**Onde apareceu.** Subida do PHP 8.3 em produção, 01/09/2026.
+
+O aviso mais frequente do site, nas duas janelas medidas:
+
+```
+PHP 8.2:  Attempt to read property "user_nicename" on bool
+PHP 8.3:  Attempt to read property "user_nicename" on false
+```
+
+**Mesmo arquivo, mesma linha, mesmo defeito.** O PHP 8.3 passou a nomear o valor (`false`) em vez
+do tipo (`bool`).
+
+**A consequência é operacional:** qualquer alerta, filtro de log, painel ou `grep` de rotina
+escrito contra a string antiga **para de encontrar o problema no dia da atualização** — e o
+silêncio novo parece melhoria. Um defeito que sumiu do painel sem ter sido corrigido é pior do
+que um defeito visível, porque ninguém volta a olhar.
+
+> **Ao subir versão de runtime, trate o texto das mensagens de diagnóstico como interface que
+> pode quebrar.** Compare as **origens** dos avisos entre as duas versões, não as strings; e
+> revise todo alerta que casa por texto literal.
+
+Da mesma família do §16.7 e do §26: o instrumento respondeu, e a resposta não era sobre o que eu
+perguntei. Aqui a diferença é que a mudança está do lado do **emissor**, não do medidor.
+
+---
+
+## 32. `kubectl diff` valida o `apply`, não o pipeline
+
+**Onde apareceu.** Fixação do SHA no manifesto de produção, 01/09/2026 — logo depois de escrever
+o §27, que é sobre exatamente este erro.
+
+Antes de empurrar a mudança rodei `kubectl diff -f kubernetes/prod/wordpress/deployment.yaml`:
+**saída vazia, código 0**. Reportei que aplicar o manifesto não mudaria nada, e empurrei.
+
+**Produção reiniciou inteira.** ReplicaSet novo, e o diff dos dois templates mostrou **um único
+campo diferente**: `kubectl.kubernetes.io/restartedAt` — assinatura de `kubectl rollout restart`,
+um passo **incondicional** do job de prod no `tf-apply.yml`, que existe para fazer valer mudança
+de ConfigMap/Secret e dispara em qualquer push a `kubernetes/**`.
+
+**A afirmação era verdadeira e a unidade era errada.** `kubectl diff` responde "o que este
+`apply` mudaria" — e o que eu precisava saber era "o que este **push** vai causar". Entre os dois
+existe um workflow com passos que o diff não enxerga.
+
+> **Verifique a unidade que você vai executar.** Se o gesto é um `push`, a pergunta é o que o
+> pipeline inteiro faz — não o que faz o comando que você imagina no meio dele. Leia os passos do
+> workflow que o caminho alterado dispara, incluindo os **incondicionais**.
+
+Custo medido: **5 requisições de leitor perdidas** (`HTTPCode_ELB_502_Count = 5`,
+`Target_5XX = 0`), contra 0 em 1.365 fora da janela.
+
+**É a segunda vez na mesma sessão** que afirmo o efeito de uma operação a partir de um substituto
+em vez de medir a operação — a primeira foi o `--delete-automated-backups` do §27. Lá o substituto
+foi o nome da flag; aqui, um comando parecido com o que o pipeline roda. **O padrão é o mesmo, e
+reconhecê-lo escrito não impediu a repetição: a defesa tem que ser procedimento, não memória.**

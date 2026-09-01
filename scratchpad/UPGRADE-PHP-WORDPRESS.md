@@ -939,3 +939,84 @@ PHP 8.3:  Attempt to read property "user_nicename" on false
    **global**: meu `$acf = function_exists(...)` sobrescreveu o objeto `$acf` do plugin com `true`,
    e `acf()->init()` estourou. **Não foi PHP 8.3.** Deixou um rascunho órfão (`9002416`),
    removido na corrida seguinte; zero rascunhos de teste no banco ao final.
+
+---
+
+## Manifesto de produção fixado no SHA novo — e um rollout que eu não previ
+
+```
+07:53:25  push em infra-bahiaba/kubernetes/prod/wordpress/deployment.yaml
+          prod-804c68f0… -> prod-e090c731de4c158c106f72e542dc9ea8d27d452e
+          nas DUAS linhas image: (initContainer copy-wp-files + conteiner wordpress)
+```
+
+O SHA anterior era o **pré-PHP**, fixado de propósito para que um `apply` acidental durante a
+validação revertesse em vez de avançar. A validação passou, então a proteção sai do caminho —
+mantida, o próximo `apply` desfaria o deploy de hoje.
+
+### 🔴 Eu verifiquei a unidade errada
+
+**Antes do push rodei `kubectl diff` contra o cluster: saída vazia, código 0.** Reportei que
+aplicar o manifesto não mudaria nada. **Era verdade sobre o `apply` e falso sobre o pipeline.**
+
+Produção reiniciou: ReplicaSet novo `747784485b`. O diff dos dois templates mostra **um único
+campo diferente**:
+
+```
+.metadata.annotations.kubectl.kubernetes.io/restartedAt
+    ANTES : 2026-08-29T07:36:19Z
+    DEPOIS: 2026-09-01T07:54:31Z
+```
+
+Essa anotação é assinatura de `kubectl rollout restart`. E ela está no `tf-apply.yml`, como passo
+**incondicional** do job de prod:
+
+```yaml
+# Mudanca em Secret/ConfigMap nao reinicia pod sozinho: o pod atual segue com
+# as variaveis de ambiente que recebeu no startup (envFrom e resolvido uma vez so).
+- name: Reiniciar pods para aplicar mudancas de ConfigMap/Secret
+  run: kubectl rollout restart deployment/wordpress -n bahia-wordpress
+```
+
+**A intenção é correta e o gatilho é largo demais:** o passo existe porque mudança de
+ConfigMap/Secret não reinicia pod sozinho, mas ele roda em **qualquer** push que toque
+`kubernetes/**` — inclusive um que só corrige a linha `image:` que o pipeline de aplicação já
+tinha reconciliado.
+
+### O custo, medido
+
+| | Requisições | Falhas | Taxa |
+|---|---|---|---|
+| **Rollout 2 (07:54–07:58)** | 628 | **5** | **0,80%** (8,62% no minuto 07:54) |
+| Fora dele (07:48–07:58) | 1.365 | 0 | 0,00% |
+
+`HTTPCode_ELB_502_Count = 5`, `HTTPCode_Target_5XX_Count = 0` — **todas falha de conexão, nenhuma
+da aplicação**, exatamente o padrão do §29. Menor que o rollout do deploy (35) porque o tráfego
+estava mais baixo e havia 3 pods, não 5.
+
+**Estado final conferido:** ReplicaSet `747784485b`, 3 pods `2/2`, os dois contêineres em
+`prod-e090c731…`, site em 200. O HPA está em 3 (min 2 / max 5), não é efeito do manifesto.
+
+---
+
+# 🔺 PRIORIDADE ELEVADA — Anexo D sai de "melhoria de desenho"
+
+**O achado agora tem número: 2,40% contra 0,10% de fundo, 24×, com 29 de 35 falhas vindas do ALB
+e não da aplicação.** Deixa de ser desenho e vira **"cada deploy de produção derruba requisição
+de leitor real, medido"**. Sobe junto com a Tarefa B.
+
+### São DUAS correções, não uma
+
+| # | Falta | O que acontece | Correção |
+|---|---|---|---|
+| **1** | **`readinessProbe`** | Sem prova de prontidão, o Kubernetes conta o pod como disponível assim que o contêiner sobe. **`maxUnavailable: 0` conta pods, não capacidade de servir** — o alvo entra no balanceador antes de o PHP-FPM aceitar conexão | `readinessProbe` HTTP nos dois contêineres |
+| **2** | **`preStop`** | O pod derrubado **segue recebendo tráfego durante a desregistração** no balanceador, enquanto o processo já está parando | `preStop: sleep 10` + `terminationGracePeriodSeconds` compatível |
+
+**As duas pontas do ciclo de vida estão abertas.** Corrigir só a prontidão deixa a terminação
+sangrando, e vice-versa. Os dados desta janela não separam qual contribuiu mais — dos três 502 da
+sonda, dois caem 3–4 s depois de um pod novo subir, e o pico do CloudWatch cobre também as
+terminações.
+
+**Terceiro item, do mesmo achado:** o `rollout restart` incondicional do `tf-apply.yml` deveria
+ser **condicional à mudança de ConfigMap/Secret**. Hoje qualquer edição em `kubernetes/**` custa
+um rollout — e, enquanto 1 e 2 não existirem, cada rollout custa requisições.
