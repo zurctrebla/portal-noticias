@@ -2139,3 +2139,41 @@ mostrou que ninguém sabia responder: qual core esta imagem entrega?**
 A fixação impede a deriva; a guarda **detecta** a deriva que a fixação não cobrir — tag reescrita
 no registro, cache envenenado, engano de digitação no `--build-arg`. São defesas de camadas
 diferentes e não substituem uma à outra.
+
+---
+
+## 34. Qual editor está ativo não se determina por CLI
+
+**Onde apareceu.** Teste da 7.1 em homolog (29/08) e a correção pelo navegador (01/09/2026).
+
+Em 29/08 rodei PHP por `kubectl exec` para saber qual editor o site usa. A resposta foi
+`editor_classico: true`, `editor_blocos: false`, `iframe_canvas: 0`, e eu construí em cima dela a
+frase central do relatório: *"o maior risco previsto da 7.1 — o iframe obrigatório — não se
+aplica"*.
+
+**No navegador, com sessão real, o site usa o editor de BLOCOS, e o canvas ESTÁ em iframe.**
+
+**Por quê.** `use_block_editor_for_post()` e o contexto de tela dependem de `is_admin()`, da tela
+corrente (`get_current_screen()`) e de filtros que só são registrados numa requisição de admin.
+Em `php -r` por `exec` nada disso existe — e a função **não erra: ela responde outra pergunta**,
+com a confiança de sempre.
+
+> **Qualquer coisa que dependa do contexto de admin — editor ativo, metaboxes registradas,
+> capacidades de tela, o que um plugin enfileira — só é verdadeira medida numa requisição real do
+> painel.** CLI serve para dados; não serve para "o que o usuário vê".
+
+Parente do `is_admin()` valendo `true` em `admin-ajax` (rodada 3). **A família é: a função
+responde, a resposta é sobre um contexto que não é o seu.**
+
+### O corolário do instrumento: o console só conta a partir da chamada
+
+No mesmo dia relatei **"zero erros e 1 aviso"** no editor. Medido corretamente, são **11 avisos por
+carga** — três deles nomeando blocos legados que dependem do caminho de compatibilidade **sem
+iframe** que o WordPress já anunciou que vai remover.
+
+A diferença não foi o ambiente: **o rastreador de console começa quando a ferramenta é chamada**, e
+eu li **depois** da página carregar. Os avisos de carregamento nunca estiveram disponíveis.
+
+> **Ordem correta: iniciar o rastreamento, recarregar, e só então ler.** Um contador que começa
+> depois do evento relata zero — e zero é a resposta mais convincente que a falta de medição pode
+> dar. Mesma família do §26 e do §30.

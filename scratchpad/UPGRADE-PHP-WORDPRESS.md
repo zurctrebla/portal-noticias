@@ -1331,3 +1331,101 @@ de entrega que sustenta a PI.
 > Não há como saber daqui se existe correção pendente — **é exatamente esse o problema.**
 
 Fica como pendência de decisão comercial, ao lado das licenças do ACF PRO.
+
+---
+
+# 🔴 CORREÇÃO GRAVE — o site NÃO usa o editor clássico
+
+**Verificado no navegador em 01/09/2026, com sessão real em `hml.bahia.ba`.**
+
+## O que eu afirmei em 29/08, e estava errado
+
+> *"O site usa o editor CLÁSSICO (`editor_classico: true`, `iframe_canvas: 0`), então o iframe
+> obrigatório da 7.1 — o maior risco previsto contra o tagDiv — **não se aplica**."*
+
+**Era o ponto central daquele relatório, e é falso.** Medido no navegador:
+
+```
+blocos_wp_data     : true                  <- editor de BLOCOS ativo
+canvas_em_IFRAME   : true
+iframe_src         : blob:https://hml.bahia.ba/fc66f79f-...
+content_ifr        : 0                     <- nao ha editor classico
+botao              : editor-post-publish-button "Salvar", habilitado
+classe do body     : ... is-fullscreen-mode post-php post-type-post
+```
+
+**O editor de blocos está ativo E o canvas da 7.1 está em iframe.** O conteúdo é **um único bloco
+`core/freeform`** — o bloco Clássico —, e é por isso que o TinyMCE aparece carregado: ele serve
+esse bloco, não a tela.
+
+### Por que errei
+
+A determinação de 29/08 saiu de **PHP por `kubectl exec`**, fora de uma requisição de admin.
+`use_block_editor_for_post()` e o contexto de tela dependem de `is_admin()`, da tela atual e de
+filtros que só rodam numa requisição real do painel. **Em CLI a resposta é outra — e é confiante.**
+Mesma família do `is_admin()` valendo `true` em `admin-ajax`. Ver HANDOVER §34.
+
+### A conclusão "nada quebrou" continua de pé — e agora vale mais
+
+Antes eu dizia que nada quebrou **porque o risco não se aplicava**. A verdade é melhor: **o risco
+se aplicava, e o site passou por ele.** Zero erros de console, zero blocos inválidos, 8 campos ACF,
+11 metaboxes (5 do ACF, 3 do tagDiv, Yoast, OneSignal, Twitter), 152 elementos tagDiv, botão de
+salvar habilitado.
+
+## 🟠 O que o console revelou — e que eu não tinha visto
+
+**Zero erros. Onze avisos por carga**, e três deles nomeiam o risco futuro com precisão:
+
+```
+Block with API version 2 or lower is deprecated since version 6.9.
+  "adrotate/advert"        registered with API version 1
+  "adrotate/group"         registered with API version 1
+  "fooplugins/foogallery"  registered with API version 1
+  -> "This means that the post editor MAY WORK AS A NON-IFRAME EDITOR. Since all
+      editors are planned to work as iframes in the future, set `apiVersion` to 3
+      and test the block inside the iframe editor."
+```
+
+**É o mecanismo que explica tudo.** O WordPress mantém um **caminho de compatibilidade sem
+iframe** para quem registra bloco em API antiga — e avisa que ele **vai acabar**.
+
+| Bloco legado | Plugin | Consegue ser corrigido? |
+|---|---|---|
+| `adrotate/advert` | AdRotate **Professional** | 🔴 **NÃO** — pago e **sem licença**, sem canal de atualização |
+| `adrotate/group` | AdRotate **Professional** | 🔴 **NÃO** — idem |
+| `fooplugins/foogallery` | FooGallery 2.4.32 | 🟢 **talvez** — o lote 2 sobe para **3.2.6** |
+
+> **A licença ausente do AdRotate deixou de ser risco abstrato de segurança.** Ela tem uma
+> consequência datada e nomeada: quando o WordPress remover o caminho sem iframe, **os dois blocos
+> do AdRotate quebram dentro do editor**, e não há por onde receber a correção.
+
+E o tagDiv tem blocos Gutenberg próprios, que enfileiram estilo de forma incompatível com o iframe:
+
+```
+td-guten-blocks-editor-css-css was added to the iframe incorrectly.
+td-gut-editor-css              was added to the iframe incorrectly.
+```
+
+Hoje é aviso, não erro. **Mas é exatamente a superfície de compatibilidade do iframe** — e o tagDiv
+também não tem canal de atualização.
+
+Demais avisos: `wp.compose.pure` (depreciado na 7.1), `wp.compose.withState` (5.8),
+`wp.editPost.PluginDocumentSettingPanel` (6.6) — uso de API velha por plugins.
+
+## 🔴 E o "zero erros, um aviso" de 29/08 era subcontagem
+
+Naquele dia relatei **1 aviso**. Hoje são **11 por carga**. A diferença não é o ambiente: é que o
+rastreamento de console **começa quando a ferramenta é chamada**, e eu havia capturado **depois**
+da carga. **Os avisos de carregamento não estavam lá para serem lidos.**
+
+Corrigido no método: **chamar o leitor de console ANTES, recarregar, e só então ler.**
+
+## O `submitdiv` ausente: explicado, e não era defeito
+
+`#submitdiv` e `#publish` = **0**, e está certo: **o editor de blocos não tem caixa Publicar.**
+O controle é o botão React `editor-post-publish-button`, presente e habilitado.
+**A pergunta estava mal formulada desde o início** — eu procurava, num editor de blocos, um
+elemento que só existe no clássico.
+
+**Consequência para o plano de lotes:** o lote 7 (PublishPress Capabilities) **não sobe** para
+primeiro. Não há caixa Publicar ausente para diagnosticar.
