@@ -1292,7 +1292,7 @@ a licença ser resolvida.** Isso é do Albert, não meu.
 | **3** ✅ | **WP Offload Media Lite** `3.2.11→3.3.1` | minor | **Sozinho, por pedido seu.** É o caminho de toda a mídia do site, e o bucket é **compartilhado com produção**. Bônus: as **244 depreciações de PHP 8.4 da Tarefa A** estão aqui — vale remedir depois |
 | **4** ✅ | **Smush** `3.22.1→4.3.2` | **major 3→4** | **Sozinho.** Mesmo pipeline do lote 3. Juntá-los destruiria a atribuição **exatamente onde ela mais importa**: se o upload quebrar, qual dos dois foi? |
 | **5** ✅ | **Co-Authors Plus** `3.6.6→4.1.1` | **major 3→4** | **Sozinho, por pedido seu.** Governa a autoria de toda matéria e a página de autor, que já teve incidente de desempenho (`author-archive-cap-lento`) |
-| **6** | **Yoast SEO** `27.7→28.3` | **major** | **Sozinho, por pedido seu.** Salto de major **com migração de indexáveis**: `wp_yoast_indexable` tem ~323 mil linhas. É o lote mais lento e o de maior escrita no banco |
+| **6** ✅ | **Yoast SEO** `27.7→`**`28.4`** (o canal andou) | **major** | **Sozinho, por pedido seu.** Salto de major **com migração de indexáveis**: `wp_yoast_indexable` tem ~323 mil linhas. É o lote mais lento e o de maior escrita no banco |
 | **7** | **PublishPress Capabilities** `2.21.0→2.50.1` | 29 minors | **Sozinho, e o alvo mudou em 02/09.** ~~Principal suspeito da caixa Publicar ausente~~ — a caixa existe, aquilo era artefato do meu `curl` sem JavaScript. O que ele governa é **capacidade e papel**, então o teste é **se a redação continua conseguindo publicar**, não se o botão está desenhado. Por último de propósito: até aqui o editor já terá sido validado seis vezes, então uma mudança nele fica atribuída |
 
 **Sete lotes, 12 plugins.** O 13º — ACF PRO — fica fora até a licença.
@@ -2214,6 +2214,239 @@ matérias em cada), e o **byline com 2 links separados** nas três matérias de 
 **Não apaguei por conta própria.** As duas autorizações anteriores foram específicas — os
 prefixos do dia ao fim do lote 4, e o `01053739` de 01/09. Remoção do bucket de **produção** não
 herda autorização de uma vez para a seguinte. Fica com o portão já pronto para uma linha sua.
+
+---
+
+# ✅ LOTE 6 — concluído em 02/09/2026
+
+| Plugin | De | Para | Salto |
+|---|---|---|---|
+| Yoast SEO | 27.7 | **28.4** | **major** |
+
+> ⚠️ **Foi para a 28.4, não para a 28.3.** O plano dizia 28.3; entre o levantamento de 01/09 e a
+> execução de hoje a Yoast lançou a **28.4**, e o *updater* do WordPress instala **a versão atual
+> do canal**, não a que estava anotada. Não é desvio de procedimento — é o procedimento
+> funcionando —, mas **o número muda em todo registro que dizia 28.3**.
+
+## Rede antes de mexer
+
+| | |
+|---|---|
+| **`tar` do diretório** | `plugins-pre-lote6-yoast-27.7.tgz` — **4.167.735 bytes, 2.315 entradas** |
+| **Dump do banco** | `dump-HOMOLOG-pre-lote6-20260902-1520.sql.gz` — **586.305.262 bytes**, `gzip -t` OK |
+| Primeira linha / rodapé | `-- MySQL dump 10.13` · `Dump completed on 2026-09-02 14:22:41` |
+| Estrutura | **92 `CREATE TABLE` × 92 tabelas** · 248 ocorrências do `siteurl` · ruído do `kubectl`: **0** |
+| SHA-256 | `bdb0af49…c7a8`, gravado ao lado · arquivo em `444` |
+
+## 🎯 A migração: PRIMEIRO PLANO, e ela NÃO reconstrói os 323 mil indexáveis
+
+Era a pergunta central do lote — *"roda em primeiro plano ou em background, e pressiona o banco
+por horas?"*. **Medido, e a resposta é melhor do que a pergunta supunha.**
+
+```
+upgrader (copia de arquivo)           : 2 s
+primeira carga do WP depois da troca  : ~3 s de relogio  (linha de base antes: 2.846 ms)
+cargas seguintes                      : 5.787 ms e 1.128 ms — variacao normal, sem bloqueio
+```
+
+**A migração roda em primeiro plano, na primeira carga, e termina em segundos.** Nada ficou
+pendente, e nenhuma requisição do site esperou por ela.
+
+### Por que foi tão rápido: é DDL, não movimentação de dado
+
+A migração nova é a `20260709144332`, e ela faz exatamente duas coisas:
+
+```php
+$this->add_column($table, 'seo_title_score',        'integer', ['null' => true, 'limit' => 3]);
+$this->add_column($table, 'meta_description_score', 'integer', ['null' => true, 'limit' => 3]);
+```
+
+**Duas colunas anuláveis, sem `DEFAULT`, no fim da tabela** — o caso em que o MySQL 8 usa
+`ALGORITHM=INSTANT` e **não reescreve uma única linha**. Conferido depois:
+
+| | |
+|---|---|
+| `seo_title_score` / `meta_description_score` | `int`, `null=YES`, `default=NULL` — as duas presentes |
+| colunas na tabela | **55** |
+| linhas com valor nas colunas novas | **50** de 316.641 — preenchidas **sob demanda**, ao visitar a página |
+| tamanho | 244,8 MB dados + 87,8 MB índice · `FILE_SIZE` **388 MB** — **igual ao de antes** |
+| `wp_yoast_migrations` | 26 → **27** |
+
+**E nenhuma reindexação foi disparada:**
+
+```
+wpseo_indexation_started            : false
+wpseo_indexables_indexation_reason  : false
+wpseo_unindexed_post_count          : false
+```
+
+> **A leitura de risco que o plano trazia — "o lote mais lento e o de maior escrita no banco" —
+> não se confirmou.** A escrita foi de duas colunas de metadado. **Os 316 mil indexáveis não foram
+> tocados**, e é por isso que o `FILE_SIZE` não mudou.
+
+## 🟡 O que SIM continua depois do rollout: um cron novo, de hora em hora
+
+```
+cron NOVO : wpseo_cleanup_cron          (não existia na 27.7)
+cadencia  : de hora em hora
+lote      : limite de 1.000 linhas por consulta
+            apply_filters('wpseo_cron_query_limit_size', 1000)
+            src/integrations/cleanup-integration.php:241
+```
+
+E ele **já rodou uma vez**, com assinatura reconhecível:
+
+```
+wp_yoast_indexable_hierarchy : 325.725 -> 324.728    (-997, na primeira carga)
+```
+
+**997 de um teto de 1.000** — é uma passada do lote de limpeza removendo hierarquia órfã.
+Acompanhado por **2,5 minutos** depois disso, a cada 25 s: as contagens ficaram **estáveis**, e o
+único movimento foi **+1 indexável por página nova visitada** (criação preguiçosa, comportamento
+normal).
+
+> **É pressão limitada, não uma varredura livre.** Mil linhas por consulta, de hora em hora, numa
+> tabela de 316 mil. Vale saber que existe **antes de virar produção**, e vale conferir depois do
+> rollout — mas não é o cenário de "horas de pressão" que o plano temia. O `wpseo_indexable_index_batch`
+> que aparece nos eventos **já existia na 27.7**; não é novidade deste lote.
+
+## 🔴 A `wp_yoast_indexable` é de onde saem `title` e `description` — conferido, e continua saindo
+
+É o mecanismo que já mordeu três vezes: o Yoast serve **da tabela**, não da opção. Amostrado
+antes e depois, com *bypass* de cache:
+
+| Página | `title` antes | `title` depois |
+|---|---|---|
+| Home | `bahia.ba - A notícia no ponto certo` | **idêntico** |
+| `/economia/` | `Economia - bahia.ba` | **idêntico** |
+| `/esporte/` | `Esporte - bahia.ba` | **idêntico** |
+| `/colunistas/da-redacao/` | `Redação: matérias publicadas - bahia.ba` | **idêntico** |
+| matéria | `Vitória vence Botafogo… - bahia.ba` | **idêntico** |
+
+**E o subtítulo na `meta description` continua saindo** — que é o mais frágil dos dois, porque
+depende de um filtro nosso com assinatura do Yoast:
+
+```
+description     : Rubro-Negro venceu o Botafogo por 1 a 0 pela 23ª rodada do Campeonato Brasileiro
+og:description  : (o mesmo)
+```
+
+O `bahia-subtitulo.php` engancha em `wpseo_metadesc`, `wpseo_opengraph_desc` e
+`wpseo_twitter_description` **lendo `$presentation->model->object_type` e `object_id`**. Se a 28.4
+tivesse mudado a forma da apresentação, o subtítulo sumiria das metatags **sem erro nenhum** — o
+Yoast voltaria a servir o que servia antes. Os quatro filtros seguem registrados
+(`wpseo_metadesc`, `wpseo_opengraph_desc`, `wpseo_twitter_description`, `wpseo_title`), e a saída
+está igual.
+
+## O sitemap: igual antes e depois, e o 504 é o de sempre
+
+```
+                          ANTES                  DEPOIS
+/sitemap_index.xml    504  60,45 s            504  60,46 s     <- 🟡 PRE-EXISTENTE, so em homolog
+/post-sitemap.xml     200   1,62 s            200   1,61 s
+/page-sitemap.xml     200   0,59 s            200   1,17 s
+```
+
+> **O 504 não é regressão e não é deste lote.** É o `sitemap-504-homolog-rds`: o RDS de homolog tem
+> *buffer pool* de 256 MB contra uma `wp_posts` de 1,1 GB, e produção responde a mesma URL em ~2 s.
+> **Medido antes de mexer justamente para não confundir as duas coisas.** Os sub-sitemaps, que são
+> o que o Google efetivamente busca, respondem 200 nas duas pontas.
+
+## 🟡 Os posts sem linha em `yoast_indexable`: a 28.4 NÃO os trata
+
+```
+antes  : 23.405 de 272.149  (8,6%)
+depois : 23.654 de 272.149  (8,7%)
+```
+
+**Continuam fora, e a proporção não se moveu.** O crescimento de 249 é a janela de tráfego criando
+indexáveis para páginas visitadas — ou seja, **o mecanismo é o mesmo de antes: preguiçoso, sob
+demanda, à medida que alguém acessa.** A 28.4 não trouxe nada que os alcance em lote.
+
+> ⚠️ **E o número que estava registrado era outro: 27.961.** A minha consulta exclui `attachment`,
+> `revision` e `nav_menu_item` e olha só `post_status='publish'`; a de antes tinha outro recorte.
+> **A conclusão que o lote precisava — "a 28.4 não muda essa fatia" — está medida com o MESMO
+> instrumento nas duas pontas.** O absoluto fica para quem precisar dele, com o recorte declarado.
+
+## Validação
+
+| Camada | Resultado |
+|---|---|
+| Site (home, 3 archives, 2 buscas, Quem Somos, autor) | **7 de 7** em 200 |
+| Busca | índice **242.865** · **10 de 10** termos · 136–824 ms |
+| **`title` e `description`** | **5 telas, idênticas**, tabela acima |
+| **Sitemap** | igual antes e depois; 504 do índice é pré-existente de homolog |
+| Rascunho com ACF + coautoria | subtítulo, imagem e **2 coautores**; removido sem resíduo |
+| **Editor no navegador** | 126 blocos, **0 inválidos**, **Publicar** presente, 8 campos ACF, 11 metaboxes, **0 avisos do editor** |
+| Logs — **220 requisições** com bypass de cache | **0 fatais · 0 depreciações · 0 notices · 0 linhas do Yoast** · 3 avisos, todos o do PureDevs GDPR |
+| **Console** | **7 advertências** — a linha de base do lote 5 **segurou**, item a item |
+
+### 🟡 O editor continua engordando, e agora dá para nomear o peso
+
+O lote 5 registrou o CAP indo de 1 para 8 arquivos de JS. Medido agora na mesma tela:
+
+```
+scripts do Yoast          : 32
+scripts do Co-Authors Plus:  8
+                            --
+                            40 arquivos de JS, de DOIS plugins
+```
+
+Mais 161 elementos do tagDiv, 8 campos ACF e 11 metaboxes. **Nada quebrou e a tela abre sem
+aviso** — mas nenhum lote mediu o **tempo de abertura do editor**, e esse é o número que a redação
+sentiria primeiro. Fica anotado como lacuna de medição, não como defeito.
+
+---
+
+# 🔗 DEPENDÊNCIA NÃO DECLARADA: a página de autor é do `bahia-autor-archive`, não do plugin
+
+**Registrado em 02/09/2026, a partir do lote 5.** Irmão direto da dependência do Smush, e com o
+mesmo formato: **algo que parece otimização é, na verdade, o que segura o funcionamento.**
+
+## O 4.1.1 NÃO consertou o desempenho — medido, já sobre ele
+
+Com o `pre_get_posts` do mu-plugin desligado, comparando o **mesmo conjunto** pelos dois caminhos:
+
+| Autor | nosso UNION | SQL do CAP | contagem bate? | nosso | **CAP** |
+|---|---|---|---|---|---|
+| `mateus-soares` | 1.763 | 1.763 | ✅ | 2.055 ms | **38.865 ms** |
+| `breno-cunha` | 991 | 991 | ✅ | 1.457 ms | **37.788 ms** |
+
+**Semântica idêntica. Desempenho 19 a 26 vezes pior.** O salto de major não tocou nisso.
+
+> ### O `bahia-autor-archive.php` não é otimização. É dependência.
+>
+> **Se alguém removê-lo achando que "o plugin novo já resolve", o incidente
+> `author-archive-cap-lento` volta no mesmo instante** — a página de autor sai de ~1,8 s para ~38 s
+> de consulta, à beira do timeout. Não há aviso, não há erro: **só a página lenta de novo.**
+
+## ⚠️ E a dependência tem um ponto frágil que precisa ser conferido a cada atualização
+
+O mu-plugin desliga os filtros do CAP **pelo nome do método**:
+
+```php
+'posts_where'   => 'posts_where_filter',
+'posts_join'    => 'posts_join_filter',
+'posts_groupby' => 'posts_groupby_filter',
+```
+
+`method_exists()` devolvendo `false` **não é erro** — é `continue`. O filtro não é removido, o SQL
+lento volta, **e o nosso UNION entra por cima dele**. O resultado continua correto e a página fica
+lenta, que é o pior modo de falhar: **sem sintoma que aponte a causa.**
+
+> **Primeira coisa a conferir em toda atualização do Co-Authors Plus:** os três nomes ainda
+> existem e ainda estão registrados. No 4.1.1 estão — em prioridade 10, conferido também no pod
+> pós-rollout.
+
+## 🟡 Nota de peso: o painel do CAP no editor foi de 1 para 8 arquivos de JavaScript
+
+O 3.6.6 carregava um pacote na tela de edição. O 4.1.1 carrega **8** — 7 `index.js` de
+dependências mais o `co-authors-plus.js`. Nada quebrou e a tela abre sem aviso.
+
+**Mas é peso novo numa tela que já carrega 161 elementos do tagDiv**, 8 campos ACF, 11 metaboxes e
+os pacotes do Yoast. Nenhum lote mediu o tempo de abertura do editor até aqui — **e é exatamente
+esse tipo de custo que se acumula sem ninguém medir**, atualização após atualização, até alguém da
+redação dizer que "o editor está lento" sem ninguém saber desde quando.
 
 ---
 

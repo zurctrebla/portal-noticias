@@ -1422,6 +1422,21 @@ CloudFront, uma a uma.
 **O passo que mais importa é o penúltimo.** Contar o que saiu prova que você apagou; **recontar o
 que ficou é o único passo que prova que você não apagou demais.**
 
+#### E a autorização é por operação, nunca por padrão
+
+Acrescentado depois do lote 5, e é regra, não preferência:
+
+> ### Autorização para apagar em bucket de PRODUÇÃO vale para **aquela** remoção. Não vira padrão.
+
+Ao longo do dia foram **três** remoções — os prefixos de teste do fim do lote 4, o resíduo de
+01/09, e o do lote 5 — e **cada uma foi pedida e concedida separadamente**, com o portão inteiro
+refeito. A tentação de tratar a terceira como "já autorizado, é o mesmo gesto" é exatamente o que
+transforma um procedimento conferido num hábito não conferido.
+
+**O que sustenta a regra é o §16.11 acima:** o critério que parecia óbvio (a data) estava errado,
+e só o inventário item a item mostrou isso. **Um gesto que precisou de inventário para estar
+certo não pode ser repetido de memória.**
+
 ### A regra que fica
 
 Toda medição precisa de um **portão de contagem**: quantas linhas entraram, quantas saíram, e
