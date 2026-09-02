@@ -331,6 +331,7 @@ campo ficar vazio. Está aqui para não se perder.
 | 6 | Anúncio novo demora 3h para aparecer | **Operacional** — deixar a data de início em branco | Média (perda de exibição paga) |
 | 7 | 13 descrições cortadas no meio | **Operacional, na PRODUÇÃO** — apagar o campo de descrição do Yoast nas 13 | Baixa |
 | 13 | **AdRotate fechado em duas frentes: o editor e a subida do PHP** | **Comercial/estratégica** — recuperar a licença, trocar de plugin, ou aceitar publicidade fora do editor | Média — **sem data, mas agora com dois prazos convergindo** (02/09) |
+| 14 | **Carregamento de imagem depende do Smush, e ninguém sabia** | **Nenhuma agora** — é aviso a ler antes de remover ou trocar plugin de imagem | Baixa — mas **alta se alguém mexer sem ler** (02/09) |
 
 ---
 
@@ -731,3 +732,45 @@ depois          :  39
 **Nenhum dos dois prazos é desta semana**, e nenhum quebra o site hoje. O que mudou é que o
 AdRotate deixou de ser "um plugin com um problema" e passou a ser **o único ponto do portal que
 está fechado em duas frentes ao mesmo tempo.**
+
+---
+
+## 14. O carregamento de imagem do site depende de um plugin que ninguém escolheu para isso
+
+> **Acrescentado em 02/09/2026.** Não pede decisão hoje. É um **aviso amarrado a uma decisão
+> futura** — e sem ele, essa decisão seria tomada sem saber o que custa.
+
+### O que foi descoberto
+
+Ao atualizar o plugin **Smush** (rotina de manutenção), medimos o HTML que o site entrega. Todas
+as imagens de todas as páginas testadas carregam **sob demanda**, conforme o leitor rola — e
+**100% disso vem do Smush**. O mecanismo equivalente do próprio WordPress está **desligado**, em
+todas as páginas, sem exceção.
+
+| Página | imagens | carregam sob demanda pelo Smush | pelo WordPress |
+|---|---|---|---|
+| Home | 17 | **17** | **0** |
+| Uma editoria | 18 | **17** | **0** |
+| Uma matéria | 10 | **10** | **0** |
+
+É o comportamento correto do plugin: quando ele assume a tarefa, desliga a do WordPress para não
+haver dois mecanismos brigando. **O efeito é que não há rede embaixo.**
+
+### Por que isso importa
+
+**Se o Smush for removido ou trocado, o site passa a baixar todas as imagens de uma vez.** Na
+home são 17 imagens antes da primeira rolagem, num site em que a maior parte do acesso é por
+celular, muitas vezes em rede móvel.
+
+E há uma ironia no meio: **o Smush está instalado por causa da compressão de imagem — que não está
+ligada.** Só **5.844 dos 155.675** arquivos têm dado de otimização. **O plugin foi mantido por um
+motivo e hoje é indispensável por outro**, e isso não estava escrito em lugar nenhum.
+
+### O que se pede
+
+Nada agora. O que se pede é que **este item seja lido antes** de qualquer decisão de remover,
+trocar ou "limpar" plugins de imagem:
+
+- Se o Smush sair, **o substituto precisa assumir o carregamento sob demanda no mesmo dia** — não
+  depois
+- Numa comparação entre plugins, esse recurso **é requisito**, não item desejável

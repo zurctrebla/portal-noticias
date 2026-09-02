@@ -1994,7 +1994,9 @@ variáveis CSS de *placeholder* (`--smush-placeholder-aspect-ratio`) montadas po
 
 > 🔗 **E confirma de novo o que `imagens-td-sizes-regressao` já dizia:** `loading="lazy"` **nativo
 > continua em zero** nas três páginas. O *lazy* do site é inteiramente do Smush — se ele sair, sai
-> junto, e não há rede nativa embaixo.
+> junto, e não há rede nativa embaixo. **Isto virou seção própria** (*Dependência não declarada*),
+> porque é maior que este lote: o plugin está instalado por causa da compressão, que nem sequer
+> está ligada, e hoje é indispensável por outro motivo.
 
 ## Segundo plano: o 4.0 trouxe processamento em fundo, e ele não saiu andando sozinho
 
@@ -2050,6 +2052,54 @@ Offload 3.3.1 · FooGallery 3.2.6 · Site Kit 1.186.0**, `wp-smush-version` em `
 Revalidado depois: **site 7 de 7**, **envio pelo REST em 201** (13 → 12 arquivos, offload
 verificado, `srcset` presente) e o **front-end com `data-src` idêntico** — 17/17, 17/18 e 10/10,
 os mesmos números de antes da atualização.
+
+---
+
+# 🔗 DEPENDÊNCIA NÃO DECLARADA: o *lazy loading* do site inteiro é do Smush
+
+**Registrado em 02/09/2026**, saiu da validação do lote 4 e **não era o que o lote procurava**.
+
+Para provar que o major 3 → 4 do Smush não quebrava a renderização, amostrei o HTML servido antes
+e depois. O que a amostra mostrou, além do que eu queria:
+
+| Página | `<img>` | com `data-src` (Smush) | com `loading="lazy"` (nativo) |
+|---|---|---|---|
+| Home | 17 | **17** | **0** |
+| `/economia/` | 18 | **17** | **0** |
+| Matéria | 10 | **10** | **0** |
+
+**Não há uma única imagem com `loading="lazy"` nativo do WordPress.** Todo o carregamento
+preguiçoso do bahia.ba passa pelo `smush-lazy-load.min.js`, que troca o `src` por `data-src` e
+monta as variáveis CSS de *placeholder* (`--smush-placeholder-aspect-ratio`) imagem por imagem.
+
+## Por que isso é dependência e não configuração
+
+O WordPress adiciona `loading="lazy"` sozinho desde a 5.5. Aqui ele **não aparece** — porque o
+Smush, ao assumir o *lazy*, desliga o nativo para não haver dois mecanismos concorrendo. É o
+comportamento correto do plugin. **O efeito colateral é que não existe rede embaixo:**
+
+> **Se o Smush for removido ou trocado, o site perde o *lazy loading* no mesmo gesto** — todas as
+> imagens de todas as páginas passam a baixar de uma vez. Não é degradação sutil: é a home
+> carregando 17 imagens de largura cheia antes da primeira rolagem, num site cuja maior fatia de
+> acesso é celular.
+
+**Ninguém escolheu isso, e ninguém sabia.** O Smush está instalado por causa da compressão — que,
+aliás, **não está ligada** (`lossy = '0'`, `webp_mod = false`, e só **5.844 dos 155.675** anexos
+têm dado de otimização). Ou seja: **o plugin foi mantido por um motivo e hoje é indispensável por
+outro.**
+
+## O que fazer com isso — hoje, nada; na hora certa, uma linha
+
+Não há ação agora, e o lote 4 provou que o *lazy* sobreviveu ao major. O que fica é um **aviso
+amarrado ao plugin**:
+
+- **Antes de remover ou substituir o Smush**, ligar o *lazy* nativo (ou o do substituto) **no
+  mesmo deploy** — não depois
+- Ao avaliar troca por outro plugin de imagem, *lazy loading* **entra na lista de requisitos**, e
+  não como item opcional
+- 🔗 Relacionado a `imagens-td-sizes-regressao`: as `td_*` do Newspaper não existem no acervo e o
+  *fallback* devolve o original cheio. **O Smush é o que segura o custo dessas imagens grandes na
+  primeira dobra.** As duas coisas juntas explicam por que a página aguenta hoje
 
 ---
 

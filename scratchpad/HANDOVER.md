@@ -1362,12 +1362,77 @@ número inflado por corrida encavalada **dispara um rollback desnecessário em p
 janelas de 0/5/15 já embutem o intervalo, **desde que não se repita a medição dentro de cada
 uma**.
 
+### 16.11 🔴 Contar não é conferir — e o filtro de ESCOPO nunca é o filtro de SELEÇÃO
+
+**Registrado em 02/09/2026**, na limpeza dos arquivos de teste no bucket `static.bahia.ba`, que é
+**compartilhado entre homolog e produção**. É o §16 na forma mais perigosa desta lista: **os
+outros descartam dado; este teria apagado dado de produção.**
+
+#### O erro de contagem
+
+No fechamento do lote 3 anotei, com números:
+
+> *"Em 01/09 o lote anterior deixou 13 objetos"* — prefixo `2026/09/01213929`.
+
+**Não era.** Aquele prefixo é `Congresso-Nacional-MP-das-blusinhas.png` — **matéria publicada**.
+Eu tinha rodado `aws s3 ls | wc -l`, visto **13**, e casado com o "13 objetos de teste" que o
+registro de 01/09 mencionava. **O número batia por coincidência**: uma imagem editorial gera as
+mesmas 13 derivadas que a minha imagem de teste.
+
+O resíduo verdadeiro estava em `2026/09/01053739`, e só apareceu quando **li os nomes**.
+
+> **Uma contagem que confere não prova que você olhou o que contou.** O `wc -l` respondeu a
+> pergunta *"quantos objetos há aqui?"* com exatidão — e eu usei a resposta para decidir
+> *"isto é meu?"*, que é outra pergunta.
+
+#### A regra que sai disso, e ela é operacional
+
+Na hora de apagar, o critério óbvio era **a data**: *"os prefixos de hoje são os meus"*. Medido
+antes de executar:
+
+```
+prefixos sob 2026/09/ com a data de HOJE : 19
+   meus (100% dos objetos com nome teste-*)  : 11
+   upload editorial publicado no mesmo dia   :  8   <- WhatsApp, desembargador-2/3/4,
+                                                      MERETRIZES-..., Maglore_..., image-...
+```
+
+**"De hoje" teria destruído 99 objetos de mídia de produção.**
+
+> ### Em remoção, a DATA é filtro de ESCOPO. O NOME é filtro de SELEÇÃO.
+>
+> A data limita onde procurar. **Quem decide o que entra é uma propriedade do próprio objeto** —
+> aqui, o prefixo do nome de arquivo, exigindo **100% dos objetos do prefixo** batendo com o
+> padrão. Prefixo com um único arquivo fora do padrão **não entra inteiro**.
+
+#### O portão que fechou
+
+Mesmo com o critério certo, a execução passa por contagem declarada antes:
+
+```
+esperado apagar : 146 objetos, 11 prefixos, 4.208.529 bytes
+apagado         : 146
+restante nos 11 : 0
+producao (8)    : 99 -> 99, INTACTOS      <- recontar o que devia FICAR, nao so o que saiu
+```
+
+E depois, conferir no **efeito**, não no bucket: site em 200 e imagens de produção respondendo no
+CloudFront, uma a uma.
+
+**O passo que mais importa é o penúltimo.** Contar o que saiu prova que você apagou; **recontar o
+que ficou é o único passo que prova que você não apagou demais.**
+
 ### A regra que fica
 
 Toda medição precisa de um **portão de contagem**: quantas linhas entraram, quantas saíram, e
 quantas foram descartadas e por quê. Sem isso, o instrumento silencioso vira o resultado.
 Isto vale também para `grep -o` com regex de contexto largo (`.{0,150}`), que em arquivo de
 centenas de KB entra em backtracking e estoura o tempo em vez de responder — usar Python.
+
+**E o §16.11 acrescenta a metade que faltava:** o portão conta **o que saiu** e **o que ficou**.
+Numa medição, contar errado dá um número errado. **Numa remoção, contar errado apaga o que não
+devia** — e é por isso que ali o critério de seleção tem de ser uma propriedade do objeto (o
+nome), nunca o filtro que apenas delimitou onde olhar (a data).
 
 ---
 
