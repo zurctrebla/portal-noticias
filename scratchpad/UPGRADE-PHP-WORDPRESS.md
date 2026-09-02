@@ -1863,7 +1863,7 @@ remoção do provedor — o bucket é o **de produção**.
 
 ```
 6 prefixos datados de 02/09  ->  80 objetos, 2.169.564 bytes (~2,1 MB)
-   (em 01/09 o lote anterior deixou 13)
+   (em 01/09 o lote anterior deixou 13, no prefixo 01053739)
 ```
 
 > 🟡 **Isto acumula, e o lote 4 vai somar mais.** Cada envio de teste deixa 13–14 objetos. São
@@ -1871,6 +1871,9 @@ remoção do provedor — o bucket é o **de produção**.
 > prefixos**, fora do WordPress e sem passar pela guarda. **Não fiz por conta própria:** apagar do
 > bucket de produção é exatamente o risco que a guarda existe para evitar, e a prática fixada em
 > 01/09 foi deixar. **Fica para sua decisão — junto, ao fim do lote 4.**
+>
+> ✅ **Autorizado e executado em 02/09** — ver a seção da limpeza do bucket, e o erro de contagem
+> que o portão pegou no caminho.
 
 
 ---
@@ -2032,6 +2035,96 @@ registrados, os únicos com `apiVersion < 3` seguem sendo `adrotate/advert` e `a
 > `could not load wp.data.select("core/editor")`. Faz sentido: naquela tela o `core/editor` não
 > existe mesmo. **A linha de base das 8 vale para `post-new.php`**, que é onde a redação escreve.
 > Fica anotado que ela **não cobre as outras telas do painel**, e que ninguém mediu essas.
+
+---
+
+## ✅ Sobreviveu ao rollout
+
+`git push origin develop` → **`2adc285b`**, `Build e Deploy (homolog)` OK, deployment de
+**generation 131 → 132**, pod **`wordpress-67cb496b8b-5hclj`**.
+
+No pod novo, que nunca viu o `Plugin_Upgrader`: **WP 7.1 · PHP 8.3.33 · Smush 4.3.2 ·
+Offload 3.3.1 · FooGallery 3.2.6 · Site Kit 1.186.0**, `wp-smush-version` em `4.3.2`,
+`lazy_load` e `auto` ligados, guarda de remoção com `has_filter` **true**.
+
+Revalidado depois: **site 7 de 7**, **envio pelo REST em 201** (13 → 12 arquivos, offload
+verificado, `srcset` presente) e o **front-end com `data-src` idêntico** — 17/17, 17/18 e 10/10,
+os mesmos números de antes da atualização.
+
+---
+
+# 🧹 LIMPEZA DO BUCKET COMPARTILHADO — 02/09/2026
+
+**A única operação desta sessão que apaga do bucket de PRODUÇÃO.** Autorizada com portão de
+contagem: dizer antes o que se espera apagar, e conferir depois o que se apagou.
+
+## 🔴 O portão pegou o que precisava pegar
+
+A regra pedida era *"confirme que TODOS são de hoje e de homolog"*. **"De hoje" sozinho teria
+destruído mídia de produção.** O bucket é compartilhado, e a redação subiu imagem o dia inteiro:
+
+```
+prefixos sob 2026/09/ com data de HOJE : 19
+   MEU-TESTE (100% dos objetos com nome teste-*)  : 11   <- apagados
+   NAO-TOCAR (upload editorial real)              :  8   <- preservados
+```
+
+Os 8 preservados não são teóricos — são matéria publicada de hoje:
+
+```
+02065409  WhatsApp-Image-2026-09-02-at-06.23.51...    13 objetos
+02074413  desembargador-2...                            8
+02083542  desembargador-3...                            8
+02084645  WhatsApp-Image-2026-09-02-at-08.18.23...     14
+02085441  MERETRIZES-morgananarjara@colibri...         17
+02091309  image-1068x1335.png                          14
+02091426  desembargador-4...                            8
+02093034  Maglore_2_Foto_Elisa-Imperial...             17
+```
+
+> **O critério que separou não foi a data — foi o conteúdo.** Um prefixo só entrou na lista de
+> remoção quando **100% dos objetos dentro dele** começavam com `teste-`. Data serviu para
+> limitar o escopo; **nome de arquivo foi o que decidiu**.
+
+## Verificações antes de apagar
+
+| Verificação | Resultado |
+|---|---|
+| Referências em `wp_as3cf_items` de homolog, prefixo a prefixo | **0** nos 11 |
+| Posts citando os arquivos no corpo | **0** |
+| Anexos correspondentes | já removidos — `155.600 / 155.675`, os números de antes dos lotes |
+| Objetos soltos na raiz de `2026/09/` | **nenhum** |
+
+## O portão, fechado
+
+```
+esperado apagar : 146 objetos, 11 prefixos, 4.208.529 bytes (~4,1 MB)
+apagado         : 146 objetos
+bate            : SIM
+restante nos 11 : 0
+producao (8 prefixos): 99 -> 99 objetos, INTACTOS
+```
+
+Depois da remoção: **site 7 de 7 em 200**, e as três imagens de produção de hoje conferidas uma a
+uma no CloudFront — **200 nas três**.
+
+## 🟡 Sobrou um, e é de ontem — fora do escopo aprovado
+
+A varredura recursiva por `teste-` em todo o `2026/` agora devolve **13 objetos, num prefixo só**:
+
+```
+2026/09/01053739   teste-midia-71-20260901-083736*.jpg   13 objetos, ~95 KB
+```
+
+É o resíduo do teste de mídia de **01/09**, o que validou a 7.1. **Não apaguei**: a autorização
+foi para os prefixos **de hoje**, e ele não é de hoje. Fica para uma linha sua — o gesto é o
+mesmo, e o portão também.
+
+> ⚠️ **E fica registrado um erro meu que o portão corrigiu.** No fechamento do lote 3 eu contei
+> `01213929` como "o resíduo de 01/09, 13 objetos". **Não era.** É upload editorial real
+> (`Congresso-Nacional-MP-das-blusinhas.png`), e eu tinha contado objetos sem olhar os nomes. O
+> resíduo verdadeiro de ontem é o `01053739`. **Contar não é conferir** — e se a limpeza tivesse
+> saído por aquela contagem, teria apagado matéria publicada.
 
 ---
 
