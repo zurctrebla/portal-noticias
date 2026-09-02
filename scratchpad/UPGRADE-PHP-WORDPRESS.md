@@ -1278,7 +1278,11 @@ site · busca · **editor abrindo** · rascunho com ACF e coautoria · logs (fat
 
 ### Validação extra, por lote
 - **2** — ordem das editorias na navegação; uma galeria FooGallery renderizando
-- **3 e 4** — **envio de mídia completo**: upload, 12 derivadas, S3, `srcset`, aparecer na matéria
+- **3 e 4** — **envio de mídia completo**: upload, 12 derivadas, S3, `srcset`, aparecer na matéria.
+  **A linha de base mudou em 02/09**: um repórter subiu imagem por navegador nesta 7.1 com o
+  Offload **3.2.11** e o Smush **3.22.1**. A pergunta destes dois lotes deixou de ser *"a mídia
+  funciona na 7.1?"* — já está respondida — e passou a ser *"continua funcionando com as versões
+  novas?"*. Comparar contra o envio humano, não contra a hipótese
 - **5** — página de autor e **tempo** dela (o incidente do CAP foi de desempenho, não de erro)
 - **6** — contagem de `wp_yoast_indexable` antes e depois, e o tempo da migração
 - **7** — a caixa Publicar, com **olho humano no navegador**
@@ -1542,6 +1546,63 @@ blocos legados restantes, de 126 registrados:
 > canal de correção.** O item 13 do `PENDENCIAS-gestores.md` foi atualizado com esse contraste —
 > o FooGallery custou uma atualização de rotina; o AdRotate virou decisão porque não há por onde
 > a correção chegar.
+
+---
+
+# ✅ VALIDAÇÃO HUMANA DA 7.1 — 02/09/2026
+
+**Não fui eu quem validou desta vez.** Um repórter da redação **publicou uma matéria e subiu uma
+imagem em homolog**, no fluxo real, pelo navegador, sem instrução minha sobre o que exercitar.
+**Funcionou por inteiro.**
+
+| O que o humano exercitou | Resultado |
+|---|---|
+| Publicar matéria pelo editor | **funcionou normalmente** |
+| **Enviar imagem** pelo painel | **funcionou 100%** |
+
+## O que essa validação fecha
+
+Ela cobre o **último buraco declarado** do teste da 7.1: até aqui, o envio de mídia tinha sido
+provado por **`media_handle_sideload` chamado por mim em PHP** — que entra pelo mesmo caminho de
+gravação, mas **não passa pelo REST nem pelo uploader do navegador**, que é exatamente onde a 7.1
+mexeu (validação de dimensões e `encode quality`). Agora passou, com um humano na ponta.
+
+**Estado sob o qual isso aconteceu, e ele importa mais que o resultado:**
+
+```
+WordPress   7.1          (db_version 61833)
+PHP         8.3.33
+plugins     lotes 1 e 2 aplicados
+WP Offload Media Lite    3.2.11   <- versao ANTIGA
+Smush                    3.22.1   <- versao ANTIGA
+```
+
+## 🎯 E isso REESCREVE o que os lotes 3 e 4 precisam provar
+
+A pergunta que os lotes de mídia carregavam era ambígua, e agora não é mais:
+
+| | Pergunta | Situação |
+|---|---|---|
+| ~~antes~~ | *"a mídia funciona na 7.1?"* | ✅ **RESPONDIDA** — por humano, com as versões antigas dos dois plugins |
+| **agora** | *"a mídia continua funcionando **com as versões novas** dos dois plugins?"* | ⬜ é o que os lotes 3 e 4 têm de responder |
+
+**A consequência prática é sobre a linha de base.** Se o upload quebrar no lote 3 ou no lote 4, a
+comparação **não é contra uma hipótese** — é contra um envio humano bem-sucedido, datado, nesta
+mesma 7.1, neste mesmo PHP, com **uma única variável trocada: a versão do plugin**. A atribuição
+fica limpa, e é por isso que os dois seguem separados.
+
+> **Dito ao contrário, para não se perder:** um upload que falhe daqui para a frente **é do
+> plugin novo**, não da 7.1. A 7.1 já foi absolvida por quem usa o sistema.
+
+## O que ela NÃO cobre — para não esticar a conclusão
+
+- **Um envio**, não um lote de vários nem arquivo grande — o `offload-s3-imagens-grandes` (40+ MP)
+  continua sem teste na 7.1
+- Não sei qual **formato nem qual tamanho** o repórter enviou; se foi PNG, o `png-formato-upload`
+  segue valendo igual
+- A **caixa Publicar** continua sendo questão aberta: ele publicou, então **o botão existe para
+  olho humano** — o que confirma que a ausência no meu HTML era do meu `curl` sem JavaScript, e
+  **não** um defeito. Isso alivia o lote 7, mas não o dispensa
 
 ---
 
