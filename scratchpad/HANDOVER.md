@@ -10,6 +10,34 @@
 > completo antigo→novo está na tabela `wp_bahia_renum_map` (117 linhas), que **não deve ser
 > apagada**. Plano e registro da operação em `RENUMERACAO-homolog.md`.
 
+---
+
+## 🧭 A regra que mais se pagou neste projeto
+
+> ### Sinais independentes confirmam. Sinais irmãos só ecoam.
+
+Antes de tratar **concordância** como confirmação, pergunte se as fontes **podem errar de formas
+diferentes**. Se não podem, você tem **uma fonte só**, lida várias vezes — e a repetição não
+acrescenta nada além de confiança indevida.
+
+**O caso que a formulou**, em 02/09/2026: para saber se a atualização do Yoast tinha disparado
+reindexação, li três opções — `wpseo_indexation_started`, `wpseo_indexables_indexation_reason`,
+`wpseo_unindexed_post_count`. **Todas em `false`, todas concordando.** Escrevi *"nenhuma
+reindexação foi disparada"*.
+
+A indexação estava rodando o tempo todo. As três marcam a reindexação **iniciada pela interface**
+e nenhuma fala do **cron de fundo** — respondiam com exatidão a uma pergunta que eu não estava
+fazendo. Horas depois, aquilo derrubou homolog.
+
+**E o pior é o mecanismo:** se eu não tivesse encontrado opção nenhuma, teria ido atrás de outra
+evidência — o `PROCESSLIST`, o agendamento, o log. **A concordância entre as três substituiu a
+busca por evidência.** Um sinal ausente teria me servido melhor que três sinais irmãos.
+
+Detalhamento no **§16.12**, e o §16 inteiro é a família: instrumentos que respondem com confiança
+a outra pergunta.
+
+---
+
 Isto reúne o que foi aprendido nas rodadas 2 a 5 e **não está escrito em nenhum outro lugar** —
 nem no código, nem no histórico do git. Documentos irmãos:
 
