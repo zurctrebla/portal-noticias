@@ -160,9 +160,26 @@ acf_pro_license_status       (VAZIA)
 
 **O servidor da ACF responde e sabe que existe a 6.8.9 — mas não entrega o pacote.**
 
-**Consequência que não desapareceu:** os **12 lotes foram todos validados sobre o ACF 6.2.1.1**.
-Quando o ACF finalmente subir, ele muda debaixo de todos eles, e **isso terá de ser revalidado** —
-é o plugin de dependência mais profunda do site (`subtitulo`, `imagem`, 5 grupos de campos).
+### 🔴 E isto muda a economia da licença — não é "atualizar um plugin"
+
+**Os 12 lotes foram todos validados sobre o ACF 6.2.1.1.** Quando o ACF subir, ele muda debaixo de
+todos eles — é o plugin de dependência mais profunda do site (`subtitulo`, `imagem`, 5 grupos de
+campos, e o modelo editorial inteiro).
+
+> ### Subir o ACF não custa um lote. Custa **refazer o ciclo**.
+
+| | |
+|---|---|
+| O que se pensa que custa | uma atualização de plugin |
+| O que custa de fato | **revalidar os 12** — mídia, autoria, SEO, capacidades, editor, console, logs |
+| Quanto isso levou desta vez | **dois dias**, 7 dumps, 7 rollouts |
+
+**E a conta piora com o tempo.** Cada lote novo que entrar antes do ACF é mais um item na lista de
+revalidação. **Quanto antes a licença aparecer, menor o retrabalho** — e essa é a variável que
+deveria pesar na decisão de renovar, não o valor da anuidade isolado.
+
+> **O certo teria sido o ACF primeiro**, para que os outros 12 fossem validados já sobre a versão
+> final. Não deu, e a ordem inversa cobra o preço uma vez. **Cobrar duas vezes é opcional.**
 
 ### 4.4 AdRotate Professional — pago, sem licença, e agora com DOIS prazos
 
@@ -212,18 +229,45 @@ isso é por construção, não por sorte.
 | `bahia-yoast-indexacao-fundo.php` | desagenda `wpseo_indexable_index_batch` | **inerte** — `bahia_ambiente()` na 1ª linha do corpo |
 | `bahia-homolog-noindex.php` | `noindex, nofollow` em toda página | **inerte** — mesma guarda |
 
-> ### ⚠️ Se qualquer uma das duas guardas falhar em produção, o efeito é grave
->
-> - o **noindex** tiraria o `bahia.ba` do Google, **em silêncio**;
-> - o **desagendamento** pararia a indexação antecipada do Yoast.
->
-> **A conferir logo depois do merge, no pod de produção:**
-> ```php
-> bahia_ambiente()                                    // deve devolver 'producao'
-> get_option('blog_public')                           // deve ser 1
-> wp_next_scheduled('wpseo_indexable_index_batch')    // NAO deve ser false
-> ```
-> E, no HTML servido: `<meta name="robots" content="index, follow ...">`.
+### 🔴 As QUATRO verificações obrigatórias, no pod de produção, depois do deploy
+
+**Não presumir do código. Rodar no pod, sobre o HTML e os cabeçalhos que produção está servindo.**
+Se **qualquer uma** falhar: **rollback imediato.** Tirar o `bahia.ba` do Google é dano que leva
+**semanas** para desfazer, e não aparece em log nenhum enquanto acontece.
+
+| # | Verificação | Esperado | Como |
+|---|---|---|---|
+| **1** | a opção nativa | `get_option('blog_public')` **= 1** | `php -r` no pod |
+| **2** | o HTML servido, em **três** telas | **nenhum** `noindex` — home, um archive e uma matéria | `curl … \| grep 'name="robots"'` |
+| **3** | os cabeçalhos, **incluindo sitemap e feed** | **nenhum** `x-robots-tag` | `curl -I` em `/`, `/sitemap_index.xml` e `/feed/` |
+| **4** | o cron do Yoast **continua agendado** | `wp_next_scheduled('wpseo_indexable_index_batch')` **≠ false** | `php -r` no pod |
+
+```bash
+POD=$(kubectl -n bahia-wordpress get pods -l app=wordpress -o jsonpath='{.items[0].metadata.name}')
+
+# 1 e 4 — estado interno
+kubectl -n bahia-wordpress exec $POD -c wordpress -- php -r '
+define("WP_USE_THEMES",false); require_once "/var/www/html/wp-load.php";
+echo "ambiente   : ".bahia_ambiente()."\n";                       # producao
+echo "blog_public: ".var_export(get_option("blog_public"),true)."\n";   # 1
+echo "cron Yoast : ".var_export(wp_next_scheduled("wpseo_indexable_index_batch"),true)."\n";'  # NAO false
+
+# 2 — o HTML servido, nas tres telas
+for u in "/" "/economia/" "/<uma-materia>/"; do
+  curl -s "https://bahia.ba$u?cb=$RANDOM" | grep -o "<meta name=.robots. content=.[^'\"]*"
+done            # esperado: index, follow ... em todas. Se aparecer noindex -> ROLLBACK
+
+# 3 — os cabecalhos, inclusive os que nao sao HTML
+for u in "/" "/sitemap_index.xml" "/feed/"; do
+  curl -sI "https://bahia.ba$u" | grep -i x-robots-tag
+done            # esperado: NENHUMA linha
+```
+
+> **A quarta é a que se esquece.** As três primeiras protegem contra o `noindex` vazar; a quarta
+> protege contra o **outro** mu-plugin vazar. Em produção o `wpseo_indexable_index_batch` **deve
+> continuar rodando** — é onde ele tem trabalho útil (e hoje já roda, a cada 15 minutos, na 27.7).
+> Se ele aparecer desagendado, a guarda de ambiente do
+> `bahia-yoast-indexacao-fundo.php` falhou.
 
 **Nenhum dos dois escreve no banco**, de propósito — o `noindex` é filtro em
 `pre_option_blog_public`, não `UPDATE`. Se fosse escrita, **um dump de homolog restaurado em

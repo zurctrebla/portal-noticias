@@ -332,6 +332,7 @@ campo ficar vazio. Está aqui para não se perder.
 | 7 | 13 descrições cortadas no meio | **Operacional, na PRODUÇÃO** — apagar o campo de descrição do Yoast nas 13 | Baixa |
 | 13 | **AdRotate fechado em duas frentes: o editor e a subida do PHP** | **Comercial/estratégica** — recuperar a licença, trocar de plugin, ou aceitar publicidade fora do editor | Média — **sem data, mas agora com dois prazos convergindo** (02/09) |
 | 14 | **Carregamento de imagem depende do Smush, e ninguém sabia** | **Nenhuma agora** — é aviso a ler antes de remover ou trocar plugin de imagem | Baixa — mas **alta se alguém mexer sem ler** (02/09) |
+| 15 | **Licença do ACF: fica mais cara quanto mais tarde** | **Comercial** — a conta não é a anuidade, é o retrabalho de revalidar 12 plugins | Média — **cresce sozinha** (02/09) |
 
 ---
 
@@ -774,3 +775,38 @@ trocar ou "limpar" plugins de imagem:
 - Se o Smush sair, **o substituto precisa assumir o carregamento sob demanda no mesmo dia** — não
   depois
 - Numa comparação entre plugins, esse recurso **é requisito**, não item desejável
+
+---
+
+## 15. A licença do ACF: quanto mais tarde ela chegar, mais cara fica
+
+> **Acrescentado em 02/09/2026**, no fechamento dos 7 lotes de plugins.
+
+### O que aconteceu
+
+Doze plugins do site foram atualizados em dois dias, cada um validado por inteiro: mídia, autoria,
+SEO, permissões, tela de edição, logs. **Um décimo terceiro ficou de fora — o ACF PRO**, porque a
+licença não está ativa e o fabricante **não entrega o arquivo** sem ela.
+
+### Por que isso não é só "um plugin desatualizado"
+
+O ACF é o que guarda **o subtítulo e a imagem de cada matéria**, e mais cinco grupos de campos. É
+a peça de que todo o resto depende.
+
+**Os doze foram validados com o ACF na versão antiga.** Quando ele finalmente subir, ele muda por
+baixo de todos os doze — e **a validação inteira precisa ser refeita**.
+
+| | |
+|---|---|
+| O que parece custar | atualizar um plugin |
+| O que custa de verdade | **refazer o ciclo dos doze** |
+| Quanto esse ciclo levou | **dois dias** de trabalho técnico |
+
+### O que se pede
+
+**Nada de imediato — o site funciona.** O que se pede é que a decisão sobre a licença **leve em
+conta o retrabalho**, e não só o preço da anuidade:
+
+- **quanto mais cedo a licença aparecer, menos coisa haverá para revalidar**
+- cada atualização nova feita antes dela **acrescenta um item** à lista de revalidação
+- é a única pendência desta lista que **fica mais cara sozinha**, sem ninguém fazer nada

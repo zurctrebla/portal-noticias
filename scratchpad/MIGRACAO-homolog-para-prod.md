@@ -1256,3 +1256,56 @@ sabemos que o mecanismo existe:
    criasse posts sem indexável — **o anti-join volta a ter o que procurar**, e aí o custo cresce
 3. A válvula, se um dia for preciso: o mu-plugin `bahia-yoast-indexacao-fundo.php`, hoje ativo
    **só em homolog**, com a condição de ambiente na primeira linha do corpo
+
+---
+
+## 11. 🔴 AS QUATRO VERIFICAÇÕES OBRIGATÓRIAS — no pod, depois do deploy
+
+**O merge `develop → main` leva dois mu-plugins que NÃO devem agir em produção.** Os dois têm
+guarda de ambiente na primeira linha do corpo; **isto aqui é conferir que a guarda funcionou.**
+
+| Arquivo | O que faria se a guarda falhasse |
+|---|---|
+| `bahia-homolog-noindex.php` | **tiraria o `bahia.ba` do Google**, em silêncio |
+| `bahia-yoast-indexacao-fundo.php` | pararia a indexação antecipada do Yoast |
+
+> **Não presumir do código. Rodar no pod, sobre o HTML e os cabeçalhos que produção está
+> servindo.** Se **qualquer uma** falhar: **rollback imediato.** O site sair do índice é dano que
+> leva **semanas** para desfazer, e não aparece em log nenhum enquanto acontece.
+
+| # | Verificação | Esperado |
+|---|---|---|
+| **1** | `get_option('blog_public')` | **1** |
+| **2** | `<meta name="robots">` em **home, um archive e uma matéria** | **`index, follow`** — nenhum `noindex` |
+| **3** | cabeçalho `x-robots-tag` em `/`, `/sitemap_index.xml` e `/feed/` | **ausente nas três** |
+| **4** | `wp_next_scheduled('wpseo_indexable_index_batch')` | **≠ `false`** — ele DEVE seguir agendado |
+
+```bash
+POD=$(kubectl -n bahia-wordpress get pods -l app=wordpress -o jsonpath='{.items[0].metadata.name}')
+
+# 1 e 4 — estado interno
+kubectl -n bahia-wordpress exec $POD -c wordpress -- php -r '
+define("WP_USE_THEMES",false); require_once "/var/www/html/wp-load.php";
+echo "ambiente   : ".bahia_ambiente()."\n";
+echo "blog_public: ".var_export(get_option("blog_public"),true)."\n";
+echo "cron Yoast : ".var_export(wp_next_scheduled("wpseo_indexable_index_batch"),true)."\n";'
+
+# 2 — o HTML servido
+for u in "/" "/economia/" "/<uma-materia>/"; do
+  curl -s "https://bahia.ba$u?cb=$RANDOM" | grep -o '<meta name=.robots. content=.[^"]*'
+done
+
+# 3 — os cabecalhos, inclusive o que nao e HTML
+for u in "/" "/sitemap_index.xml" "/feed/"; do
+  echo "== $u"; curl -sI "https://bahia.ba$u" | grep -i x-robots-tag
+done
+```
+
+**A quarta é a que se esquece.** As três primeiras protegem contra o `noindex` vazar; a quarta
+protege contra o **outro** mu-plugin vazar. Em produção o `wpseo_indexable_index_batch` **deve
+continuar rodando** — é onde ele tem trabalho útil, e já roda hoje, a cada 15 minutos, na 27.7.
+**Se aparecer desagendado, a guarda do `bahia-yoast-indexacao-fundo.php` falhou.**
+
+> 🔗 **Por que os dois são filtro e não escrita no banco** — e por que isso importa: ver a
+> **segunda regra** no topo do `HANDOVER.md`. Um `UPDATE` em `blog_public` viajaria no dump e
+> chegaria a produção sozinho.

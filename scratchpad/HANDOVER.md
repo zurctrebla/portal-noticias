@@ -38,6 +38,100 @@ a outra pergunta.
 
 ---
 
+## 🧭 A segunda regra: guardas que viajam junto com o perigo
+
+> ### A guarda depende de algo que viaja junto com o dado que ela protege?
+
+Se depende, ela **se desliga exatamente quando é mais necessária** — porque o gesto que traz o
+perigo é o mesmo que apaga a guarda. **Duas vezes este projeto encontrou isso, nas duas direções
+opostas**, e é o contraste que ensina.
+
+### Caso A — a guarda que se desliga sozinha (25 a 27/08/2026)
+
+`bahia-homolog-guardas.php` protege o bucket compartilhado, e começa assim:
+
+```php
+if (!function_exists('bahia_ambiente') || 'homolog' !== bahia_ambiente()) return;
+```
+
+E `bahia_ambiente()` decide **lendo o `siteurl` do banco**.
+
+**Junte as duas coisas.** Restaure o banco de produção em homolog — que é a operação de rotina
+deste projeto — e o `siteurl` passa a ser `https://bahia.ba`. A função devolve `producao`. **As
+guardas retornam antes de registrar qualquer filtro: desligam-se sozinhas, sem erro, sem aviso,
+sem nada no log.**
+
+E desligam-se **no pior instante possível**: logo depois de homolog receber a `wp_as3cf_items` de
+produção inteira, apontando para os mesmos objetos que o site no ar serve, no mesmo bucket sem
+versionamento que já custou nove arquivos.
+
+**A guarda dependia do banco. O perigo chega pelo banco.**
+
+### Caso B — a guarda que não podia viajar (02/09/2026)
+
+Para tirar homolog dos buscadores, o caminho óbvio era gravar `blog_public = 0` em `wp_options`.
+**Não foi o que fizemos:**
+
+```php
+add_filter('pre_option_blog_public', '__return_zero');   // filtro, nao UPDATE
+```
+
+Porque o dado protegido — o valor da opção — **viaja no dump**. Um dump de homolog restaurado em
+produção levaria `blog_public = 0` junto e **tiraria o bahia.ba do Google, em silêncio**. Por
+filtro isso é impossível: o valor no banco continua `1`, e o comportamento vive no **código**, que
+não viaja em dump nenhum.
+
+### O critério, e como usá-lo
+
+| | Caso A | Caso B |
+|---|---|---|
+| Onde mora a guarda | **no banco** (`siteurl`) | **no código** (filtro em mu-plugin) |
+| Onde mora o perigo | no banco (dump restaurado) | no banco (valor da opção) |
+| Viajam juntos? | **sim** → guarda falha **aberta** | **não** → guarda se mantém |
+
+**Antes de escrever qualquer guarda, pergunte por onde o perigo chega — e ponha a guarda em outro
+lugar.** Guarda e perigo no mesmo veículo não é redundância: é uma guarda que só funciona
+enquanto não é necessária.
+
+---
+
+## 🔁 Um mecanismo contraintuitivo que vai ser esquecido: `noindex` antes de `Disallow`
+
+> ### `Disallow` impede o rastreador de **ver** o `noindex`.
+
+Para tirar um site do índice de busca, o instinto é `Disallow: /` no `robots.txt`. **Numa página
+que já está indexada, isso congela o problema em vez de resolver.**
+
+```
+Disallow    -> proibe BUSCAR a pagina
+                    |
+                    v
+            o rastreador nunca carrega a pagina
+                    |
+                    v
+            nunca ve o <meta robots="noindex">
+                    |
+                    v
+            o que ja esta no indice FICA — as vezes por meses
+```
+
+**A ordem correta, e ela é sequencial:**
+
+1. **`noindex` primeiro**, com o rastreamento **ainda permitido** — para o buscador visitar, ler a
+   diretiva e **remover** o que já indexou;
+2. **`Disallow` depois**, quando as páginas tiverem saído do índice, aí sim para cortar a carga de
+   rastreamento.
+
+**Aplicado em 02/09/2026 em homolog**, que já tinha home, `/entretenimento/`, `/justica/`,
+`/politica/` e `/dende-e-poder/` indexadas. O passo 1 está feito
+(`mu-plugins/bahia-homolog-noindex.php`); **o passo 2 é tarefa própria**, e exige mexer no nginx —
+`location = /robots.txt` não tem `try_files`, então a URL nunca chega ao PHP.
+
+> **Só se pula o passo 1 quando nada da origem foi indexado ainda.** Aí `Disallow` sozinho basta,
+> porque não há o que remover.
+
+---
+
 Isto reúne o que foi aprendido nas rodadas 2 a 5 e **não está escrito em nenhum outro lugar** —
 nem no código, nem no histórico do git. Documentos irmãos:
 
