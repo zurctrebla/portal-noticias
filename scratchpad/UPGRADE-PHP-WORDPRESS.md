@@ -2396,6 +2396,24 @@ Mais 161 elementos do tagDiv, 8 campos ACF e 11 metaboxes. **Nada quebrou e a te
 aviso** — mas nenhum lote mediu o **tempo de abertura do editor**, e esse é o número que a redação
 sentiria primeiro. Fica anotado como lacuna de medição, não como defeito.
 
+## ✅ Sobreviveu ao rollout
+
+`git push origin develop` → **`3da334b7`**, generation **133 → 134**, pod
+**`wordpress-7c455796f4-75ctq`**.
+
+No pod novo: **WP 7.1 · PHP 8.3.33 · Yoast 28.4 · CAP 4.1.1 · Offload 3.3.1 · Smush 4.3.2 ·
+FooGallery 3.2.6 · Site Kit 1.186.0**. `wp_yoast_migrations` em **27**, última `20260709144332`, e
+**nenhuma reindexação pendente** — os três sinalizadores seguem em `false` no pod que veio da
+imagem, que era o que faltava confirmar.
+
+Revalidado depois: **site 7 de 7**, **sitemap idêntico** (504 pré-existente no índice, 200 em
+0,64 s no `post-sitemap` e 0,59 s no `page-sitemap`), e as **5 telas com `title` e `description`
+iguais** — inclusive o subtítulo na `meta description` da matéria.
+
+**Nenhum resíduo no bucket:** este lote não exercitou envio de mídia, então não criou objeto de
+teste. O `2026/09/02110414` do lote 5 foi removido no início desta etapa, com o portão fechado em
+**13 esperados / 13 apagados / 0 restantes**, e os **99 objetos de produção intactos**.
+
 ---
 
 # 🔗 DEPENDÊNCIA NÃO DECLARADA: a página de autor é do `bahia-autor-archive`, não do plugin
