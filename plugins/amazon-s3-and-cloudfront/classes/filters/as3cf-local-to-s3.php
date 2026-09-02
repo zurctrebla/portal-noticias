@@ -36,11 +36,18 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 		// Edit Media page
 		add_filter( 'set_url_scheme', array( $this, 'set_url_scheme' ), 10, 3 );
 		// Blocks
-		if ( function_exists( 'is_wp_version_compatible' ) && is_wp_version_compatible( '5.9' ) ) {
-			add_filter( 'render_block', array( $this, 'filter_post' ), 100 );
-			add_filter( 'get_block_templates', array( $this, 'filter_get_block_templates' ), 100, 3 );
-			add_filter( 'get_block_template', array( $this, 'filter_get_block_template' ), 100, 3 );
-		}
+		add_filter( 'render_block', array( $this, 'filter_post' ), 100 );
+		add_filter( 'get_block_templates', array( $this, 'filter_get_block_templates' ), 100, 3 );
+		add_filter( 'get_block_template', array( $this, 'filter_get_block_template' ), 100, 3 );
+		add_filter( 'get_block_file_template', array( $this, 'filter_get_block_template' ), 100, 3 );
+		add_filter( 'rest_request_after_callbacks',
+			array(
+				$this,
+				'filter_rest_request_after_callbacks_raw_content',
+			),
+			100,
+			3
+		);
 	}
 
 	/**
@@ -70,9 +77,13 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 	/**
 	 * Filter post data.
 	 *
-	 * @param WP_Post $post
+	 * @param WP_Post|mixed $post
 	 */
 	public function filter_post_data( $post ) {
+		if ( empty( $post ) || ! is_a( $post, 'WP_Post' ) ) {
+			return;
+		}
+
 		global $pages;
 
 		$cache    = $this->get_post_cache( $post->ID );
@@ -292,7 +303,9 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 				continue;
 			}
 
-			$path = AS3CF_Utils::decode_filename_in_path( ltrim( str_replace( $this->get_bare_upload_base_urls(), '', $bare_url ), '/' ) );
+			$path = AS3CF_Utils::decode_filename_in_path(
+				ltrim( str_replace( $this->get_bare_upload_base_urls(), '', $bare_url ), '/' )
+			);
 
 			$paths[ $path ]           = $full_url;
 			$full_urls[ $full_url ][] = $url;
@@ -307,7 +320,12 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 					// Each returned item may have matched on either the source_path or original_source_path.
 					// Because the base image file name of a thumbnail might match the primary rather scaled or rotated full image
 					// it's possible that both source paths are used by separate URLs.
-					foreach ( array( $as3cf_item->source_path(), $as3cf_item->original_source_path() ) as $source_path ) {
+					foreach (
+						array(
+							$as3cf_item->source_path(),
+							$as3cf_item->original_source_path(),
+						) as $source_path
+					) {
 						if ( ! empty( $paths[ $source_path ] ) ) {
 							$matched_full_url = $paths[ $source_path ];
 
@@ -435,7 +453,10 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 			}
 
 			$ours = false;
-			if ( $this->as3cf->get_setting( 'enable-delivery-domain' ) && $this->as3cf->get_setting( 'delivery-domain', '' ) === $parts['host'] ) {
+			if (
+				$this->as3cf->get_setting( 'enable-delivery-domain' ) &&
+				$this->as3cf->get_setting( 'delivery-domain', '' ) === $parts['host']
+			) {
 				$ours = true;
 			} elseif ( false !== strpos( $parts['host'], $this->as3cf->get_storage_provider()->get_domain() ) ) {
 				$ours = true;
@@ -497,5 +518,46 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 		}
 
 		return $block_template;
+	}
+
+	/**
+	 * Filters the response immediately after executing any REST API
+	 * callbacks.
+	 *
+	 * Here we're looking for ['content']['raw'] in the data being returned,
+	 * which depending on the method for entering the Site Editor, might not be
+	 * properly filtered during the pre-fetch REST request.
+	 *
+	 * @param WP_REST_Response|WP_HTTP_Response|WP_Error|mixed $response Result to send to the client.
+	 *                                                                   Usually a WP_REST_Response or WP_Error.
+	 * @param array                                            $handler  Route handler used for the request.
+	 * @param WP_REST_Request                                  $request  Request used to generate the response.
+	 *
+	 * @returns WP_REST_Response|WP_HTTP_Response|WP_Error|mixed
+	 */
+	public function filter_rest_request_after_callbacks_raw_content( $response, $handler, $request ) {
+		if ( empty( $response ) || ! is_a( $response, 'WP_HTTP_Response' ) ) {
+			return $response;
+		}
+
+		$data = $response->get_data();
+
+		if (
+			empty( $data ) ||
+			! is_array( $data ) ||
+			empty( $data['content']['raw'] ) ||
+			! is_string( $data['content']['raw'] )
+		) {
+			return $response;
+		}
+
+		$content = $this->filter_post( $data['content']['raw'] );
+
+		if ( ! empty( $content ) && is_string( $content ) ) {
+			$data['content']['raw'] = $content;
+			$response->set_data( $data );
+		}
+
+		return $response;
 	}
 }

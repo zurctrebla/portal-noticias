@@ -307,6 +307,12 @@ mas cada chamada escreve no log.
 **O padrão é claro: 100% está em biblioteca de terceiro vendorizada.** Nenhuma linha do nosso
 código precisa mudar. O caminho para o 8.4 é **esperar os releases**, não corrigir código.
 
+> 🟢 **ATUALIZAÇÃO 02/09/2026 — o release do Offload chegou, e esta tabela está velha.** O lote 3
+> subiu o WP Offload Media para **3.3.1** (o 3.3.0 declara *"PHP 8.4 compatible"*), e a medição
+> caiu de **248 para 1** ocorrência nele — **286 → 39 no total**, com o mesmo instrumento antes e
+> depois. **O bloqueador desta tarefa era ele.** Ver a seção do lote 3 para os números e para o
+> que sobrou: 2 ocorrências no **nosso** repositório, 9 no AdRotate pago, 28 vendorizadas.
+
 **O que destrava:** WP Offload Media sozinho responde por **87%**. Quando ele sair com o
 `?` nos tipos, o número cai para 36 e o assunto muda de figura.
 
@@ -1256,7 +1262,7 @@ a licença ser resolvida.** Isso é do Albert, não meu.
 |---|---|---|---|
 | **1** | Post Type Switcher `4.0.0→4.0.1` · WP Twitter Auto Publish `1.7.6→1.7.7` · Site Kit `1.180.0→1.186.0` | patch | **Prova o procedimento com o menor custo.** Nenhum toca conteúdo, mídia ou renderização: dois são só admin e um é analytics. Se o processo estiver errado, descobre-se aqui |
 | **2** | Disable Comments `2.5.3→2.8.0` · Category Order `1.9.1→2.0` · OneSignal `3.5.0→3.9.2` · FooGallery `2.4.32→3.2.6` | minor a **major** | Periféricos com **sintomas distinguíveis entre si** — comentário, ordem de termo, push e galeria não se confundem. Category Order toca ordenação de taxonomia, e **editorias são CPTs**: merece olhar na navegação |
-| **3** | **WP Offload Media Lite** `3.2.11→3.3.1` | minor | **Sozinho, por pedido seu.** É o caminho de toda a mídia do site, e o bucket é **compartilhado com produção**. Bônus: as **244 depreciações de PHP 8.4 da Tarefa A** estão aqui — vale remedir depois |
+| **3** ✅ | **WP Offload Media Lite** `3.2.11→3.3.1` | minor | **Sozinho, por pedido seu.** É o caminho de toda a mídia do site, e o bucket é **compartilhado com produção**. Bônus: as **244 depreciações de PHP 8.4 da Tarefa A** estão aqui — vale remedir depois |
 | **4** | **Smush** `3.22.1→4.3.2` | **major 3→4** | **Sozinho.** Mesmo pipeline do lote 3. Juntá-los destruiria a atribuição **exatamente onde ela mais importa**: se o upload quebrar, qual dos dois foi? |
 | **5** | **Co-Authors Plus** `3.6.6→4.1.1` | **major 3→4** | **Sozinho, por pedido seu.** Governa a autoria de toda matéria e a página de autor, que já teve incidente de desempenho (`author-archive-cap-lento`) |
 | **6** | **Yoast SEO** `27.7→28.3` | **major** | **Sozinho, por pedido seu.** Salto de major **com migração de indexáveis**: `wp_yoast_indexable` tem ~323 mil linhas. É o lote mais lento e o de maior escrita no banco |
@@ -1603,6 +1609,207 @@ fica limpa, e é por isso que os dois seguem separados.
 - A **caixa Publicar** continua sendo questão aberta: ele publicou, então **o botão existe para
   olho humano** — o que confirma que a ausência no meu HTML era do meu `curl` sem JavaScript, e
   **não** um defeito. Isso alivia o lote 7, mas não o dispensa
+
+
+# ✅ LOTE 3 — concluído em 02/09/2026
+
+| Plugin | De | Para | Salto |
+|---|---|---|---|
+| WP Offload Media Lite | 3.2.11 | **3.3.1** | minor (com **3.3.0** no meio) |
+
+Continua **ativo**. Atualizado pelo `Plugin_Upgrader` no pod, com `bulk_upgrade` — resposta `OK`, e
+o log do upgrader mostra `downloading_package`, `unpack_package`, `installing_package`,
+`remove_old`, `process_success`.
+
+## Rede antes de mexer
+
+| | |
+|---|---|
+| **`tar` do diretório** | `plugins-pre-lote3-offload-3.2.11.tgz` — **3.726.234 bytes, 2.384 entradas** |
+| **Dump do banco** | `dump-HOMOLOG-pre-lote3-20260902-1106.sql.gz` — **586.005.843 bytes**, `gzip -t` OK |
+| Primeira linha | `-- MySQL dump 10.13` — **sem ruído do `kubectl`** (dump por `exec` em pod dedicado) |
+| Rodapé | `Dump completed on 2026-09-02 10:08:36` |
+| Estrutura | **92 `CREATE TABLE` × 92 tabelas no banco** · 246 ocorrências do `siteurl` de homolog |
+| `grep 'pod ".*" deleted'` | **0** |
+| SHA-256 | `b022980e…f4a3`, gravado ao lado · arquivo em `444` |
+
+> O dump saiu **antes** deste lote mesmo o plano original não exigindo — por pedido seu, todos os
+> lotes de 3 a 7 têm dump próprio. O lote 3 acabou **migrando dado sim** (abaixo), então foi bom.
+
+## Migração de dados: houve, e é só um marcador
+
+```
+as3cf_schema_version   3.2.11 -> 3.3.1      <- migrou
+wp_as3cf_items         155.600 -> 155.600   <- intacta
+colunas da tabela      14 -> 14, nomes identicos
+anexos                 155.675 -> 155.675
+settings (29 chaves)   identicos, um a um   <- bucket, regiao, cloudfront, prefixo, remove-local-file
+```
+
+## 🎯 O teste que este lote existia para fazer — o envio de imagem, em três caminhos
+
+**A linha de base era o envio humano de 01/09**, com Offload 3.2.11. Refeito agora com 3.3.1:
+
+| Caminho | Como | Resultado |
+|---|---|---|
+| **A — `media_handle_sideload`** | PHP, o mesmo instrumento de 01/09 | ✅ **13 entradas → 12 arquivos**, idêntico ao de 01/09 |
+| **B — controlador REST** | `rest_do_request` em `/wp/v2/media` | ✅ **201**, 13 → 12, offload OK |
+| **C — 🔴 NAVEGADOR** | `wp.apiFetch` na sessão real, pelo nginx + PHP-FPM | ✅ **201 em 7,4 s** |
+
+**O caminho C é o que reproduz o repórter**, e é o que fecha o lote: cookie de sessão de verdade,
+nonce do REST, passando por nginx e PHP-FPM, no mesmo endpoint que o uploader do editor usa.
+
+```
+imagem     : 1600x1067 JPEG, 28.624 bytes, gerada no canvas do navegador
+resposta   : 201 em 7.437 ms, ID 9000312, image/jpeg
+derivadas  : 14 entradas -> 13 arquivos distintos (9 delas td_* do Newspaper)
+offload    : bucket static.bahia.ba, regiao sa-east-1, is_verified=1
+URL        : https://d1x4bjge7r9nas.cloudfront.net/.../teste-navegador-lote3-...jpg
+CloudFront : 200 (28.624 bytes) e 200 na td_485x360 (5.795 bytes)
+s3 ls      : 14 objetos no prefixo — 1 original + 13 derivadas, nada faltando
+srcset     : PRESENTE
+local      : 0 de 14 arquivos no disco — remove-local-file=1 honrado
+```
+
+## 🟠 O achado do lote, e por que ele NÃO é defeito — mas muda o instrumento
+
+Rodando o teste REST **pelo meu `kubectl exec`**, o log encheu:
+
+```
+AS3CF: Could not initialize WP_Filesystem.
+PHP Warning: Undefined array key "remove_result" ... remove-local-handler.php on line 217
+```
+
+…e o arquivo local **não era removido**. Levaria a "regressão do 3.3.1" — e estaria errado.
+
+**A causa é o `uid`, não o plugin.** O `kubectl exec` roda como **root**; o PHP-FPM roda como
+**www-data**. Medido, lado a lado, no mesmo pod:
+
+| Sob qual usuário | `get_filesystem_method()` | `WP_Filesystem()` | remoção local | tempo |
+|---|---|---|---|---|
+| **root** (meu `exec`) | cai para FTP | **false** | ❌ 13 de 13 ficam no disco | **40,2 s** |
+| **www-data** (o do FPM) | `direct` | **true** (`WP_Filesystem_Direct`) | ✅ 0 de 13 no disco | **7,3 s** |
+
+E o `3.3.1` **documenta a mudança** no próprio changelog:
+
+> *"Offload and remove from local triggered from outside the admin context no longer sometimes
+> results in a fatal error"*
+
+O `3.2.11` chamava `@unlink()` direto; o `3.3.1` exige `WP_Filesystem` e **desiste com `return
+false`** se não conseguir inicializar. Em contexto de web isso é uma proteção; fora dele, vira
+aviso. **Não há caminho de produção que caia nisso:** não existe `CronJob`, não existe `crontab`
+no contêiner, e `DISABLE_WP_CRON` não está definida — o WP-Cron roda **na requisição web**, como
+`www-data`.
+
+> 📌 **Lição de método, e vale para os lotes 4 a 7:** meu arranjo de teste rodava como **root**, que
+> **não é o usuário do site**. Para qualquer coisa que toque `WP_Filesystem`, permissão ou remoção
+> de arquivo, o teste tem de rodar como **www-data** — senão eu meço o meu harness, não o site.
+> Os 33 segundos a mais eram o *fallback* de FTP tentando e falhando.
+
+## 🟢 E o bônus da Tarefa A entregou — o PHP 8.4 destravou
+
+O 3.3.0 declara no changelog **"PHP 8.4 compatible"** e **"PHP 8.5 compatible"**. Medido, com o
+**mesmo instrumento antes e depois**, no mesmo pod:
+
+```
+amazon-s3-and-cloudfront    248  ->  1      (-247)
+```
+
+| Escopo | Antes do lote 3 | Depois | |
+|---|---|---|---|
+| `amazon-s3-and-cloudfront` | **248** | **1** | `vendor/Gcp/google/auth/…/ApplicationDefaultCredentials.php` |
+| Demais plugins | 36 | 36 | mobile-detect, twitteroauth, ca-bundle, php-jwt |
+| Temas | 2 | 2 | as duas `Mobile-Detect` vendorizadas |
+| `mu-plugins` (nosso) | 0 | 0 | |
+| **TOTAL** | **286** | **39** | |
+
+> **Nota de instrumento, para não inflar o resultado:** a varredura de 29/08 contou **244** no
+> Offload e **280** no total; a minha conta **248** e **286** **no mesmo código 3.2.11**. São
+> regras de contagem um pouco diferentes. O que vale é que **antes e depois saíram do mesmo
+> instrumento**: a queda de **247 ocorrências** é real, e o Offload deixa de ser o bloqueador.
+
+**O que isso muda na Tarefa A:** o bloqueio do PHP 8.4 era *"244 no Offload, código de terceiro,
+depende de release deles"*. **O release chegou.** Sobram 39 ocorrências, e o desenho delas é outro:
+
+- **2 estão no nosso repositório** (`bahia_refactor` e `bahia_social`, `Mobile-Detect` vendorizada)
+- 9 no `adrotate-pro` — **pago e sem licença**, continua sem canal
+- as outras 28 em `twitteroauth`, `ca-bundle` e `php-jwt` vendorizados
+
+**A Tarefa A não está pronta — está viável.** Ela deixou de depender de um release de terceiro e
+passou a depender de decisão nossa. Merece reavaliação, mas **não neste ciclo de lotes.**
+
+## Validação
+
+| Camada | Resultado |
+|---|---|
+| Site (home, 3 archives, 2 buscas, Quem Somos, autor) | **7 de 7** em 200 |
+| Busca | índice `wp_bahia_search_idx` **242.865** linhas · **10 de 10** termos · `s=bahia` 501 · 98–456 ms |
+| **Envio de mídia** | **os três caminhos acima**, incluindo o do navegador |
+| Rascunho com ACF + coautoria | subtítulo, imagem e **2 coautores** lidos de volta; removido sem resíduo |
+| **Editor no navegador** | canvas em iframe, **126 blocos registrados, 0 inválidos**, botão **Publicar** presente e habilitado, 8 campos ACF, 11 metaboxes, 161 elementos tagDiv, 8 do CAP, **0 avisos do editor** |
+| Logs — janela de 8 min, **240 requisições com bypass de cache** | **0 fatais · 0 depreciações · 0 notices · 0 linhas `AS3CF`** |
+
+### Os 26 avisos da janela, e nenhum é deste lote
+
+```
+24x  Attempt to read property "user_nicename" on false
+     co-authors-plus/php/class-coauthors-plus.php        <- 1 por acesso a /colunistas/
+ 2x  Cannot modify header information - headers already sent
+     puredevs-gdpr-compliance/public/class-pd-gdpr-public.php
+```
+
+> **O 24 não é coincidência:** a janela bateu **24 vezes** em `/colunistas/da-redacao/`, e o aviso
+> saiu **uma vez por acesso**. É a página de autor, pré-existente, e é **alvo do lote 5** — que já
+> tem o incidente de desempenho do CAP na conta. Fica medido aqui como "antes".
+
+### 📌 Console — a linha de base de 8 se manteve, item a item
+
+**Zero erros. Oito advertências**, exatamente as mesmas do fim do lote 2:
+
+```
+2x  Block API version 1: adrotate/advert, adrotate/group
+1x  wp.compose.pure deprecated since 7.1
+1x  wp.compose.withState deprecated since 5.8
+1x  wp.editPost.PluginDocumentSettingPanel deprecated since 6.6
+3x  ... added to the iframe incorrectly (global-styles, td-guten-blocks, td-gut)
+```
+
+E a causa conferida no registro, não inferida da ausência: dos **126 blocos registrados**, os
+**únicos** com `apiVersion < 3` seguem sendo `adrotate/advert` e `adrotate/group`.
+
+**Era o esperado, e vale dizer por quê:** o Offload Media **não registra bloco nem enfileira JS de
+editor**, então um console alterado aqui seria sinal de que ele saiu do lugar dele.
+
+## ✅ E a caixa Publicar — a questão aberta de 01/09 está respondida
+
+O botão **Publicar** está na tela, habilitado, com olho humano e com `querySelector`. **Não havia
+defeito**: o site usa o editor de blocos, onde o controle é montado por JavaScript e **nunca**
+apareceria no HTML servido — o `submitdiv` que eu procurava é do editor clássico. O repórter já
+tinha provado isso publicando.
+
+> **Consequência para o lote 7:** ele perde o "principal suspeito da caixa Publicar ausente", que
+> era metade da sua justificativa. Continua sozinho e por último — 29 minors em quem governa
+> capacidade no admin é motivo bastante — mas o alvo mudou.
+
+## ⚠️ O resíduo no bucket compartilhado, e ele cresceu
+
+Anexos e rascunhos de teste **removidos, com resíduo zero**: `wp_as3cf_items` e a contagem de
+anexos voltaram a **155.600 / 155.675**, os mesmos números de antes do lote.
+
+**Os arquivos no S3 permanecem**, porque a guarda `as3cf_remove_source_files_from_provider`
+(conferida por `has_filter` **antes de cada envio**, e o teste **aborta** se ela faltar) impede
+remoção do provedor — o bucket é o **de produção**.
+
+```
+6 prefixos datados de 02/09  ->  80 objetos, 2.169.564 bytes (~2,1 MB)
+   (em 01/09 o lote anterior deixou 13)
+```
+
+> 🟡 **Isto acumula, e o lote 4 vai somar mais.** Cada envio de teste deixa 13–14 objetos. São
+> nomes datados e prefixos exclusivos de teste, então **dá para limpar com `aws s3 rm` nos
+> prefixos**, fora do WordPress e sem passar pela guarda. **Não fiz por conta própria:** apagar do
+> bucket de produção é exatamente o risco que a guarda existe para evitar, e a prática fixada em
+> 01/09 foi deixar. **Fica para sua decisão — junto, ao fim do lote 4.**
 
 ---
 
