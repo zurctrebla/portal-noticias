@@ -96,7 +96,7 @@ class CrossSell {
 	 * @return void
 	 * @since 1.0.0
 	 */
-	public function init( Container $container ): void {
+	public function init( $container ) {
 		$this->submenu_params  = $container->get( 'submenu_data' );
 		$this->assets_version  = ! empty( $this->script_data( 'version' ) ) ? $this->script_data( 'version' ) : WPMUDEV_MODULE_PLUGIN_CROSS_SELL_VERSION;
 		$this->unique_id       = "wpmudev-cross-sell-container-{$this->assets_version}";
@@ -133,7 +133,7 @@ class CrossSell {
 	 * 
 	 * @return void
 	 */
-	public function internal_admin_actions( $text = '' ): void {
+	public function internal_admin_actions( $text = '' ) {
 		// Prepare assets used for specific admin menu page.
 		$this->prepare_assets();
 
@@ -156,7 +156,7 @@ class CrossSell {
 	 *
 	 * @return void
 	 */
-	public function prepare_assets(): void {
+	public function prepare_assets() {
 		if ( ! is_array( $this->page_scripts ) ) {
 			$this->page_scripts = array();
 		}
@@ -313,7 +313,7 @@ class CrossSell {
 	 * @return array An associative array representing the submenu schema.
 	 * @since 1.0.0
 	 */
-	private function get_submenu_schema(): array {
+	private function get_submenu_schema() {
 		return array(
 			'slug'        => 'string',
 			'parent_slug' => 'string',
@@ -330,11 +330,11 @@ class CrossSell {
 	 *
 	 * @return void
 	 */
-	public function callback(): void {
+	public function callback() {
 		$this->view();
 	}
 
-	protected function get_utm_source(): string {
+	protected function get_utm_source() {
 		static $utm_source = null;
 
 		if ( empty( $utm_source ) ) {
@@ -366,7 +366,7 @@ class CrossSell {
 	 * @param array $plugins Plugins list.
 	 * @return array
 	 */
-	private function filter_plugins_list( array $plugins = array() ): array {
+	private function filter_plugins_list( $plugins = array() ) {
 		$current_plugin_slug = $this->submenu_params['slug'];
 		$utm_source          = $this->get_utm_source();
 
@@ -432,7 +432,7 @@ class CrossSell {
 	 *
 	 * @return string|array
 	 */
-	protected function script_data( string $key = '' ) {
+	protected function script_data( $key = '' ) {
 		$raw_script_data = $this->raw_script_data();
 
 		return ! empty( $key ) && ! empty( $raw_script_data[ $key ] ) ? $raw_script_data[ $key ] : $raw_script_data;
@@ -443,7 +443,7 @@ class CrossSell {
 	 *
 	 * @return array
 	 */
-	protected function raw_script_data(): array {
+	protected function raw_script_data() {
 		static $script_data = null;
 
 		if ( is_null( $script_data ) && file_exists( WPMUDEV_MODULE_PLUGIN_CROSS_SELL_DIR . 'assets/js/crosssellpage.asset.php' ) ) {
@@ -495,7 +495,7 @@ class CrossSell {
 	 *
 	 * @return void
 	 */
-	public function set_script_translation( string $handle = '' ): void {
+	public function set_script_translation( $handle = '' ) {
 		if ( ! empty( $this->translation_dir ) && is_string( $this->translation_dir ) ) {
 			wp_set_script_translations( $handle, 'plugin-cross-sell-textdomain', $this->translation_dir );
 		} else {
@@ -533,7 +533,7 @@ class CrossSell {
 		return $classes;
 	}
 
-	protected function is_current_page(): bool {
+	protected function is_current_page() {
 		$current_screen = get_current_screen();
 		return ! empty( $current_screen->id )
 			&& ! empty( $this->page_slug )

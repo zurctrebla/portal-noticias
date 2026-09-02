@@ -1290,7 +1290,7 @@ a licença ser resolvida.** Isso é do Albert, não meu.
 | **1** | Post Type Switcher `4.0.0→4.0.1` · WP Twitter Auto Publish `1.7.6→1.7.7` · Site Kit `1.180.0→1.186.0` | patch | **Prova o procedimento com o menor custo.** Nenhum toca conteúdo, mídia ou renderização: dois são só admin e um é analytics. Se o processo estiver errado, descobre-se aqui |
 | **2** | Disable Comments `2.5.3→2.8.0` · Category Order `1.9.1→2.0` · OneSignal `3.5.0→3.9.2` · FooGallery `2.4.32→3.2.6` | minor a **major** | Periféricos com **sintomas distinguíveis entre si** — comentário, ordem de termo, push e galeria não se confundem. Category Order toca ordenação de taxonomia, e **editorias são CPTs**: merece olhar na navegação |
 | **3** ✅ | **WP Offload Media Lite** `3.2.11→3.3.1` | minor | **Sozinho, por pedido seu.** É o caminho de toda a mídia do site, e o bucket é **compartilhado com produção**. Bônus: as **244 depreciações de PHP 8.4 da Tarefa A** estão aqui — vale remedir depois |
-| **4** | **Smush** `3.22.1→4.3.2` | **major 3→4** | **Sozinho.** Mesmo pipeline do lote 3. Juntá-los destruiria a atribuição **exatamente onde ela mais importa**: se o upload quebrar, qual dos dois foi? |
+| **4** ✅ | **Smush** `3.22.1→4.3.2` | **major 3→4** | **Sozinho.** Mesmo pipeline do lote 3. Juntá-los destruiria a atribuição **exatamente onde ela mais importa**: se o upload quebrar, qual dos dois foi? |
 | **5** | **Co-Authors Plus** `3.6.6→4.1.1` | **major 3→4** | **Sozinho, por pedido seu.** Governa a autoria de toda matéria e a página de autor, que já teve incidente de desempenho (`author-archive-cap-lento`) |
 | **6** | **Yoast SEO** `27.7→28.3` | **major** | **Sozinho, por pedido seu.** Salto de major **com migração de indexáveis**: `wp_yoast_indexable` tem ~323 mil linhas. É o lote mais lento e o de maior escrita no banco |
 | **7** | **PublishPress Capabilities** `2.21.0→2.50.1` | 29 minors | **Sozinho, e o alvo mudou em 02/09.** ~~Principal suspeito da caixa Publicar ausente~~ — a caixa existe, aquilo era artefato do meu `curl` sem JavaScript. O que ele governa é **capacidade e papel**, então o teste é **se a redação continua conseguindo publicar**, não se o botão está desenhado. Por último de propósito: até aqui o editor já terá sido validado seis vezes, então uma mudança nele fica atribuída |
@@ -1873,6 +1873,168 @@ remoção do provedor — o bucket é o **de produção**.
 > 01/09 foi deixar. **Fica para sua decisão — junto, ao fim do lote 4.**
 
 
+---
+
+# ✅ LOTE 4 — concluído em 02/09/2026
+
+| Plugin | De | Para | Salto |
+|---|---|---|---|
+| Smush | 3.22.1 | **4.3.2** | **major 3 → 4** |
+
+Continua **ativo**. O diretório encolheu de **822 para 569 arquivos** — o 4.0 reescreveu a
+interface e removeu código.
+
+## Rede antes de mexer
+
+| | |
+|---|---|
+| **`tar` do diretório** | `plugins-pre-lote4-smush-3.22.1.tgz` — **5.073.004 bytes, 982 entradas** |
+| **Dump do banco** | `dump-HOMOLOG-pre-lote4-20260902-1316.sql.gz` — **586.088.906 bytes**, `gzip -t` OK |
+| Primeira linha / rodapé | `-- MySQL dump 10.13` · `Dump completed on 2026-09-02 12:20:40` |
+| Estrutura | **92 `CREATE TABLE` × 92 tabelas** · 246 ocorrências do `siteurl` de homolog |
+| `grep 'pod ".*" deleted'` | **0** |
+| SHA-256 | `523af4c4…a723a`, gravado ao lado · arquivo em `444` |
+| **Guarda de remoção** | `has_filter` **true**, conferida **antes** de mexer e antes de cada envio |
+
+## 🟠 A atualização falhou na primeira tentativa — e a falha foi minha, não do plugin
+
+Rodei o `Plugin_Upgrader` **como `www-data`**, aplicando a lição do lote 3. Deu erro:
+
+```
+PHP Warning: chmod(): Operation not permitted
+   wp-admin/includes/class-wp-filesystem-direct.php:195
+=> ERRO: The update cannot be installed because some files could not be copied.
+```
+
+**A lição do lote 3 estava certa e eu a apliquei larga demais.** Os arquivos dos plugins são
+**do `root`** — vêm do `COPY` da imagem — e o `www-data` não consegue sobrescrevê-los. O diretório
+`plugins/` é dele, mas os arquivos dentro não.
+
+| Quem faz o quê | Usuário certo | Por quê |
+|---|---|---|
+| **Medir comportamento** (upload, remoção, permissão) | **`www-data`** | é quem o site usa; foi o achado do lote 3 |
+| **Rodar o `Plugin_Upgrader`** | **`root`** | precisa sobrescrever arquivo de `root` vindo da imagem |
+
+**O `WP_Upgrader` desfez sozinho, e conferi:** o diretório voltou com **822 arquivos, o mesmo
+número do `tar`**, versão ainda 3.22.1 e plugin ativo. Restou só o pacote extraído em
+`wp-content/upgrade/wp-smushit.4.3.2`, que apaguei antes de repetir.
+
+Refeito como `root`: `process_success`, **3.22.1 → 4.3.2**, ativo. Arquivos de `root`, legíveis
+pelo `www-data` — conferido.
+
+## Migração de dados: houve, e ela DUPLICA em vez de converter
+
+```
+wp-smush-version         3.22.1 -> 4.3.2
+settings (24 chaves)     identicas, uma a uma
+wp-smpro-smush-data      5.844 -> 5.844 linhas em postmeta
+wp-smush-lossy           5.827 -> 5.827
+wp_smush_dir_images      0 -> 0
+```
+
+**O 4.x criou uma segunda cópia das listas, em JSON, e deixou a antiga:**
+
+| Opção nova (4.x) | Opção antiga (mantida) | Tamanho |
+|---|---|---|
+| `wp-smush-error-items-list-json` | `wp-smush-error-items-list` | **401.661 e 401.659 bytes** |
+| `wp_smush_global_stats_json` | `wp_smush_global_stats` | 100 e 126 |
+| `wp-smush-optimize-list-json` | `wp-smush-optimize-list` | 22 e 20 |
+| `wp-smush-reoptimize-list-json` · `wp-smush-ignored-items-list-json` · `wp-smush-animated-items-list-json` | as três antigas | ≤ 2 |
+
+Confirmado que são novas: **o código 3.22.1 não menciona `-json` em lugar nenhum**; quem as
+escreve é o `core/class-installer.php` do 4.x, e o `uninstall.php` conhece as duas famílias.
+
+> **Custa quase nada, mas vale escrito:** são ~**800 KB** em `wp_options` onde antes havia 400 KB.
+> **Todas com `autoload=off`**, então **não entram em nenhuma requisição** — é peso morto em disco,
+> não em runtime. Não removi: a cópia antiga é o caminho de volta se o 4.x precisar ser revertido.
+
+Uma única diferença de configuração, e é inócua: em `wp-smush-lazy_load`, o `spinner.selected` foi
+de **1 para 2**. O `animation.selected` é `"fadein"`, então **o spinner não é usado** — mudou um
+valor que não é lido.
+
+## 🎯 O teste do lote — o envio de imagem, outra vez nos três caminhos
+
+Mesma bateria do lote 3, agora com a variável trocada sendo o **Smush**:
+
+| Caminho | Resultado |
+|---|---|
+| **A** — `media_handle_sideload` | ✅ ID 9000314 em **6,4 s** · **13 → 12 arquivos** (9 `td_*`) |
+| **B** — controlador REST | ✅ **201** em 6,8 s · 13 → 12 · offload `is_verified=1` |
+| **C** — 🔴 **NAVEGADOR**, sessão real por nginx + PHP-FPM | ✅ **201 em 8,0 s** · ID 9000318 |
+
+```
+caminho C  : 1600x1067 JPEG, 35.827 bytes, gerado no canvas do navegador
+derivadas  : 14 entradas -> 13 arquivos distintos (9 td_* do Newspaper)
+offload    : static.bahia.ba, sa-east-1, is_verified=1
+s3 ls      : 14 objetos no prefixo — 1 original + 13 derivadas
+srcset     : PRESENTE
+local      : 0 de 14 no disco, nos TRES caminhos — remove-local-file honrado
+```
+
+**Os dois plugins de mídia agora estão nas versões novas, e o envio continua funcionando pelo
+mesmo caminho que o repórter usou.** Era essa a pergunta dos lotes 3 e 4.
+
+## 🔴 O que o Smush toca e o Offload não — e por isso foi medido à parte
+
+O Smush **reescreve o HTML do front**: com `lazy_load` ligado, cada `<img>` sai com `data-src` em
+vez de `src`. **Um major que quebrasse isso quebraria a imagem de todo o site**, e nenhum teste de
+upload perceberia. Amostrado antes e depois, com *bypass* de cache:
+
+| Página | `<img>` | `data-src` | `srcset` | `loading="lazy"` | bytes |
+|---|---|---|---|---|---|
+| `/` | 17 → **17** | 17 → **17** | 0 → **0** | 0 → **0** | 566.166 → 566.109 |
+| `/economia/` | 18 → **18** | 17 → **17** | 0 → **0** | 0 → **0** | 307.120 → 306.307 |
+| matéria | 10 → **10** | 10 → **10** | 1 → **1** | 0 → **0** | 318.792 → 318.658 |
+
+**Idêntico em tudo que é comportamento.** O `smush-lazy-load.min.js` segue enfileirado, com as
+variáveis CSS de *placeholder* (`--smush-placeholder-aspect-ratio`) montadas por imagem.
+
+> 🔗 **E confirma de novo o que `imagens-td-sizes-regressao` já dizia:** `loading="lazy"` **nativo
+> continua em zero** nas três páginas. O *lazy* do site é inteiramente do Smush — se ele sair, sai
+> junto, e não há rede nativa embaixo.
+
+## Segundo plano: o 4.0 trouxe processamento em fundo, e ele não saiu andando sozinho
+
+O changelog do 4.0 anuncia *"Free Background Processing"*. Conferido depois da atualização:
+
+```
+eventos agendados no total : 33
+eventos do Smush           : 1   ->  wp_smush_daily_cron, para 03/09 10:04
+lotes em segundo plano     : nenhum criado
+```
+
+As únicas opções de lote no banco continuam sendo as **três do Offload**, que já existiam.
+**Nenhuma varredura de biblioteca foi disparada** — o que importa, porque são **155.675 anexos**.
+
+## Validação
+
+| Camada | Resultado |
+|---|---|
+| Site (home, 3 archives, 2 buscas, Quem Somos, autor) | **7 de 7** em 200 |
+| Busca | índice **242.865** linhas · **10 de 10** termos · 367–1.583 ms |
+| **Envio de mídia** | **os três caminhos**, incluindo o do navegador |
+| **Front-end com lazy load** | **idêntico**, tabela acima |
+| Rascunho com ACF + coautoria | subtítulo, imagem e **2 coautores**; removido sem resíduo |
+| **Editor no navegador** | 126 blocos registrados, **0 inválidos**, **Publicar** presente, 8 campos ACF, 11 metaboxes, 161 elementos tagDiv, 8 do CAP, **0 avisos do editor** |
+| Logs — **260 requisições** com bypass de cache | **0 fatais · 0 depreciações · 0 notices · 0 linhas do Smush** |
+| Limpeza | anexos e rascunhos removidos; `wp_as3cf_items` e anexos de volta a **155.600 / 155.675** |
+
+Os **28 avisos** da janela são os dois de sempre: **26** do Co-Authors Plus (um por acesso a
+`/colunistas/`, e a janela bateu 26 vezes lá) e **2** do PureDevs GDPR.
+
+### 📌 Console — 8 advertências, as mesmas de novo
+
+Zero erros. As mesmas oito do fim do lote 2 e do lote 3, item a item. Dos **126 blocos**
+registrados, os únicos com `apiVersion < 3` seguem sendo `adrotate/advert` e `adrotate/group`.
+
+> 🟡 **Um aviso a mais apareceu, e não é do lote — é de uma tela que a linha de base nunca cobriu.**
+> Na **lista de posts** (`edit.php`), e **não** no editor, o OneSignal registra
+> `could not load wp.data.select("core/editor")`. Faz sentido: naquela tela o `core/editor` não
+> existe mesmo. **A linha de base das 8 vale para `post-new.php`**, que é onde a redação escreve.
+> Fica anotado que ela **não cobre as outras telas do painel**, e que ninguém mediu essas.
+
+---
+
 # 🧪 O `uid` do teste — `kubectl exec` é root, o site é `www-data`
 
 **Registrado em 02/09/2026, a partir do lote 3. Vale para todos os lotes e para além deles.**
@@ -1908,9 +2070,26 @@ O erro simétrico é mais perigoso, porque **não deixa rastro no log**: como ro
 `chmod`, `mkdir` e escrita em qualquer diretório **sempre funcionam**. Um teste de permissão feito
 por root **passa quando deveria falhar** — e o defeito só aparece em produção, servido a leitor.
 
-> **A regra, curta:** se o que está sendo testado toca arquivo, permissão, dono ou
-> `WP_Filesystem`, o teste roda como **`www-data`**. Se não toca, tanto faz — mas custa nada rodar
-> como `www-data` sempre, e é o que passo a fazer.
+## 🔴 A outra metade, descoberta no lote 4: "sempre `www-data`" está errado também
+
+Apliquei a regra acima larga demais e rodei o **`Plugin_Upgrader`** como `www-data`. Falhou:
+
+```
+PHP Warning: chmod(): Operation not permitted
+=> ERRO: The update cannot be installed because some files could not be copied.
+```
+
+**Os arquivos dos plugins são do `root`** — vêm do `COPY` da imagem. O diretório `plugins/` é do
+`www-data`, mas os arquivos dentro dele não são, e ele não consegue sobrescrevê-los.
+
+| Tarefa | Usuário certo | Por quê |
+|---|---|---|
+| **Medir comportamento** — upload, remoção, permissão, `WP_Filesystem` | **`www-data`** | é quem o site usa |
+| **Escrever arquivo de plugin** — `Plugin_Upgrader`, `Core_Upgrader` | **`root`** | precisa sobrescrever arquivo de `root` vindo da imagem |
+
+> **A regra, corrigida:** **medir** como `www-data`; **instalar** como `root`. Não é "um dos dois
+> sempre" — é qual dos dois o gesto imita. E vale saber que o `WP_Upgrader` **desfaz sozinho**
+> quando a cópia falha: conferi que o diretório voltou com o mesmo número de arquivos do `tar`.
 
 **Onde isso já valia sem eu saber:** os lotes 1 e 2 foram validados por `exec` como root. Nenhum
 dos dois dependia de `WP_Filesystem`, então a conclusão deles continua de pé — mas a validação

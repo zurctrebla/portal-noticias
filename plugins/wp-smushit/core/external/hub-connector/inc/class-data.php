@@ -50,10 +50,10 @@ class Data {
 
 		// Attempt to get from parsed data.
 		if ( ! empty( $parts['scheme'] ) && ! empty( $parts['host'] ) ) {
-			return "{$parts['scheme']}://{$parts['host']}" . add_query_arg( null, null );
+			return "{$parts['scheme']}://{$parts['host']}" . add_query_arg( array() );
 		}
 
-		return add_query_arg( null, null );
+		return add_query_arg( array() );
 	}
 
 	/**
@@ -353,7 +353,7 @@ class Data {
 	 *
 	 * @return array
 	 */
-	public function profile_data( bool $force = false ) {
+	public function profile_data( $force = false ) {
 		// Get profile data.
 		$profile = Options::get_transient( 'profile' );
 
@@ -397,7 +397,7 @@ class Data {
 	 * @since 1.0.7
 	 * @return array
 	 */
-	public function membership_projects(): array {
+	public function membership_projects() {
 		$type = $this->membership_type();
 
 		if ( 'full' === $type ) {
@@ -430,7 +430,7 @@ class Data {
 	 * @since 1.0.7
 	 * @return array
 	 */
-	public function membership_excluded_projects(): array {
+	public function membership_excluded_projects() {
 		$excluded = array();
 		$data     = $this->membership_data();
 		if ( false === empty( $data['membership_excluded_projects'] ) && is_array( $data['membership_excluded_projects'] ) ) {
@@ -451,7 +451,7 @@ class Data {
 	 *
 	 * @return bool
 	 */
-	public function membership_has_access( string $access ): bool {
+	public function membership_has_access( $access ) {
 		$data     = $this->membership_data();
 		$accesses = $data['membership_access'];
 
@@ -465,5 +465,27 @@ class Data {
 		}
 
 		return in_array( $access, $accesses, true );
+	}
+
+	/**
+	 * Get full WPMU DEV Hosting ID.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return string
+	 */
+	public function get_full_wpmu_dev_hosting_id() {
+		if ( ! defined( 'WPMUDEV_HOSTING_SITE_ID' ) && ! isset( $_SERVER['WPMUDEV_HOSTED'] ) ) {
+			return '';
+		}
+
+		$server_id  = defined( 'WPMUDEV_HOSTING_SITE_ID' ) ? WPMUDEV_HOSTING_SITE_ID : gethostname();
+		$website_id = ( defined( 'WPMUDEV_HOSTING_WEBSITE_ID' ) && ! empty( WPMUDEV_HOSTING_WEBSITE_ID ) ) ? WPMUDEV_HOSTING_WEBSITE_ID : '';
+
+		if ( empty( $website_id ) ) { // non shared sub-hosting.
+			return $server_id; // return server id.
+		}
+
+		return implode( '-', array( $website_id, $server_id ) );
 	}
 }
