@@ -330,7 +330,7 @@ campo ficar vazio. Está aqui para não se perder.
 | 5 | Limite de 70/160 caracteres | Nenhuma — só conferir após atualizar o tema | Informativa |
 | 6 | Anúncio novo demora 3h para aparecer | **Operacional** — deixar a data de início em branco | Média (perda de exibição paga) |
 | 7 | 13 descrições cortadas no meio | **Operacional, na PRODUÇÃO** — apagar o campo de descrição do Yoast nas 13 | Baixa |
-| 13 | **AdRotate vai parar de funcionar dentro do editor** | **Comercial/estratégica** — recuperar a licença, trocar de plugin, ou aceitar publicidade fora do editor | Média — **sem data, mas com direção anunciada pelo WordPress** |
+| 13 | **AdRotate fechado em duas frentes: o editor e a subida do PHP** | **Comercial/estratégica** — recuperar a licença, trocar de plugin, ou aceitar publicidade fora do editor | Média — **sem data, mas agora com dois prazos convergindo** (02/09) |
 
 ---
 
@@ -607,7 +607,7 @@ técnico de limpeza da AWS.
 
 ---
 
-## 13. O AdRotate vai parar de funcionar dentro do editor — e não há de onde receber a correção
+## 13. O AdRotate está fechado em duas frentes — o editor e a subida do PHP — e não há de onde receber a correção
 
 > **Acrescentado em 01/09/2026.** Este item **substitui** o registro anterior, que dizia apenas
 > *"plugin pago sem licença, risco de segurança"*. **A natureza do problema mudou quando o
@@ -694,3 +694,40 @@ do AdRotate.** Foi resolvido sem nenhuma decisão de vocês, porque havia por on
 > **É o contraste que define este item.** O FooGallery custou uma atualização de rotina. Os dois
 > do AdRotate não têm por onde ser corrigidos enquanto a licença não existir — e é por isso que
 > eles viraram decisão de vocês, e o FooGallery não.
+
+### 🔴 E agora são DOIS prazos, no mesmo plugin, pelo mesmo motivo
+
+**Acrescentado em 02/09/2026.** Apareceu um segundo prazo sobre o AdRotate, por um caminho
+completamente diferente do editor — e ele **converge** com o primeiro.
+
+O portal roda hoje em **PHP 8.3**. A próxima versão da linguagem, a **8.4**, deixa de aceitar uma
+forma antiga de escrever código. Isso não quebra nada de imediato: **cada uso escreve uma linha de
+aviso no log**, a cada execução.
+
+Quando isso foi medido pela primeira vez, em 29/08, havia **280 usos** espalhados por vários
+plugins, e a conclusão foi *"não dá para subir para o 8.4: quase tudo está em código de terceiro,
+e depende de eles lançarem correção"*. **Um deles lançou.** Em 02/09 o WP Offload Media — a peça
+que sozinha respondia por 87% do problema — foi atualizado, e o número dele caiu de **248 para 1**.
+
+```
+antes do lote 3 : 286 usos no total
+depois          :  39
+```
+
+**O que sobrou muda a natureza do item:**
+
+| Onde | Usos | Situação |
+|---|---|---|
+| **`adrotate-pro`** | **9** | ❌ **pago e sem licença — sem canal, como no editor** |
+| Bibliotecas de outros plugins com canal aberto | 28 | 🟡 chegam quando os fabricantes lançarem |
+| **Código do nosso repositório** | **2** | ✅ **é trabalho nosso, e podemos fazer** |
+
+> **É o mesmo plugin, o mesmo problema de canal, e agora com dois relógios andando juntos:** o
+> AdRotate é o que trava o editor isolado **e** um dos que travam a subida do PHP. As três saídas
+> acima (**A** licença, **B** trocar de plugin, **C** aceitar fora do editor) **não mudam** — mas
+> o que se ganha escolhendo a **A** ou a **B** ficou maior, porque resolve dois problemas de uma
+> vez, e o que se perde ficando na **C** também.
+
+**Nenhum dos dois prazos é desta semana**, e nenhum quebra o site hoje. O que mudou é que o
+AdRotate deixou de ser "um plugin com um problema" e passou a ser **o único ponto do portal que
+está fechado em duas frentes ao mesmo tempo.**

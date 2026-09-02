@@ -307,18 +307,45 @@ mas cada chamada escreve no log.
 **O padrão é claro: 100% está em biblioteca de terceiro vendorizada.** Nenhuma linha do nosso
 código precisa mudar. O caminho para o 8.4 é **esperar os releases**, não corrigir código.
 
-> 🟢 **ATUALIZAÇÃO 02/09/2026 — o release do Offload chegou, e esta tabela está velha.** O lote 3
-> subiu o WP Offload Media para **3.3.1** (o 3.3.0 declara *"PHP 8.4 compatible"*), e a medição
-> caiu de **248 para 1** ocorrência nele — **286 → 39 no total**, com o mesmo instrumento antes e
-> depois. **O bloqueador desta tarefa era ele.** Ver a seção do lote 3 para os números e para o
-> que sobrou: 2 ocorrências no **nosso** repositório, 9 no AdRotate pago, 28 vendorizadas.
+> 🟢 **ATUALIZAÇÃO 02/09/2026 — a tabela acima está velha, e o bloqueio mudou de natureza.**
 
-**O que destrava:** WP Offload Media sozinho responde por **87%**. Quando ele sair com o
-`?` nos tipos, o número cai para 36 e o assunto muda de figura.
+O lote 3 subiu o WP Offload Media para **3.3.1** (o 3.3.0 declara *"PHP 8.4 compatible"* e
+*"PHP 8.5 compatible"* no changelog). Medido com o **mesmo instrumento antes e depois**, no mesmo
+pod:
 
-**Como reavaliar:** repetir a varredura (está em `git log` desta sessão) depois de cada rodada
-de atualização de plugins. **Não subir para 8.4 enquanto o total não estiver perto de zero em
-código que não controlamos.**
+```
+amazon-s3-and-cloudfront    248 -> 1        TOTAL   286 -> 39
+```
+
+**Esta tarefa não estava travada em "código de terceiro" no geral — estava travada NELE.** Ele
+respondia por 87%, e saiu. O que resta não é a mesma lista mais curta; **é uma lista de outra
+natureza:**
+
+| O que sobrou | Ocorrências | Quem resolve |
+|---|---|---|
+| **`adrotate-pro`** (`library/mobile-detect.php`) | **9** | ❌ **pago, sem licença, sem canal** — 🔗 vai para o **item 13** dos gestores |
+| `twitter-auto-publish`, `td-social-counter`, `google-site-kit` | 28 | 🟡 vendorizadas em plugins **com canal aberto** — chegam sozinhas |
+| **`bahia_refactor` e `bahia_social`** (`Mobile-Detect`) | **2** | ✅ **nosso repositório — é trabalho que podemos fazer** |
+| `mu-plugins` (código nosso) | 0 | — |
+
+**A frase de 29/08 — *"o caminho para o 8.4 é esperar os releases, não corrigir código"* — deixou
+de ser verdade inteira.** Hoje o caminho é:
+
+1. **2 são nossos.** Duas bibliotecas `Mobile-Detect` vendorizadas no nosso repositório. Não
+   dependem de ninguém, e o gesto é trocar `Foo $x = null` por `?Foo $x = null`.
+2. **28 chegam sozinhas**, conforme os fabricantes lançarem — todos têm canal aberto.
+3. **9 são do AdRotate, e não têm por onde chegar.** Mesmo plugin, mesmo problema de canal e agora
+   **o mesmo item de decisão que o do editor isolado**: são dois relógios andando juntos sobre a
+   mesma peça. Registrado no **item 13** do `PENDENCIAS-gestores.md`.
+
+> ⚠️ **Nota de instrumento, para não inflar o resultado.** A varredura de 29/08 contou **244** no
+> Offload e **280** no total; a minha conta **248** e **286** **no mesmo código 3.2.11**. São
+> regras de contagem um pouco diferentes, e a de 29/08 não foi reproduzida. **O que sustenta a
+> conclusão é que antes e depois saíram do mesmo instrumento** — a queda de 247 é real.
+
+**A Tarefa A não está pronta; está viável.** Ela saiu de "depende de release de terceiro" e virou
+"9 numa decisão comercial e 2 de trabalho nosso". **Não neste ciclo de lotes** — mas merece
+reavaliação assim que os sete fecharem.
 
 ## 🔴 Tarefa B — PRIORIDADE IMEDIATA APÓS ESTA JANELA
 
@@ -1266,7 +1293,7 @@ a licença ser resolvida.** Isso é do Albert, não meu.
 | **4** | **Smush** `3.22.1→4.3.2` | **major 3→4** | **Sozinho.** Mesmo pipeline do lote 3. Juntá-los destruiria a atribuição **exatamente onde ela mais importa**: se o upload quebrar, qual dos dois foi? |
 | **5** | **Co-Authors Plus** `3.6.6→4.1.1` | **major 3→4** | **Sozinho, por pedido seu.** Governa a autoria de toda matéria e a página de autor, que já teve incidente de desempenho (`author-archive-cap-lento`) |
 | **6** | **Yoast SEO** `27.7→28.3` | **major** | **Sozinho, por pedido seu.** Salto de major **com migração de indexáveis**: `wp_yoast_indexable` tem ~323 mil linhas. É o lote mais lento e o de maior escrita no banco |
-| **7** | **PublishPress Capabilities** `2.21.0→2.50.1` | 29 minors | **Sozinho.** Governa capacidades no admin e **é o principal suspeito da caixa Publicar ausente**. Por último de propósito: até aqui o editor já terá sido validado seis vezes, então uma mudança nele fica atribuída |
+| **7** | **PublishPress Capabilities** `2.21.0→2.50.1` | 29 minors | **Sozinho, e o alvo mudou em 02/09.** ~~Principal suspeito da caixa Publicar ausente~~ — a caixa existe, aquilo era artefato do meu `curl` sem JavaScript. O que ele governa é **capacidade e papel**, então o teste é **se a redação continua conseguindo publicar**, não se o botão está desenhado. Por último de propósito: até aqui o editor já terá sido validado seis vezes, então uma mudança nele fica atribuída |
 
 **Sete lotes, 12 plugins.** O 13º — ACF PRO — fica fora até a licença.
 
@@ -1291,7 +1318,12 @@ site · busca · **editor abrindo** · rascunho com ACF e coautoria · logs (fat
   novas?"*. Comparar contra o envio humano, não contra a hipótese
 - **5** — página de autor e **tempo** dela (o incidente do CAP foi de desempenho, não de erro)
 - **6** — contagem de `wp_yoast_indexable` antes e depois, e o tempo da migração
-- **7** — a caixa Publicar, com **olho humano no navegador**
+- **7** — **não** "a caixa Publicar existe" (já respondido em 02/09). O teste é de **permissão
+  efetiva, por papel**: para *administrator*, *editor* e *author*, conferir `user_can` em
+  `publish_posts`, `edit_published_posts`, `upload_files` e `edit_others_posts` **antes e depois**,
+  e publicar de fato um rascunho com o papel mais restrito que a redação usa. Um salto de 29
+  minors em quem governa capacidade tira acesso sem avisar — e o sintoma disso **não** é um botão
+  sumido, é um "você não tem permissão" na hora de publicar
 
 ## ⚠️ O que o rollback NÃO cobre
 
@@ -1839,6 +1871,50 @@ remoção do provedor — o bucket é o **de produção**.
 > prefixos**, fora do WordPress e sem passar pela guarda. **Não fiz por conta própria:** apagar do
 > bucket de produção é exatamente o risco que a guarda existe para evitar, e a prática fixada em
 > 01/09 foi deixar. **Fica para sua decisão — junto, ao fim do lote 4.**
+
+
+# 🧪 O `uid` do teste — `kubectl exec` é root, o site é `www-data`
+
+**Registrado em 02/09/2026, a partir do lote 3. Vale para todos os lotes e para além deles.**
+
+`kubectl exec` no pod do WordPress entra como **root**. O **PHP-FPM roda como `www-data`**. Para a
+maior parte do que se mede isso não importa — mas para **qualquer coisa que dependa de permissão
+de arquivo**, os dois usuários dão respostas **opostas**, e o teste passa a medir o instrumento.
+
+## O caso que revelou
+
+O WP Offload Media 3.3.1 trocou `@unlink()` por `WP_Filesystem` na remoção do arquivo local.
+Medido lado a lado, no mesmo pod, no mesmo segundo:
+
+| Sob qual usuário | `get_filesystem_method()` | `WP_Filesystem()` | remoção local | tempo do upload |
+|---|---|---|---|---|
+| **root** — o meu `kubectl exec` | cai para **FTP** | **`false`** | ❌ 13 de 13 ficam no disco | **40,2 s** |
+| **www-data** — o do PHP-FPM | **`direct`** | **`true`** (`WP_Filesystem_Direct`) | ✅ 0 de 13 | **7,3 s** |
+
+Como root, o log enchia de `AS3CF: Could not initialize WP_Filesystem` e
+`Undefined array key "remove_result"`. **Eu estava a um passo de reportar uma regressão do
+plugin que não existe** — e os 33 segundos a mais eram o *fallback* de FTP tentando e falhando.
+
+## O gesto
+
+```bash
+kubectl -n bahia-wordpress exec $POD -c wordpress -- \
+  su -s /bin/sh www-data -c 'php /tmp/teste.php'
+```
+
+## 🔴 E o inverso engana igual
+
+O erro simétrico é mais perigoso, porque **não deixa rastro no log**: como root, `@unlink()`,
+`chmod`, `mkdir` e escrita em qualquer diretório **sempre funcionam**. Um teste de permissão feito
+por root **passa quando deveria falhar** — e o defeito só aparece em produção, servido a leitor.
+
+> **A regra, curta:** se o que está sendo testado toca arquivo, permissão, dono ou
+> `WP_Filesystem`, o teste roda como **`www-data`**. Se não toca, tanto faz — mas custa nada rodar
+> como `www-data` sempre, e é o que passo a fazer.
+
+**Onde isso já valia sem eu saber:** os lotes 1 e 2 foram validados por `exec` como root. Nenhum
+dos dois dependia de `WP_Filesystem`, então a conclusão deles continua de pé — mas a validação
+**não teria detectado** um defeito de permissão se houvesse um.
 
 ---
 
