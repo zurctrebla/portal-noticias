@@ -1291,7 +1291,7 @@ a licença ser resolvida.** Isso é do Albert, não meu.
 | **2** | Disable Comments `2.5.3→2.8.0` · Category Order `1.9.1→2.0` · OneSignal `3.5.0→3.9.2` · FooGallery `2.4.32→3.2.6` | minor a **major** | Periféricos com **sintomas distinguíveis entre si** — comentário, ordem de termo, push e galeria não se confundem. Category Order toca ordenação de taxonomia, e **editorias são CPTs**: merece olhar na navegação |
 | **3** ✅ | **WP Offload Media Lite** `3.2.11→3.3.1` | minor | **Sozinho, por pedido seu.** É o caminho de toda a mídia do site, e o bucket é **compartilhado com produção**. Bônus: as **244 depreciações de PHP 8.4 da Tarefa A** estão aqui — vale remedir depois |
 | **4** ✅ | **Smush** `3.22.1→4.3.2` | **major 3→4** | **Sozinho.** Mesmo pipeline do lote 3. Juntá-los destruiria a atribuição **exatamente onde ela mais importa**: se o upload quebrar, qual dos dois foi? |
-| **5** | **Co-Authors Plus** `3.6.6→4.1.1` | **major 3→4** | **Sozinho, por pedido seu.** Governa a autoria de toda matéria e a página de autor, que já teve incidente de desempenho (`author-archive-cap-lento`) |
+| **5** ✅ | **Co-Authors Plus** `3.6.6→4.1.1` | **major 3→4** | **Sozinho, por pedido seu.** Governa a autoria de toda matéria e a página de autor, que já teve incidente de desempenho (`author-archive-cap-lento`) |
 | **6** | **Yoast SEO** `27.7→28.3` | **major** | **Sozinho, por pedido seu.** Salto de major **com migração de indexáveis**: `wp_yoast_indexable` tem ~323 mil linhas. É o lote mais lento e o de maior escrita no banco |
 | **7** | **PublishPress Capabilities** `2.21.0→2.50.1` | 29 minors | **Sozinho, e o alvo mudou em 02/09.** ~~Principal suspeito da caixa Publicar ausente~~ — a caixa existe, aquilo era artefato do meu `curl` sem JavaScript. O que ele governa é **capacidade e papel**, então o teste é **se a redação continua conseguindo publicar**, não se o botão está desenhado. Por último de propósito: até aqui o editor já terá sido validado seis vezes, então uma mudança nele fica atribuída |
 
@@ -2052,6 +2052,146 @@ Offload 3.3.1 · FooGallery 3.2.6 · Site Kit 1.186.0**, `wp-smush-version` em `
 Revalidado depois: **site 7 de 7**, **envio pelo REST em 201** (13 → 12 arquivos, offload
 verificado, `srcset` presente) e o **front-end com `data-src` idêntico** — 17/17, 17/18 e 10/10,
 os mesmos números de antes da atualização.
+
+---
+
+# ✅ LOTE 5 — concluído em 02/09/2026
+
+| Plugin | De | Para | Salto |
+|---|---|---|---|
+| Co-Authors Plus | 3.6.6 | **4.1.1** | **major 3 → 4** |
+
+Continua **ativo**. O pacote encolheu de **219 para 86 entradas**.
+
+## Rede antes de mexer
+
+| | |
+|---|---|
+| **`tar` do diretório** | `plugins-pre-lote5-cap-3.6.6.tgz` — **424.183 bytes, 219 entradas** |
+| **Dump do banco** | `dump-HOMOLOG-pre-lote5-20260902-1447.sql.gz` — **586.296.024 bytes**, `gzip -t` OK |
+| Primeira linha / rodapé | `-- MySQL dump 10.13` · `Dump completed on 2026-09-02 13:49:42` |
+| Estrutura | **92 `CREATE TABLE` × 92 tabelas** · 247 ocorrências do `siteurl` de homolog · ruído do `kubectl`: **0** |
+| SHA-256 | `5810847c…8cbb`, gravado ao lado · arquivo em `444` |
+
+Atualizado **como `root`** desde a primeira tentativa — a lição do lote 4 aplicada na forma certa.
+
+## 🔴 A pergunta que este lote tinha de responder primeiro: o nosso mu-plugin ainda se aplica?
+
+O `bahia-autor-archive.php` **desliga três filtros do CAP pelo nome do método** e injeta um UNION
+indexado no lugar. **Se o 4.1.1 tivesse renomeado ou movido esses métodos, `method_exists`
+devolveria `false`, os filtros não seriam removidos, e o SQL lento voltaria — com o nosso UNION
+por cima.** Falharia em silêncio, e o sintoma seria a página de autor lenta de novo.
+
+Medido, antes e depois:
+
+| | 3.6.6 | 4.1.1 |
+|---|---|---|
+| `CoAuthors_Plus::posts_where_filter` | existe | **existe** |
+| `CoAuthors_Plus::posts_join_filter` | existe | **existe** |
+| `CoAuthors_Plus::posts_groupby_filter` | existe | **existe** |
+| registrados em `posts_where` / `posts_join` / `posts_groupby` | prio 10 | **prio 10** |
+| `get_coauthors()` devolve | `WP_User` com `display_name`, `ID`, `user_nicename` | **idêntico** |
+| `get_coauthors`, `coauthors`, `is_coauthor_for_post` | existem | **existem** |
+| termos `author` / relações | 179 / 253.757 | **179 / 253.757** |
+
+**O mu-plugin continua se aplicando, e continua sendo necessário.**
+
+## 🎯 O 4.1.1 NÃO consertou o desempenho — e a medição prova que nossa correção ainda é o que segura
+
+Comparei, **já sobre o 4.1.1**, o conjunto do nosso UNION contra o conjunto que o **próprio CAP**
+produz, desligando o `pre_get_posts` do mu-plugin:
+
+| Autor | nosso UNION | CAP | bate? | nosso | **CAP** |
+|---|---|---|---|---|---|
+| `mateus-soares` | 1.763 | 1.763 | ✅ | 2.055 ms | **38.865 ms** |
+| `breno-cunha` | 991 | 991 | ✅ | 1.457 ms | **37.788 ms** |
+
+> **Duas conclusões, e as duas importam.** A **semântica** do nosso UNION continua idêntica à do
+> plugin — contagem igual, autor a autor. E o **problema de desempenho continua lá**: o SQL do CAP
+> ainda leva **38 segundos** por autor. O incidente `author-archive-cap-lento` **não foi resolvido
+> a montante**; se o mu-plugin sair, a página volta a beirar o timeout.
+
+**A página de autor, medida ponta a ponta** (segunda medida, com cache quente):
+
+| Autor | antes | depois |
+|---|---|---|
+| `da-redacao` | 3,89 s | **3,05 s** |
+| `mateus-soares` | 2,12 s | **1,88 s** |
+| `rodrigo-daniel` | 2,15 s | **1,84 s** |
+| `luis-filipe` | 2,18 s | **1,85 s** |
+| `breno-cunha` | 2,10 s | **1,84 s** |
+
+70 matérias listadas em todas, antes e depois. **Nenhuma regressão** — e uma melhora pequena e
+consistente, que não vou creditar ao plugin sem mais medida.
+
+## 🟢 O ganho mensurável: os avisos de `user_nicename` foram a ZERO
+
+Era o "antes" que o lote já tinha na mão, medido nas janelas dos lotes 3 e 4:
+
+```
+lote 3 — 240 requisicoes : 24 avisos  Attempt to read property "user_nicename" on false
+                                       co-authors-plus/php/class-coauthors-plus.php
+lote 4 — 260 requisicoes : 26 avisos  (1 por acesso a /colunistas/)
+lote 5 — 210 requisicoes :  0 avisos  <- ZERO
+```
+
+**Um por acesso à página de autor, e agora nenhum.** O total de avisos da janela caiu de **28 para
+1** — sobrou só o `headers already sent` do PureDevs GDPR.
+
+## 🟢 E o console caiu de 8 para 7 — a advertência que sumiu é dele
+
+```
+antes : 8 advertencias
+depois: 7   —  "wp.editPost.PluginDocumentSettingPanel is deprecated since version 6.6" SUMIU
+```
+
+E a causa foi **conferida no código, não inferida do sumiço**:
+
+```
+3.6.6  build/index.js :  a.PluginDocumentSettingPanel          (pacote @wordpress/edit-post)
+4.1.1  build/index.js :  wp.editor?.PluginDocumentSettingPanel
+                         || wp.editPost?.PluginDocumentSettingPanel
+```
+
+O 4.1.1 **prefere o `wp.editor`** e só cai no depreciado se ele não existir. Na 7.1 existe.
+
+> **Segunda advertência legada eliminada em três lotes** — a do FooGallery no lote 2, esta agora.
+> A linha de base para o lote 6 é **7**, e as que restam são: 2 do AdRotate (`apiVersion 1`),
+> `wp.compose.pure`, `wp.compose.withState`, e 3 de `added to the iframe incorrectly`.
+
+## Validação
+
+| Camada | Resultado |
+|---|---|
+| Site (home, 3 archives, 2 buscas, Quem Somos, autor) | **7 de 7** em 200 |
+| Busca | índice **242.865** · **10 de 10** termos · 107–682 ms |
+| **Página de autor** | **5 autores**, tabela acima — sem regressão |
+| **Byline com 2 coautores** | **2 links separados**, em 3 matérias — `Por <a>A</a> e <a>B</a>`, mesmas URLs |
+| **Escrita de coautoria** | rascunho com ACF + `add_coauthors()` de 2 pessoas, lido de volta, removido sem resíduo |
+| Envio de mídia (REST) | **201** · 13 → 12 arquivos · offload `is_verified=1` · `srcset` presente |
+| **Editor no navegador** | 126 blocos, **0 inválidos**, **Publicar** presente, 8 campos ACF, 11 metaboxes, **0 avisos do editor** |
+| Logs — **210 requisições** com bypass de cache | **0 fatais · 0 depreciações · 0 notices · 1 aviso** (o do GDPR) |
+| Migração de dados | **nenhuma** — sem opção `coauthor*` no banco, sem evento de cron |
+
+### Duas observações que não são defeito
+
+- **O painel do CAP no editor engordou.** O 4.x carrega **8 arquivos de JavaScript** próprios na
+  tela de edição (7 `index.js` de dependências + `co-authors-plus.js`), onde o 3.6.6 carregava um
+  pacote só. Os elementos de coautoria no DOM foram de 8 para 7. Nada quebrou, e a tela abre sem
+  aviso — mas é peso novo numa tela que já carrega 161 elementos do tagDiv.
+- **Os 259 `guest-author` do banco são órfãos.** Nenhum deles tem termo `cap-*` na taxonomia, e
+  nenhum tem post associado. É resíduo da importação, **anterior a este lote**, e por isso o
+  formato de guest author não é caminho exercitado aqui — toda a autoria do site passa por
+  `WP_User`.
+
+### 🟡 Uma divergência de número, dita como divergência
+
+O registro anterior falava em **28.379 posts (11,7%)** sem o termo do autor primário — o caso de
+borda que o ramo A do UNION cobre. **A minha medição de hoje devolveu 30.892 de 272.149 (11,4%)**,
+e o valor **não mudou com a atualização** (idêntico antes e depois). A diferença é de
+**instrumento**: eu contei todos os tipos publicáveis, e o número antigo tinha outro recorte. **O
+que o lote precisava provar — que o 4.1.1 não mexeu nessa fatia — está provado.** O número
+absoluto exato fica para quem precisar dele, com o recorte declarado.
 
 ---
 
