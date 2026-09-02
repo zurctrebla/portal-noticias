@@ -2193,6 +2193,28 @@ e o valor **não mudou com a atualização** (idêntico antes e depois). A difer
 que o lote precisava provar — que o 4.1.1 não mexeu nessa fatia — está provado.** O número
 absoluto exato fica para quem precisar dele, com o recorte declarado.
 
+## ✅ Sobreviveu ao rollout
+
+`git push origin develop` → **`051cb366`**, generation **132 → 133**, pod
+**`wordpress-7fbd67f758-mrnpr`**.
+
+No pod novo: **WP 7.1 · PHP 8.3.33 · CAP 4.1.1 · Offload 3.3.1 · Smush 4.3.2 · FooGallery 3.2.6 ·
+Site Kit 1.186.0**. E, o que mais importa aqui, **os três métodos do CAP continuam existindo e
+registrados em prioridade 10 no pod que veio da imagem** — o `bahia-autor-archive` segue válido.
+
+Revalidado depois: **site 7 de 7**, **página de autor em 1,49–2,68 s** nos cinco autores (70
+matérias em cada), e o **byline com 2 links separados** nas três matérias de teste.
+
+## 🟡 Resíduo deste lote no bucket, e ele NÃO foi apagado
+
+```
+2026/09/02110414   teste-rest-lote5-20260902-140412*   13 objetos, 481.100 bytes
+```
+
+**Não apaguei por conta própria.** As duas autorizações anteriores foram específicas — os
+prefixos do dia ao fim do lote 4, e o `01053739` de 01/09. Remoção do bucket de **produção** não
+herda autorização de uma vez para a seguinte. Fica com o portão já pronto para uma linha sua.
+
 ---
 
 # 🔗 DEPENDÊNCIA NÃO DECLARADA: o *lazy loading* do site inteiro é do Smush
