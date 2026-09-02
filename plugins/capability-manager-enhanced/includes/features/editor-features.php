@@ -57,10 +57,10 @@ $active_tab_slug = (!empty($_REQUEST['pp_caps_tab'])) ? sanitize_key($_REQUEST['
 
 $active_tab_type_obj = get_post_type_object($active_tab_slug);
 
-$active_tab_text = is_object($active_tab_type_obj) 
-    && isset($active_tab_type_obj->labels) 
+$active_tab_text = is_object($active_tab_type_obj)
+    && isset($active_tab_type_obj->labels)
     && isset($active_tab_type_obj->labels->singular_name)
-    ? 
+    ?
     $active_tab_type_obj->labels->singular_name : '';
 ?>
 
@@ -114,13 +114,14 @@ $active_tab_text = is_object($active_tab_type_obj)
                                     <input type="submit" name="editor-features-all-submit"
                                             value="<?php esc_attr_e('Save for all Post Types', 'capability-manager-enhanced') ?>"
                                             class="button-secondary ppc-editor-features-submit" style="float:right" />
-                                            
+
                                     <input type="submit" name="editor-features-submit"
-                                        value="<?php esc_attr_e(sprintf(esc_html__('Save %s Restrictions', 'capability-manager-enhanced'), esc_html($active_tab_text))); ?>"
+                                        value="<?php echo esc_attr(sprintf(esc_html__('Save %s Restrictions', 'capability-manager-enhanced'), esc_html($active_tab_text))); ?>"
                                         class="button-primary ppc-editor-features-submit" style="float:right"
-                                        data-current_cpt="<?php esc_attr_e(sprintf(esc_html__('Save %s Restrictions', 'capability-manager-enhanced'), 'post_type')); ?>" />
+                                        data-current_cpt="<?php echo esc_attr(sprintf(esc_html__('Save %s Restrictions', 'capability-manager-enhanced'), 'post_type')); ?>" />
                                 </div>
-                            
+                                <div class="clear"></div>
+
                             <?php if ($classic_editor) : ?>
                                 <ul class="nav-tab-wrapper">
                                     <li class="editor-features-tab gutenberg-tab nav-tab <?php if (empty($_REQUEST['ppc-tab']) || ('gutenberg' == $_REQUEST['ppc-tab'])) echo 'nav-tab-active';?>"
@@ -149,7 +150,7 @@ $active_tab_text = is_object($active_tab_type_obj)
                                                 <div id="ppc-capabilities-wrapper" class="postbox">
 
                                                 <div class="ppc-capabilities-tabs">
-                                                    <ul>
+                                                    <ul style="min-width: 200px;">
                                                         <?php
 
                                                             foreach($def_post_types as $type_name) {
@@ -161,14 +162,17 @@ $active_tab_text = is_object($active_tab_type_obj)
                                                                 $disabled_count += (is_array($ce_post_disabled) && isset($ce_post_disabled[$type_name])) ? count($ce_post_disabled[$type_name]) : 0;
 
                                                                 ?>
-                                                                <li data-slug="<?php echo esc_attr($type_name); ?>" 
-                                                                    data-content="cme-cap-type-tables-<?php echo esc_attr($type_name); ?>" 
+                                                                <li data-slug="<?php echo esc_attr($type_name); ?>"
+                                                                    data-content="cme-cap-type-tables-<?php echo esc_attr($type_name); ?>"
                                                                     data-name="<?php echo esc_attr($type_obj->labels->singular_name); ?>"
-                                                                    class="<?php echo esc_attr($active_class); ?>">
-                                                                    <?php echo esc_html($type_obj->labels->singular_name); ?>
+                                                                    class="<?php echo esc_attr($active_class); ?>"
+                                                                    style="display: flex;justify-content: space-between;">
+                                                                    <span class="feature-post-type-title">
+                                                                        <?php echo esc_html($type_obj->labels->singular_name); ?>
+                                                                    </span>
                                                                     <?php if ($disabled_count > 0) : ?>
-                                                                        <span class="pp-capabilities-feature-count">
-                                                                            <?php echo esc_html__('Restricted:', 'capability-manager-enhanced') . ' ' . esc_html($disabled_count); ?>
+                                                                        <span class="pp-capabilities-count-indicator">
+                                                                            <?php echo esc_html($disabled_count); ?>
                                                                         </span>
                                                                     <?php endif; ?>
                                                                 </li>
@@ -212,17 +216,18 @@ $active_tab_text = is_object($active_tab_type_obj)
 
                             <div class="editor-features-footer-meta">
                                 <div style="float:right">
-                                
+
                                 <input type="submit" name="editor-features-all-submit"
                                     value="<?php esc_attr_e('Save for all Post Types', 'capability-manager-enhanced') ?>"
                                     class="button-secondary ppc-editor-features-submit" style="float:right" />
-                                
+
                                 <input type="submit" name="editor-features-submit"
-                                    value="<?php esc_attr_e(sprintf(esc_html__('Save %s Restrictions', 'capability-manager-enhanced'), esc_html($active_tab_text))); ?>"
+                                    value="<?php echo esc_attr(sprintf(esc_html__('Save %s Restrictions', 'capability-manager-enhanced'), esc_html($active_tab_text))); ?>"
                                     class="button-primary ppc-editor-features-submit" style="float:right"
-                                    data-current_cpt="<?php esc_attr_e(sprintf(esc_html__('Save %s Restrictions', 'capability-manager-enhanced'), 'post_type')); ?>" />
+                                    data-current_cpt="<?php echo esc_attr(sprintf(esc_html__('Save %s Restrictions', 'capability-manager-enhanced'), 'post_type')); ?>" />
 
                                 </div>
+                                <div class="clear"></div>
                             </div>
 
                         </td>
@@ -230,12 +235,14 @@ $active_tab_text = is_object($active_tab_type_obj)
                 </table>
             </div><!-- .pp-column-left -->
             <div class="pp-column-right pp-capabilities-sidebar">
-                <?php 
+                <?php
                 $banner_messages = ['<p>'];
                 $banner_messages[] = esc_html__('Editor Features allows you to remove elements from the post editing screen.', 'capability-manager-enhanced');
                 $banner_messages[] = '</p><p>';
-                $banner_messages[] = sprintf(esc_html__('%1$s = No change', 'capability-manager-enhanced'), '<input type="checkbox" title="'. esc_attr__('usage key', 'capability-manager-enhanced') .'" disabled>') . ' <br />';
-                $banner_messages[] = sprintf(esc_html__('%1$s = This feature is denied', 'capability-manager-enhanced'), '<input type="checkbox" title="'. esc_attr__('usage key', 'capability-manager-enhanced') .'" checked disabled>'). ' <br />';
+                $banner_messages[] = '<input type="checkbox" title="'. esc_attr__('usage key', 'capability-manager-enhanced') .'" disabled> = '
+                    . esc_html__('No change', 'capability-manager-enhanced') . ' <br />';
+                $banner_messages[] = '<input type="checkbox" title="'. esc_attr__('usage key', 'capability-manager-enhanced') .'" checked disabled> = '
+                    . esc_html__('This feature is denied', 'capability-manager-enhanced') . ' <br />';
                 $banner_messages[] = '<p>';
                 $banner_messages[] = '<p><a class="button ppc-checkboxes-documentation-link" href="https://publishpress.com/knowledge-base/editor-features/"target="blank">' . esc_html__('View Documentation', 'capability-manager-enhanced') . '</a></p>';
                 $banner_title  = __('How to use Editor Features', 'capability-manager-enhanced');
@@ -254,7 +261,7 @@ $active_tab_text = is_object($active_tab_type_obj)
 </div>
 
 <style>
-    <?php 
+    <?php
         if (!empty($empty_post_type_feature_class)) {
             echo esc_html(implode(', ', $empty_post_type_feature_class));
             echo esc_html('{display: none !important}');
@@ -324,7 +331,7 @@ $active_tab_text = is_object($active_tab_type_obj)
 
             //Update button text
             $('input[name="editor-features-submit"]').val($button_text);
-            
+
         });
 
         // -------------------------------------------------------------

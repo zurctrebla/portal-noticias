@@ -99,8 +99,82 @@ class PP_Capabilities_Admin_Features
         $title['new-content']      = esc_html__('New', 'capability-manager-enhanced');
         $title['user-info']        = esc_html__('User Display Name', 'capability-manager-enhanced');
         $title['wpseo-menu']       = esc_html__('Yoast SEO', 'capability-manager-enhanced');
+        $title['edit']             = esc_html__('Edit Post', 'capability-manager-enhanced');
+        $title['site-editor']      = esc_html__('Edit Site', 'capability-manager-enhanced');
 
         return isset($title[$id]) ? $title[$id] : $id;
+    }
+
+    /**
+     * Add fallback toolbar entries for dynamic frontend links.
+     *
+     * @return void
+     */
+    private static function addDynamicToolbarFallbacks()
+    {
+        global $toolbar_items;
+
+        if (!is_array($toolbar_items)) {
+            $toolbar_items = [];
+        }
+
+        $fallback_items = [
+            'edit' => [
+                'label'    => self::elementToolbarTitleFallback('edit'),
+                'parent'   => '',
+                'step'     => 1,
+                'position' => 0,
+                'action'   => 'ppc_adminbar'
+            ],
+            'site-editor' => [
+                'label'    => self::elementToolbarTitleFallback('site-editor'),
+                'parent'   => '',
+                'step'     => 1,
+                'position' => 0,
+                'action'   => 'ppc_adminbar'
+            ],
+        ];
+
+        // Keep existing runtime entries untouched; only inject missing dynamic items.
+        foreach ($fallback_items as $id => $item) {
+            if (!isset($toolbar_items[$id])) {
+                $fallback_items[$id]['position'] = !empty($toolbar_items['new-content']['position'])
+                    ? ((int)$toolbar_items['new-content']['position'] + 1)
+                    : 999999998;
+                $fallback_items[$id]['step'] = !empty($toolbar_items['new-content']['step'])
+                    ? (int)$toolbar_items['new-content']['step']
+                    : 1;
+            } else {
+                unset($fallback_items[$id]);
+            }
+        }
+
+        if (empty($fallback_items)) {
+            return;
+        }
+
+        // Insert right after + New when available, otherwise append.
+        $ordered_items = [];
+        $inserted = false;
+
+        foreach ($toolbar_items as $id => $item) {
+            $ordered_items[$id] = $item;
+
+            if ('new-content' === $id) {
+                foreach ($fallback_items as $fallback_id => $fallback_item) {
+                    $ordered_items[$fallback_id] = $fallback_item;
+                }
+                $inserted = true;
+            }
+        }
+
+        if (!$inserted) {
+            foreach ($fallback_items as $fallback_id => $fallback_item) {
+                $ordered_items[$fallback_id] = $fallback_item;
+            }
+        }
+
+        $toolbar_items = $ordered_items;
     }
 
     /**
@@ -187,6 +261,10 @@ class PP_Capabilities_Admin_Features
     {
         global $toolbar_items;
 
+        if (function_exists('ppc_features_get_admin_bar_nodes')) {
+            ppc_features_get_admin_bar_nodes();
+        }
+
         if (!is_array($toolbar_items)) {
             $toolbar_items = [];
         }
@@ -203,6 +281,7 @@ class PP_Capabilities_Admin_Features
         $toolbarTree = self::formatAdminToolbarTree($toolbars);
         //set toolbar element with steps
         self::setAdminToolbarElement($toolbarTree);
+        self::addDynamicToolbarFallbacks();
 
         return $toolbar_items;
     }
@@ -331,9 +410,16 @@ class PP_Capabilities_Admin_Features
             }
         }
 
-		//merge all array values incase it's more than role
-        //$all_disabled_elements = array_merge(...$all_disabled_elements);  // This is a PHP 7.4 operator
-        $all_disabled_elements = (is_array($all_disabled_elements) && isset($all_disabled_elements[0])) ? array_merge($all_disabled_elements[0]) : [];
+        if (is_array($all_disabled_elements) && !empty($all_disabled_elements)) {
+            $all_disabled_elements = array_filter($all_disabled_elements, 'is_array');
+            if (!empty($all_disabled_elements)) {
+                $all_disabled_elements = call_user_func_array('array_merge', $all_disabled_elements);
+            } else {
+                $all_disabled_elements = [];
+            }
+        } else {
+            $all_disabled_elements = [];
+        }
 
         do_action('ppc_admin_feature_restriction', $all_disabled_elements);
 
@@ -346,7 +432,7 @@ class PP_Capabilities_Admin_Features
                 //backend admin tool bar
                 add_action('admin_head', [__CLASS__, 'disableDashboardBarBackend']);
             } else {
-			    add_action( 'wp_before_admin_bar_render', [ __CLASS__, 'disableDashboardBar' ], 99 );
+                add_action( 'wp_before_admin_bar_render', [ __CLASS__, 'disableDashboardBar' ], 9999 );
             }
 		}
 

@@ -1293,7 +1293,7 @@ a licença ser resolvida.** Isso é do Albert, não meu.
 | **4** ✅ | **Smush** `3.22.1→4.3.2` | **major 3→4** | **Sozinho.** Mesmo pipeline do lote 3. Juntá-los destruiria a atribuição **exatamente onde ela mais importa**: se o upload quebrar, qual dos dois foi? |
 | **5** ✅ | **Co-Authors Plus** `3.6.6→4.1.1` | **major 3→4** | **Sozinho, por pedido seu.** Governa a autoria de toda matéria e a página de autor, que já teve incidente de desempenho (`author-archive-cap-lento`) |
 | **6** ✅ | **Yoast SEO** `27.7→`**`28.4`** — ⚠️ o plano dizia **28.3**, o canal andou antes da execução | **major** | **Sozinho, por pedido seu.** ~~O lote mais lento e o de maior escrita no banco~~ — **a previsão não se confirmou**: a migração é DDL instantâneo (duas colunas anuláveis), os ~316 mil indexáveis **não** foram reconstruídos, e o `FILE_SIZE` não mudou. Ver a seção do lote 6 |
-| **7** | **PublishPress Capabilities** `2.21.0→2.50.1` | 29 minors | **Sozinho, e o alvo mudou em 02/09.** ~~Principal suspeito da caixa Publicar ausente~~ — a caixa existe, aquilo era artefato do meu `curl` sem JavaScript. O que ele governa é **capacidade e papel**, então o teste é **se a redação continua conseguindo publicar**, não se o botão está desenhado. Por último de propósito: até aqui o editor já terá sido validado seis vezes, então uma mudança nele fica atribuída |
+| **7** ✅ | **PublishPress Capabilities** `2.21.0→2.50.1` | 29 minors | **Sozinho, e o alvo mudou em 02/09.** ~~Principal suspeito da caixa Publicar ausente~~ — a caixa existe, aquilo era artefato do meu `curl` sem JavaScript. O que ele governa é **capacidade e papel**, então o teste é **se a redação continua conseguindo publicar**, não se o botão está desenhado. Por último de propósito: até aqui o editor já terá sido validado seis vezes, então uma mudança nele fica atribuída |
 
 **Sete lotes, 12 plugins.** O 13º — ACF PRO — fica fora até a licença.
 
@@ -2277,7 +2277,14 @@ $this->add_column($table, 'meta_description_score', 'integer', ['null' => true, 
 | tamanho | 244,8 MB dados + 87,8 MB índice · `FILE_SIZE` **388 MB** — **igual ao de antes** |
 | `wp_yoast_migrations` | 26 → **27** |
 
-**E nenhuma reindexação foi disparada:**
+**E nenhuma reindexação foi disparada** — 🔴 **e esta frase estava errada, corrigida em 02/09**.
+Ver o §16.12 do `HANDOVER.md` e a seção do incidente do lote 7: as três opções abaixo marcam a
+reindexação **iniciada pela interface**, e não dizem nada sobre o **cron de fundo**, que estava
+rodando o tempo todo — e continua rodando em **produção**, na 27.7, de 15 em 15 minutos. O que a
+28.4 não fez foi **disparar** trabalho novo: a versão do construtor de indexável é a **mesma** nas
+duas (`'post' => 2`), então nenhum indexável existente virou desatualizado.
+
+As três opções, que eu li e que respondem outra pergunta:
 
 ```
 wpseo_indexation_started            : false
@@ -2418,6 +2425,190 @@ iguais** — inclusive o subtítulo na `meta description` da matéria.
 **Nenhum resíduo no bucket:** este lote não exercitou envio de mídia, então não criou objeto de
 teste. O `2026/09/02110414` do lote 5 foi removido no início desta etapa, com o portão fechado em
 **13 esperados / 13 apagados / 0 restantes**, e os **99 objetos de produção intactos**.
+
+---
+
+# ✅ LOTE 7 — concluído em 02/09/2026
+
+| Plugin | De | Para | Salto |
+|---|---|---|---|
+| PublishPress Capabilities | 2.21.0 | **2.50.1** | 29 minors |
+
+**Rede antes:** `tar` (901.930 bytes, 292 entradas) e dump verificado —
+`dump-HOMOLOG-pre-lote7-20260902-1816.sql.gz`, **586.537.347 bytes**, `gzip -t` OK, rodapé
+`Dump completed on 2026-09-02 17:19:51`, **92 `CREATE TABLE` × 92 tabelas**, 249 ocorrências do
+`siteurl`, ruído do `kubectl`: 0, SHA-256 `c787f6fe…8713`, arquivo em `444`.
+
+## Qual papel a redação usa de fato — a pergunta que reordenou o teste
+
+| papel | pessoas | posts no acervo | **últimos 120 dias** |
+|---|---|---|---|
+| **editor** | **17** | **194.838** | **15 pessoas · 6.478 posts** |
+| author | 2 | **7** | 2 pessoas · 7 posts |
+| contributor | 1 | 0 | — |
+| administrator | 6 | 239 | 3 pessoas · 84 posts |
+
+> **A redação publica como `editor`, e não há ambiguidade.** O `author` tem **7 posts em todo o
+> acervo** — testá-lo era academia, como você suspeitou. Testei os três mesmo assim, mas o peso
+> da conclusão está no `editor`.
+
+Há ainda **128 usuários com papel `none`**, responsáveis por 73.694 posts históricos: são os
+autores da importação, sem capacidade nenhuma. Não entram, não publicam.
+
+## 🎯 As capacidades, antes × depois — diferidas uma a uma, não por contagem
+
+O `md5` das definições de papel mudou (`3d265e53…` → `034252d1…`), e as contagens também
+(administrator 126 → 128, editor 60 → **58**). **Contagem não diz o quê**, então extraí o "antes"
+do dump e diferi capacidade por capacidade:
+
+```
+administrator  +2  GANHOU  manage_capabilities_admin_notices
+                           manage_capabilities_admin_styles
+editor         -2  PERDEU  manage_capabilities_frontend_features
+                           manage_capabilities_redirects
+author, contributor, subscriber, wpseo_manager, wpseo_editor   IDENTICOS
+```
+
+**As quatro capacidades editoriais estão intactas em todos os papéis:**
+
+| capacidade | administrator | editor | author | contributor | subscriber |
+|---|---|---|---|---|---|
+| `publish_posts` | sim | **sim** | sim | – | – |
+| `edit_published_posts` | sim | **sim** | sim | – | – |
+| `upload_files` | sim | **sim** | sim | sim | – |
+| `edit_others_posts` | sim | **sim** | – | – | – |
+
+Idênticas antes e depois, na definição do papel e em `user_can()` sobre usuário real.
+
+> **O que o editor perdeu são duas telas do próprio plugin de capacidades** — "frontend features"
+> e "redirects". É permissão de administrar o plugin, **não de publicar**. Um editor que abrisse
+> essas telas deixa de abrir; ninguém da redação abre.
+
+## ✅ E publicou de verdade — com a matéria aparecendo no site
+
+| papel | REST `POST /wp/v2/posts` | post | **no site** |
+|---|---|---|---|
+| **editor** (#137) | **201** | 9000330 `publish` | **200** · título na página · corpo presente |
+| author (#170) | 201 | 9000331 `publish` | **200** · corpo presente |
+| contributor (#165) | — | `publish_posts=NAO`, **igual a antes** | — |
+
+**Não bastava o botão funcionar.** Busquei as duas URLs públicas com *bypass* de cache: as duas
+respondem **200**, com o título e o corpo do teste no HTML servido. Removidos depois, sem resíduo
+— `wp_as3cf_items` e anexos de volta a **155.600 / 155.675**.
+
+## 📏 A lacuna de medição virou linha de base
+
+Nenhum lote tinha medido o tempo de abertura do editor. Agora existe, medida por `iframe` com
+`performance.getEntriesByType('navigation')`, quatro amostras antes e dez depois:
+
+| | antes do lote 7 | depois |
+|---|---|---|
+| **recursos carregados** | **250** | **250** |
+| **arquivos de JS** | **178** | **178** |
+| editor pronto (melhor amostra) | 3.988 ms | 3.994 ms |
+
+**As duas medidas estruturais são idênticas — o lote 7 não acrescentou peso.** O tempo, nas
+amostras posteriores, oscilou de 4,0 a 32,9 s: a medição pegou o ambiente sob a contenção descrita
+abaixo. **Recurso e JS não dependem de carga; tempo depende.** Por isso a conclusão se apoia nos
+dois primeiros e não no terceiro.
+
+> ⚠️ **Esta linha de base é depois dos lotes 1 a 6.** Não existe o "antes do lote 1", e não dá para
+> reconstruir. O que fica estabelecido é o ponto de partida daqui para a frente.
+
+## Validação
+
+| Camada | Resultado |
+|---|---|
+| Site | **7 de 7** em 200 (depois da recuperação, abaixo) |
+| Busca | **10 de 10** termos, contagens idênticas (501, 483) |
+| **Capacidades** | tabela acima, diferidas uma a uma |
+| **Publicação real** | editor e author publicaram, e a matéria apareceu |
+| **Editor no navegador** | 126 blocos, 0 inválidos, **Publicar** presente, 8 campos ACF, 11 metaboxes, 0 avisos |
+| **Console** | **7 advertências** — a linha de base do lote 5 segurou pelo terceiro lote seguido |
+
+---
+
+# 🔴 INCIDENTE: homolog fora do ar durante o lote 7 — e não foi o lote 7
+
+**02/09/2026.** Durante a validação do lote 7 homolog parou de responder: 504 na home e na busca,
+10 s num archive. **A causa não era o plugin que estava sendo atualizado.**
+
+## O sintoma que separou as hipóteses
+
+A busca **devolvia os resultados certos** — 10 de 10 termos, contagens idênticas às de sempre
+(501, 483) — e levava **3 a 163 segundos** onde levava 107 a 824 ms.
+
+> **Resultado certo com tempo absurdo é contenção, não defeito de consulta.** Foi o que impediu de
+> procurar bug no lote 7.
+
+## A causa, no `PROCESSLIST`
+
+```sql
+SELECT P.ID FROM wp_posts AS P
+WHERE P.post_type IN (30 tipos) AND P.post_status NOT IN ('auto-draft')
+  AND NOT EXISTS (SELECT 1 FROM wp_yoast_indexable I
+                  WHERE I.object_id = P.ID AND I.object_type = 'post' AND I.version = 2)
+LIMIT 15
+```
+
+**Cinco cópias empilhadas, de 13 a 28 minutos cada**, disparadas pelo `wpseo_indexable_index_batch`
+— o cron de indexação do Yoast, que roda **de 15 em 15 minutos**. Cada disparo encavalava no
+anterior, que ainda não tinha terminado.
+
+**Homolog tem ~138 mil candidatos** (23.654 posts sem indexável + 114.873 indexáveis em
+`version='0'`) e um `innodb_buffer_pool` de **128 MB** contra uma `wp_posts` de **1,1 GB**. O
+`LIMIT 15` não ajuda: para achar 15, varre a tabela.
+
+### E eu contribuí, de duas formas
+
+1. **Duas varreduras minhas** (`post_title LIKE 'Teste%'` sobre 435 mil linhas) que eu interrompi
+   no terminal — **e que continuaram rodando no servidor**, 20 e 23 minutos. Ver §16.13.
+2. **O ClaudeBot crawlando homolog** em rajada de ~46 req/min, com `?p=NNNN` que **fura o cache**
+   — cada uma renderizando uma página de ~320 KB. Homolog tem `blog_public=1`, serve
+   `<meta name="robots" content="index, follow">` e **não tem `robots.txt`** (404 no nginx).
+
+## A correção aplicada: `mu-plugins/bahia-yoast-indexacao-fundo.php`
+
+**Ataca a causa, não o efeito.** Matar consulta presa trata o sintoma e o cron reagenda em 15
+minutos.
+
+| | |
+|---|---|
+| **O que faz** | `wp_clear_scheduled_hook('wpseo_indexable_index_batch')` no `init` e no `admin_init`, mais `remove_all_actions()` no mesmo gancho |
+| **Por que os dois** | o Yoast **reagenda sozinho** em `admin_init` prioridade 11 (`background-indexing-integration.php:211`); tirar da fila uma vez não basta |
+| **Onde age** | **só em homolog** — guarda `bahia_ambiente()` na primeira linha do corpo |
+| **O que custa** | nada de funcionalidade: o indexável é construído **sob demanda**. Troca-se trabalho de fundo caro por trabalho sob demanda barato |
+| **🔴 Como reverter** | **apagar o arquivo.** Sem estado guardado, sem opção escrita, sem migração. No carregamento seguinte o Yoast reagenda sozinho |
+| **Como conferir que voltou** | `wp_next_scheduled('wpseo_indexable_index_batch')` deixa de ser `false` |
+| **Condição de saída** | escrita no cabeçalho do arquivo: ou os ~138 mil pendentes são preenchidos em janela controlada, ou fica decidido **por escrito** que a indexação antecipada não interessa |
+
+Conferido depois de aplicar:
+
+```
+wp_next_scheduled('wpseo_indexable_index_batch') : false
+has_action('wpseo_indexable_index_batch')        : false
+```
+
+## A recuperação, medida
+
+```
+                        durante          depois
+site                    4 de 7 em 200    7 de 7 em 200
+busca                   504 / 3-163 s    10 de 10, 310 ms a 7,8 s
+Threads_running         16               2
+consultas ativas > 60s  8                0
+```
+
+**A busca voltou funcionalmente inteira.** Os tempos seguem acima da linha de base (107–824 ms)
+porque o `buffer_pool` de 128 MB ficou frio depois das varreduras — reaquece com uso.
+
+## 🟡 O que fica como tarefa, e não é do lote 7
+
+**Homolog é rastreável publicamente.** `blog_public=1`, `robots: index, follow`, sem
+`robots.txt`. Foram vistos **ClaudeBot e Googlebot**. Além da carga, é conteúdo duplicado do site
+de produção num domínio diferente. **Um `robots.txt` com `Disallow: /` em homolog resolve os
+dois**, e é uma linha no nginx ou um filtro — mas é decisão sua, porque muda o que os buscadores
+enxergam.
 
 ---
 

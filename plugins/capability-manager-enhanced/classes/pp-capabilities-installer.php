@@ -12,6 +12,7 @@ class PP_Capabilities_Installer
     public static function runInstallTasks($currentVersion)
     {
         self::addPluginCapabilities();
+        self::addAdminNoticesCapabilities();
 
         /**
          * @param string $currentVersion
@@ -34,6 +35,20 @@ class PP_Capabilities_Installer
         }
         if (version_compare($currentVersions, '2.17.0', '<')) {
             self::addRedirectsCapabilities();
+        }
+
+        if (version_compare($currentVersions, '2.30.0', '<')) {
+            self::addAdminStylesCapabilities();
+        }
+
+
+        if (version_compare($currentVersions, '2.43.0', '<')) {
+            self::addAdminNoticesCapabilities();
+            self::migrateAdminNoticesDashboardFeatureStatus();
+        }
+
+        if (version_compare($currentVersions, '2.50.1', '<')) {
+            self::removeLegacyEditorCapabilities();
         }
 
         /**
@@ -60,11 +75,12 @@ class PP_Capabilities_Installer
         }
 
         /**
-         * If it's a fresh installation, we're giving 'administrator' and 'editor'
-         * all capabilities
+         * On a fresh installation, grant plugin management capabilities only to
+         * administrators. Other roles can still be delegated the
+         * manage_capabilities capability explicitly.
          */
         if (empty($eligible_roles)) {
-            $eligible_roles = ['administrator', 'editor'];
+            $eligible_roles = ['administrator'];
         }
 
         /**
@@ -80,13 +96,32 @@ class PP_Capabilities_Installer
         }
     }
 
+    /**
+     * Remove plugin management capabilities previously granted to Editors by
+     * the installer. Administrators can explicitly delegate them again.
+     */
+    private static function removeLegacyEditorCapabilities()
+    {
+        $role = get_role('editor');
+        if (!is_object($role)) {
+            return;
+        }
+
+        $pp_capabilities = apply_filters('cme_publishpress_capabilities_capabilities', []);
+        foreach ($pp_capabilities as $cap) {
+            if ($role->has_cap($cap)) {
+                $role->remove_cap($cap);
+            }
+        }
+    }
+
     private static function addFrontendFeaturesCapabilities()
     {
 
-        $eligible_roles = ['administrator', 'editor'];
+        $eligible_roles = ['administrator'];
 
         /**
-         * Add frontend features capabilities to admin and editor roles
+         * Add frontend features capabilities to administrator roles.
          */
         foreach ($eligible_roles as $eligible_role) {
             $role = get_role($eligible_role);
@@ -99,10 +134,10 @@ class PP_Capabilities_Installer
     private static function addRedirectsCapabilities()
     {
 
-        $eligible_roles = ['administrator', 'editor'];
+        $eligible_roles = ['administrator'];
 
         /**
-         * Add redirect capabilities to admin and editor roles
+         * Add redirect capabilities to administrator roles.
          */
         foreach ($eligible_roles as $eligible_role) {
             $role = get_role($eligible_role);
@@ -137,6 +172,60 @@ class PP_Capabilities_Installer
         if (!empty($role_redirects)) {
             update_option('capsman_role_redirects', $role_redirects);
         }
+    }
+
+    private static function addAdminStylesCapabilities()
+    {
+        $eligible_roles = ['administrator'];
+
+        /**
+         * Add admin styles capabilities to administrator roles.
+         */
+        foreach ($eligible_roles as $eligible_role) {
+            $role = get_role($eligible_role);
+            if (is_object($role) && !$role->has_cap('manage_capabilities_admin_styles')) {
+                $role->add_cap('manage_capabilities_admin_styles');
+            }
+        }
+    }
+
+    private static function addAdminNoticesCapabilities()
+    {
+        $eligible_roles = ['administrator'];
+
+        foreach ($eligible_roles as $eligible_role) {
+            $role = get_role($eligible_role);
+            if (is_object($role) && !$role->has_cap('manage_capabilities_admin_notices')) {
+                $role->add_cap('manage_capabilities_admin_notices');
+            }
+        }
+    }
+
+    private static function migrateAdminNoticesDashboardFeatureStatus()
+    {
+        $dashboard_features_status = get_option('capsman_dashboard_features_status', []);
+        if (!is_array($dashboard_features_status)) {
+            $dashboard_features_status = [];
+        }
+
+        if (isset($dashboard_features_status['admin-notices']['status'])) {
+            return;
+        }
+
+        $legacy_notice_settings = get_option('cme_admin_notice_options', []);
+        $legacy_has_values = false;
+
+        if (is_array($legacy_notice_settings) && !empty($legacy_notice_settings)) {
+            foreach ($legacy_notice_settings as $role_settings) {
+                if (is_array($role_settings) && !empty(array_filter($role_settings))) {
+                    $legacy_has_values = true;
+                    break;
+                }
+            }
+        }
+
+        $dashboard_features_status['admin-notices']['status'] = $legacy_has_values ? 'on' : 'off';
+        update_option('capsman_dashboard_features_status', $dashboard_features_status, false);
     }
 
 }

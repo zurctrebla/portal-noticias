@@ -1153,57 +1153,106 @@ de dar a virada por encerrada (seção 8.5).
 
 ---
 
-## 10. 🟡 ACOMPANHAR NA PRIMEIRA HORA depois que produção receber o Yoast 28.4
+## 10. ✅ PORTÃO DO YOAST 28.4 EM PRODUÇÃO — respondido em 02/09/2026, e está LIBERADO
 
-**Acrescentado em 02/09/2026, no fechamento do lote 6.**
+**Substitui a versão anterior desta seção, que pedia medição.** As medições foram feitas, **em
+produção, somente leitura**, e as quatro perguntas têm resposta.
 
-A atualização do Yoast **não** faz o que se temia — a migração é DDL instantâneo e não reconstrói
-indexável nenhum. Mas ela **deixa um processo de fundo ligado**, e ele é novo:
+### A pergunta que estava por trás: o Yoast 28.4 cria trabalho de fundo em produção?
+
+**Não. Nenhum.** E a prova é mais forte do que "medimos e deu pouco":
 
 ```
-cron   : wpseo_cleanup_cron        (nao existia na 27.7)
-quando : de hora em hora
-teto   : 1.000 linhas por consulta
-         apply_filters('wpseo_cron_query_limit_size', 1000)
-         src/integrations/cleanup-integration.php:241
+wordpress-seo/src/values/indexables/indexable-builder-versions.php
+
+  27.7  ->  'post' => 2      'term' => 2      'user' => 2 ...
+  28.4  ->  'post' => 2      'term' => 2      'user' => 2 ...     IDENTICO
 ```
 
-Em homolog ele rodou **uma vez**, removeu **997 linhas de `yoast_indexable_hierarchy`** (997 de um
-teto de 1.000, assinatura clara de uma passada do lote), e depois as contagens ficaram estáveis.
+O Yoast marca cada indexável com a **versão do construtor** que o gerou, e reconstrói o que
+estiver abaixo da versão atual. **A 28.4 não muda nenhuma dessas versões** — então nenhum
+indexável existente vira "desatualizado" pela atualização. **Não há reindexação a disparar.**
 
-### Por que isso não se transporta direto para produção
+### 1. Quantos posts sem linha de indexável existem em produção hoje?
+
+**Zero.** Medido com a lista de tipos do próprio Yoast (`get_indexable_post_types()`, 31 tipos,
+sem `attachment`):
+
+```
+anti-join do Yoast, LIMIT 15 : 1.777 / 1.673 / 1.583 ms   ->  0 linhas
+contagem completa            : 0 posts, em 1.558 ms
+indexaveis de post           : 265.645, TODOS em version='2'
+posts publicaveis            : 275.109
+```
+
+> ⚠️ **Uma medição minha errada, corrigida antes de virar número.** A primeira tentativa usou
+> `get_post_types(['public'=>true])` e devolveu **157.800**. O erro era incluir `attachment` —
+> são 155 mil anexos que o Yoast **não** indexa. A lista do plugin é a única que vale.
+
+**Homolog é o oposto**, e por isso quebrou: 23.654 posts sem indexável **mais 114.873 indexáveis
+em `version='0'`** — cerca de **138 mil** candidatos. São linhas antigas, do retrato de produção
+de 28/07, que nunca foram reconstruídas porque **ninguém navega em homolog**. Produção convergiu
+sozinha, com tráfego real; homolog ficou parada.
+
+### 2. O pool de 11 GB absorve o custo ou só o esconde?
+
+**Absorve, e dá para ver a diferença de ordem de grandeza:**
 
 | | homolog | **produção** |
 |---|---|---|
-| Posts | 272 mil | **435 mil** |
-| `wp_posts` | — | **1,1 GB** |
-| Banco | `db.t3.micro`, *buffer pool* 256 MB | maior, mas **sem folga medida** |
+| `innodb_buffer_pool_size` | **128 MB** (não 256, como os registros supunham) | **11.264 MB** |
+| `wp_posts` | 1,1 GB | 1,1 GB |
+| O mesmo anti-join, `LIMIT 15` | **13 a 28 minutos** | **~1,6 s** |
+| Candidatos a indexar | ~138.000 | **0** |
 
-> **"Pressão limitada" não é "pressão nenhuma".** O incidente de capacidade desta manhã mostrou
-> que o pool satura com pouco, e o volume de produção é **1,6 vez** o de homolog. Uma limpeza de
-> mil linhas por hora numa tabela maior, competindo com tráfego real, é diferente da mesma
-> limpeza num ambiente parado.
+Em produção a tabela cabe no pool e a varredura é em memória. **E, com zero candidatos, ela varre,
+não acha nada e para.**
 
-### O que medir, e quando
+### 3. O `wpseo_indexable_index_batch` já roda em produção HOJE, na 27.7?
 
-**Na primeira hora depois do deploy**, e não no dia seguinte:
+**Roda, e essa é a resposta mais importante desta seção.**
 
-1. **Quando o cron dispara** — `_get_cron_array()`, procurar `wpseo_cleanup_cron`
-2. **`Threads_running` e a fila do banco** nos minutos ao redor do disparo, comparados com a mesma
-   janela antes do deploy
-3. **`yoast_indexable_hierarchy` e `yoast_indexable`** antes e depois de cada passada — a queda
-   perto de 1.000 é a assinatura de que ele trabalhou
-4. **Quantas passadas seguidas** ele faz até parar: em homolog foi **uma**; se em produção houver
-   muito mais órfão acumulado, pode ser **hora após hora até drenar**
-
-### A saída, se apertar
-
-O teto é **filtrável**. Baixar de 1.000 para 200 é uma linha em mu-plugin, e não exige tocar no
-plugin:
-
-```php
-add_filter('wpseo_cron_query_limit_size', function () { return 200; });
+```
+wp_next_scheduled('wpseo_indexable_index_batch') : agendado
+intervalo                                        : fifteen_minutes
+has_action(...)                                  : true
 ```
 
-**Não aplicar preventivamente** — mede-se primeiro. Mas é bom saber que a válvula existe antes de
-precisar dela às pressas.
+**De 15 em 15 minutos, hoje, na 27.7, antes de qualquer atualização.** Ou seja: o mecanismo que
+derrubou homolog **não é novidade da 28.4** — ele já está em produção há tempo, custando ~1,6 s a
+cada 15 minutos e não achando nada.
+
+> **Isto desarma a hipótese de que o lote 6 traria um risco novo.** O risco que homolog sofreu é
+> de **backlog + banco pequeno**, e produção não tem nem um nem outro.
+
+### 4. Desagendar em produção é aceitável? Tem efeito colateral no sitemap e nas meta tags?
+
+**Não é necessário, e por isso a pergunta muda de tom.** Com zero candidatos, desagendar
+economizaria 1,6 s a cada 15 minutos e **não mudaria nada mais**.
+
+Sobre os efeitos colaterais, caso um dia seja preciso:
+
+| | efeito de desagendar |
+|---|---|
+| `title`, `meta description`, canonical, Open Graph | **nenhum** — o indexável é construído **sob demanda**, quando a página é pedida |
+| Sub-sitemaps (`post-sitemap.xml`, `page-sitemap.xml`) | **nenhum** — leem os indexáveis existentes |
+| Páginas nunca visitadas | perdem o preenchimento **antecipado**; a primeira visita paga o custo, uma vez |
+
+**O trabalho de fundo só ADIANTA o que aconteceria de qualquer jeito.** Desligá-lo troca custo de
+fundo por custo sob demanda; não desliga funcionalidade. Conferido em homolog, com o cron
+desligado: as 5 telas amostradas mantiveram `title` e `description` idênticos.
+
+### ✅ Conclusão do portão
+
+**O Yoast 28.4 pode subir para produção.** Não há reindexação a disparar, o cron que existiria já
+existe, e o custo dele hoje é de 1,6 s a cada 15 minutos sobre zero candidatos.
+
+**O que continua valendo acompanhar na primeira hora** — não por causa da 28.4, mas porque agora
+sabemos que o mecanismo existe:
+
+1. `wpseo_cleanup_cron` (esse **é** novo na 28.x): de hora em hora, teto de 1.000 linhas por
+   consulta, filtrável por `wpseo_cron_query_limit_size`
+2. Se a contagem de candidatos deixar de ser zero — o que aconteceria se uma importação em massa
+   criasse posts sem indexável — **o anti-join volta a ter o que procurar**, e aí o custo cresce
+3. A válvula, se um dia for preciso: o mu-plugin `bahia-yoast-indexacao-fundo.php`, hoje ativo
+   **só em homolog**, com a condição de ambiente na primeira linha do corpo

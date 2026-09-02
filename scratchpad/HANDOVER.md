@@ -1437,6 +1437,80 @@ transforma um procedimento conferido num hábito não conferido.
 e só o inventário item a item mostrou isso. **Um gesto que precisou de inventário para estar
 certo não pode ser repetido de memória.**
 
+### 16.12 🔴 Três sinais concordantes, e todos irrelevantes — a concordância dá a confiança
+
+**Errei isto em 02/09/2026, no lote 6, e a correção só apareceu no lote 7 — depois de o erro ter
+derrubado homolog.**
+
+Ao validar o Yoast 28.4, precisava responder *"a atualização disparou reindexação em segundo
+plano?"*. Li três opções:
+
+```
+wpseo_indexation_started            : false
+wpseo_indexables_indexation_reason  : false
+wpseo_unindexed_post_count          : false
+```
+
+**Três sinais, todos negativos, todos concordando.** Escrevi *"nenhuma reindexação foi
+disparada"* e segui.
+
+**A indexação estava rodando o tempo todo.** Encontrada no `PROCESSLIST` do lote 7: cinco cópias
+empilhadas do anti-join do `wpseo_indexable_index_batch`, de 13 a 28 minutos cada, varrendo
+`wp_posts` (435 mil linhas, 1,1 GB) num `buffer_pool` de **128 MB**.
+
+#### Por que as três estavam certas e mesmo assim eu errei
+
+As três opções marcam **uma reindexação em massa iniciada pela interface** — o botão "otimizar
+dados de SEO" do painel. Nenhuma delas fala do **cron de fundo**, que é outro caminho, tem outro
+gatilho e outro estado. **Elas respondiam com exatidão a uma pergunta que eu não estava fazendo.**
+
+> ### É pior que um sinal ausente, e é por isto:
+>
+> Se eu não tivesse achado nenhuma opção, teria procurado outra evidência — o `PROCESSLIST`, o
+> agendamento, o log. **A concordância entre três leituras substituiu a busca por evidência.**
+> Três respostas iguais parecem confirmação cruzada; aqui eram **a mesma resposta repetida três
+> vezes**, porque as três vinham da mesma origem e do mesmo conceito.
+>
+> **Sinais independentes confirmam. Sinais irmãos só ecoam.** Antes de tratar concordância como
+> confirmação, perguntar se as fontes podem errar de formas diferentes — se não podem, é uma
+> fonte só.
+
+#### O que teria respondido a pergunta certa
+
+```sql
+SELECT ID, TIME, INFO FROM information_schema.PROCESSLIST WHERE COMMAND <> 'Sleep';
+```
+
+E, mais barato ainda, duas linhas de PHP:
+
+```php
+wp_next_scheduled('wpseo_indexable_index_batch');   // o evento esta na fila?
+has_action('wpseo_indexable_index_batch');          // e tem quem o execute?
+```
+
+**Eu chequei o estado declarado; a pergunta era sobre o trabalho em execução.** Ver o §16.4 — a
+mesma família, mecanismo novo.
+
+### 16.13 🔴 Interromper o `kubectl exec` NÃO mata a consulta no servidor
+
+**Descoberto no mesmo incidente.** Duas consultas minhas, `post_title LIKE 'Teste%'` sobre 435 mil
+linhas, foram interrompidas quando o `kubectl exec` estourou o tempo. **Elas continuaram
+rodando** — 20 e 23 minutos, achadas depois no `PROCESSLIST`, arrastando 1,1 GB por um
+`buffer_pool` de 128 MB e esfomeando o resto do banco.
+
+**O cliente sai; o trabalho fica.** É o mesmo padrão do túnel SSH que cai no meio da migração: a
+sessão morre, o processo remoto não. E há um agravante — **ao perder o terminal, perdi o
+identificador da consulta**, que só se recupera pelo `PROCESSLIST`.
+
+| | |
+|---|---|
+| **O que não funciona** | `Ctrl-C`, `timeout`, o estouro do `kubectl exec`, fechar o terminal |
+| **O que funciona** | `KILL QUERY <id>`, com o `id` lido do `information_schema.PROCESSLIST` |
+
+**A prevenção é anterior:** não rodar varredura de tabela grande num banco pequeno. As duas
+consultas existiam só para achar um post pelo título — havia o `ID`, que é chave primária, e eu
+usei o `LIKE`. **A consulta certa teria custado milissegundos.**
+
 ### A regra que fica
 
 Toda medição precisa de um **portão de contagem**: quantas linhas entraram, quantas saíram, e

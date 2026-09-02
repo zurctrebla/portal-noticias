@@ -1,13 +1,13 @@
 <?php
 /**
  * PublishPress Capabilities [Free]
- * 
+ *
  * Plugin to create and manage roles and capabilities.
- * 
+ *
  * This is the plugin's original controller module, which is due for some refactoring.
  * It registers and handles menus, loads javascript, and processes or routes update operations from the Capabilities screen.
- * 
- * Note: for lower overhead, this module is only loaded for Capabilities Pro URLs. 
+ *
+ * Note: for lower overhead, this module is only loaded for Capabilities Pro URLs.
  * For all other wp-admin URLs, menus are registered by a separate skeleton module.
  *
  * @author		Jordi Canals, Kevin Behrens
@@ -61,6 +61,11 @@ function _cme_core_caps() {
 
 function _cme_is_read_removal_blocked( $role_name ) {
 	$role = get_role($role_name);
+
+	if (!$role || empty($role->capabilities) || !is_array($role->capabilities)) {
+		return false;
+	}
+
 	$rcaps = $role->capabilities;
 
 	$core_caps = array_diff_key( _cme_core_caps(), array_fill_keys( array( 'unfiltered_html', 'unfiltered_upload', 'upload_files', 'edit_files', 'read' ), true ) );
@@ -122,6 +127,8 @@ class CapabilityManager
 	private $log_db_role_objects = array();
 
 	var $message;
+
+	var $network_sync_token;
 
 	/**
 	 * Module ID. Is the module internal short name.
@@ -190,10 +197,10 @@ class CapabilityManager
      */
     function adminStyles()
     {
-		if (empty($_REQUEST['page']) 
-		|| !in_array( 
-			$_REQUEST['page'], 
-			['pp-capabilities', 'pp-capabilities-backup', 'pp-capabilities-roles', 'pp-capabilities-admin-menus', 'pp-capabilities-editor-features', 'pp-capabilities-nav-menus', 'pp-capabilities-settings', 'pp-capabilities-admin-features', 'pp-capabilities-profile-features', 'pp-capabilities-dashboard', 'pp-capabilities-frontend-features', 'pp-capabilities-redirects']
+		if (empty($_REQUEST['page'])
+		|| !in_array(
+			$_REQUEST['page'],
+				['pp-capabilities', 'pp-capabilities-backup', 'pp-capabilities-roles', 'pp-capabilities-admin-menus', 'pp-capabilities-editor-features', 'pp-capabilities-nav-menus', 'pp-capabilities-settings', 'pp-capabilities-admin-features', 'pp-capabilities-profile-features', 'pp-capabilities-dashboard', 'pp-capabilities-frontend-features', 'pp-capabilities-redirects', 'pp-capabilities-admin-styles', 'pp-capabilities-admin-notices']
 			)
 		) {
 			return;
@@ -205,6 +212,22 @@ class CapabilityManager
 		wp_enqueue_style( $this->ID . 'framework_admin');
 
 		if ('pp-capabilities' == $_REQUEST['page']) {
+			// search script and css
+			wp_enqueue_script(
+				'capabilities-search',
+				$this->mod_url . '/common/js/capabilities-search.js',
+				['jquery'],
+				PUBLISHPRESS_CAPS_VERSION,
+				true
+			);
+
+			wp_enqueue_style(
+				'capabilities-search',
+				$this->mod_url . '/common/css/capabilities-search.css',
+				[],
+				PUBLISHPRESS_CAPS_VERSION
+			);
+			// cap admin css
 			wp_register_style( $this->ID . '_admin', $this->mod_url . '/common/css/admin-caps.css', false, PUBLISHPRESS_CAPS_VERSION);
 		} else {
 			// @todo: remove Capabilities-specific styles from admin.css
@@ -234,7 +257,12 @@ class CapabilityManager
 			'chkCaption' => __( 'Add or remove this capability from the WordPress role', 'capability-manager-enhanced' ),
 			'switchableCaption' => __( 'Add or remove capability from the role normally', 'capability-manager-enhanced' ),
 			'deleteWarning' => __( 'Are you sure you want to delete this item ?', 'capability-manager-enhanced' ),
-			'saveWarning'   => __( 'Add or clear custom item entry before saving changes.', 'capability-manager-enhanced' )
+			'saveWarning'   => __( 'Add or clear custom item entry before saving changes.', 'capability-manager-enhanced' ),
+			'foundOneMatchOneTab' => __( 'Found %1$d match in %2$d tab', 'capability-manager-enhanced' ),
+			'foundOneMatchMultipleTabs' => __( 'Found %1$d match in %2$d tabs', 'capability-manager-enhanced' ),
+			'foundMultipleMatchesOneTab' => __( 'Found %1$d matches in %2$d tab', 'capability-manager-enhanced' ),
+			'foundMultipleMatchesMultipleTabs' => __( 'Found %1$d matches in %2$d tabs', 'capability-manager-enhanced' ),
+			'noMatchesFoundFor' => __( 'No matches found for "%s"', 'capability-manager-enhanced' )
 			]
 		);
     }
@@ -272,9 +300,29 @@ class CapabilityManager
 			add_filter( 'option_' . $role_key, array( &$this, 'reinstate_db_roles' ), PHP_INT_MAX );
 		}
 
-		$action = (defined('PP_CAPABILITIES_COMPAT_MODE')) ? 'init' : 'publishpress_capabilities_loaded';
-		add_action( $action, array( &$this, 'processRoleUpdate' ) );
+		if (defined('PP_CAPABILITIES_COMPAT_MODE')) {
+			add_action('init', array(&$this, 'processRoleUpdate'), 20);
+		} else {
+			add_action('publishpress_capabilities_loaded', array(&$this, 'scheduleRoleUpdate'));
+		}
     }
+
+	/**
+	 * Defer role updates until translations and post types can safely load.
+	 *
+	 * The publishpress_capabilities_loaded action normally runs during
+	 * plugins_loaded, which is too early to translate role names on WordPress
+	 * 6.7 and newer.
+	 *
+	 * @return void
+	 */
+	function scheduleRoleUpdate() {
+		if (did_action('init')) {
+			$this->processRoleUpdate();
+		} else {
+			add_action('init', array(&$this, 'processRoleUpdate'), 20);
+		}
+	}
 
 	public function set_current_role($role_name) {
 		global $current_user;
@@ -286,13 +334,29 @@ class CapabilityManager
 
 	public function get_last_role() {
 		global $current_user;
-	
+
 		$role_name = get_option("capsman_last_role_{$current_user->ID}");
-	
+
+		if ($role_name && function_exists('pp_capabilities_is_application_password_subject') && pp_capabilities_is_application_password_subject($role_name)) {
+			$current_page = (!empty($_REQUEST['page']) && is_scalar($_REQUEST['page']))
+				? sanitize_key(wp_unslash($_REQUEST['page']))
+				: '';
+
+			if (
+				('pp-capabilities' === $current_page)
+				&& function_exists('pp_capabilities_can_manage_application_password_subject')
+				&& pp_capabilities_can_manage_application_password_subject($role_name)
+			) {
+				return sanitize_key($role_name);
+			}
+
+			$role_name = '';
+		}
+
 		if (!$role_name || !get_role($role_name)) {
 			$role_name = get_option('default_role');
 		}
-	
+
 		return $role_name;
 	}
 
@@ -339,7 +403,7 @@ class CapabilityManager
 			update_option( $this->ID . '_backup_datestamp', current_time( 'timestamp' ), false );
 		}
 
-		if (!$wpdb->get_var("SELECT COUNT(option_id) FROM $wpdb->options WHERE option_name LIKE 'cme_backup_auto_%'")) {
+		if (!pp_capabilities_get_auto_backup_option_names()) {
 			pp_capabilities_autobackup();
 		}
 	}
@@ -360,7 +424,7 @@ class CapabilityManager
 	public function cme_menu() {
 
         global $menu, $submenu, $capabilities_toplevel_page;
-        
+
         //we need to set primary menu capability to the first menu user has access to
         $sub_menu_pages = pp_capabilities_sub_menu_lists();
         $user_menu_caps = pp_capabilities_user_can_caps();
@@ -379,7 +443,7 @@ class CapabilityManager
                 $user_menu_caps = array_filter($user_menu_caps);
             }
         }
-		
+
         if (is_multisite() && is_super_admin()) {
             $cap_name      = 'read';
             $cap_callback  = [$this, 'dashboardPage'];
@@ -396,6 +460,10 @@ class CapabilityManager
         }
 
         $capabilities_toplevel_page = $cap_page_slug;
+
+        if (!pp_capabilities_should_display_admin_menu()) {
+            return;
+        }
 
         if (!$cap_name) {
             return;
@@ -437,7 +505,7 @@ class CapabilityManager
         $submenu_slugs_conditions   = [];
 
         foreach ($sub_menu_pages as $feature => $subpage_option) {
-            if ($subpage_option['dashboard_control'] === false 
+            if ($subpage_option['dashboard_control'] === false
                 || pp_capabilities_feature_enabled($feature)
                 //we'll be using css to hide menu on dashboard control screen to enable dynamic menu control
                 || $dashboard_screen
@@ -482,14 +550,14 @@ class CapabilityManager
                 }
             }
         }
-        
+
 	}
 
     function initRolesAdmin() {
         // @todo: solve order of execution issue so this column headers definition is not duplicated
         if (!empty($_REQUEST['page']) && ('pp-capabilities-roles' == $_REQUEST['page'])) {
             add_filter(
-                "manage_capabilities_page_pp-capabilities-roles_columns", 
+                "manage_capabilities_page_pp-capabilities-roles_columns",
 
                 function($arr) {
                     return [
@@ -612,7 +680,7 @@ class CapabilityManager
 		do_action('pp_capabilities_editor_features');
         include(dirname(CME_FILE) . '/includes/features/editor-features.php');
     }
-	
+
 	/**
 	 * Manages Admin Features
 	 *
@@ -646,7 +714,7 @@ class CapabilityManager
 				wp_die('<strong>' . esc_html__('You do not have permission to manage admin features.', 'capability-manager-enhanced') . '</strong>');
 			} else {
 				$features_role = sanitize_key($_POST['ppc-admin-features-role']);
-				
+
 				$this->set_current_role($features_role);
 
 				$disabled_admin_items = !empty(get_option('capsman_disabled_admin_features')) ? (array)get_option('capsman_disabled_admin_features') : [];
@@ -658,14 +726,14 @@ class CapabilityManager
 				if (in_array($features_role, wp_get_current_user()->roles)){
 					$ppc_page_reload = '1';
 				}
-				
+
 	            ak_admin_notify(__('Settings updated.', 'capability-manager-enhanced'));
 			}
 		}
 
         include(dirname(CME_FILE) . '/includes/features/admin-features.php');
     }
-	
+
 	/**
 	 * Manages Frontend Features
 	 *
@@ -699,21 +767,114 @@ class CapabilityManager
 				wp_die('<strong>' . esc_html__('You do not have permission to manage frontend features.', 'capability-manager-enhanced') . '</strong>');
 			} else {
 				$features_role = sanitize_key($_POST['ppc-frontend-features-role']);
-				
+
 				$this->set_current_role($features_role);
 
 				$disabled_frontend_items = !empty(get_option('capsman_disabled_frontend_features')) ? (array)get_option('capsman_disabled_frontend_features') : [];
 				$disabled_frontend_items[$features_role] = isset($_POST['capsman_disabled_frontend_features']) ? array_map('sanitize_text_field', $_POST['capsman_disabled_frontend_features']) : '';
 
 				update_option('capsman_disabled_frontend_features', $disabled_frontend_items, false);
-				
+
 	            ak_admin_notify(__('Settings updated.', 'capability-manager-enhanced'));
 			}
 		}
 
         include(dirname(CME_FILE) . '/includes/features/frontend-features/frontend-features.php');
     }
-	
+
+	/**
+	 * Manages Admin Styles
+	 *
+	 * @return void
+	 */
+	public function ManageAdminStyles() {
+		if ((!is_multisite() || !is_super_admin()) && !current_user_can('administrator') && !current_user_can('manage_capabilities_admin_styles')) {
+            // TODO: Implement exceptions.
+		    wp_die('<strong>' . esc_html__('You do not have permission to manage admin styles.', 'capability-manager-enhanced') . '</strong>');
+		}
+
+		$this->generateNames();
+		$roles = array_keys($this->roles);
+
+		if (!isset($this->current)) {
+			if ('POST' !== $_SERVER['REQUEST_METHOD'] && !empty($_REQUEST['role'])) {
+				$this->set_current_role(sanitize_key($_REQUEST['role']));
+			}
+		}
+
+		if (!isset($this->current) || !get_role($this->current)) {
+			$this->current = get_option('default_role');
+		}
+
+		if (!in_array($this->current, $roles)) {
+			$this->current = array_shift($roles);
+		}
+
+        include(dirname(CME_FILE) . '/includes/features/admin-styles/admin-styles-ui.php');
+    }
+
+	/**
+	 * Manages Admin Notices
+	 *
+	 * @return void
+	 */
+	public function ManageAdminNotices() {
+		if ((!is_multisite() || !is_super_admin()) && !current_user_can('administrator') && !current_user_can('manage_capabilities_admin_notices')) {
+            wp_die('<strong>' . esc_html__('You do not have permission to manage admin notices.', 'capability-manager-enhanced') . '</strong>');
+		}
+
+		$this->generateNames();
+		$roles = array_keys($this->roles);
+
+		if (!isset($this->current)) {
+			if ('POST' !== $_SERVER['REQUEST_METHOD'] && !empty($_REQUEST['role'])) {
+				$this->set_current_role(sanitize_key($_REQUEST['role']));
+			}
+		}
+
+		if (!isset($this->current) || !get_role($this->current)) {
+			$this->current = get_option('default_role');
+		}
+
+		if (!in_array($this->current, $roles)) {
+			$this->current = array_shift($roles);
+		}
+
+		$all_roles = wp_roles()->roles;
+
+		if ('POST' === $_SERVER['REQUEST_METHOD'] && (isset($_POST['ppc-admin-notices-submit']) || isset($_POST['ppc-admin-notices-all-submit']))) {
+			if (!wp_verify_nonce(sanitize_key($_REQUEST['_wpnonce'] ?? ''), 'pp-capabilities-admin-notices')) {
+				wp_die('<strong>' . esc_html__('You do not have permission to manage admin notices.', 'capability-manager-enhanced') . '</strong>');
+			}
+
+			$notices_role = !empty($_POST['ppc-admin-notices-role']) ? sanitize_key($_POST['ppc-admin-notices-role']) : $this->current;
+
+			if (isset($all_roles[$notices_role])) {
+				$this->set_current_role($notices_role);
+			}
+
+			$submitted_options = isset($_POST['cme_admin_notice_options']) ? map_deep($_POST['cme_admin_notice_options'], 'sanitize_text_field') : [];
+			if (!is_array($submitted_options)) {
+				$submitted_options = [];
+			}
+
+			$all_notice_options = (array) get_option('cme_admin_notice_options', []);
+
+			if (isset($_POST['ppc-admin-notices-all-submit'])) {
+				foreach (array_keys($all_roles) as $role_key) {
+					$all_notice_options[$role_key] = $submitted_options;
+				}
+			} else {
+				$all_notice_options[$notices_role] = $submitted_options;
+			}
+
+			update_option('cme_admin_notice_options', $all_notice_options, false);
+			ak_admin_notify(__('Settings updated.', 'capability-manager-enhanced'));
+		}
+
+        include(dirname(CME_FILE) . '/includes/admin-notices/admin-notices-settings.php');
+    }
+
 	/**
 	 * Manage Nave Menus
 	 *
@@ -747,7 +908,7 @@ class CapabilityManager
 				wp_die('<strong>' . esc_html__('You do not have permission to manage navigation menus.', 'capability-manager-enhanced') . '</strong>');
 			} else {
 				$menu_role = sanitize_key($_POST['ppc-nav-menu-role']);
-				
+
 				$this->set_current_role($menu_role);
 
                 //set role nav child menu
@@ -764,7 +925,7 @@ class CapabilityManager
         include(dirname(CME_FILE) . '/includes/features/nav-menus.php');
     }
 
-	
+
 	/**
 	 * Manages Profile Features
 	 *
@@ -798,7 +959,7 @@ class CapabilityManager
 				wp_die('<strong>' . esc_html__('You do not have permission to manage profile features.', 'capability-manager-enhanced') . '</strong>');
 			} else {
 				$features_role = sanitize_key($_POST['ppc-profile-features-role']);
-				
+
 				$this->set_current_role($features_role);
 
                 $previous_elements              = !empty(get_option('capsman_profile_features_elements')) ? (array)get_option('capsman_profile_features_elements') : [];
@@ -838,7 +999,7 @@ class CapabilityManager
                         update_option('capsman_profile_features_elements', $previous_elements, false);
                     }
                 }
-				
+
 	            ak_admin_notify(__('Settings updated.', 'capability-manager-enhanced'));
 			}
 		}
@@ -846,7 +1007,7 @@ class CapabilityManager
         include(dirname(CME_FILE) . '/includes/features/profile-features.php');
     }
 
-	
+
 	/**
 	 * Manage Redirect
 	 *
@@ -875,12 +1036,12 @@ class CapabilityManager
 			$this->current = array_shift($roles);
 		}
 
-		if (!empty($_SERVER['REQUEST_METHOD']) && ('POST' == $_SERVER['REQUEST_METHOD']) && isset($_POST['redirects-features-submit']) && !empty($_REQUEST['_wpnonce'])) {
+		if (!empty($_SERVER['REQUEST_METHOD']) && ('POST' == $_SERVER['REQUEST_METHOD']) && (isset($_POST['redirects-features-submit']) || isset($_POST['redirects-features-all-submit'])) && !empty($_REQUEST['_wpnonce'])) {
 			if (!wp_verify_nonce(sanitize_key($_REQUEST['_wpnonce']), 'pp-capabilities-redirects-features')) {
 				wp_die('<strong>' . esc_html__('Invalid form. Reload this page and try again.', 'capability-manager-enhanced') . '</strong>');
 			} else {
 				$features_role = sanitize_key($_POST['ppc-redirects-features-role']);
-				
+
 				$this->set_current_role($features_role);
 
 				$custom_redirect = !empty($_POST['custom_redirect']) ? (int) $_POST['custom_redirect'] : 0;
@@ -892,17 +1053,34 @@ class CapabilityManager
 
 				$role_redirects = !empty(get_option('capsman_role_redirects')) ? (array)get_option('capsman_role_redirects') : [];
 
-				$role_redirects[$features_role] = [
-					'custom_redirect' => $custom_redirect,
-					'referer_redirect' => $referer_redirect,
-					'login_redirect' => $login_redirect,
-					'logout_redirect' => $logout_redirect,
-					'registration_redirect' => $registration_redirect,
-					'first_login_redirect' => $first_login_redirect
-				];
+				if (isset($_POST['redirects-features-all-submit'])) {
+					// Save for all roles
+					$all_roles = array_keys($this->roles);
+
+					foreach ($all_roles as $role) {
+						$role_redirects[$role] = [
+							'custom_redirect' => $custom_redirect,
+							'referer_redirect' => $referer_redirect,
+							'login_redirect' => $login_redirect,
+							'logout_redirect' => $logout_redirect,
+							'registration_redirect' => $registration_redirect,
+							'first_login_redirect' => $first_login_redirect
+						];
+					}
+				} else {
+					// Save for current role only
+					$role_redirects[$features_role] = [
+						'custom_redirect' => $custom_redirect,
+						'referer_redirect' => $referer_redirect,
+						'login_redirect' => $login_redirect,
+						'logout_redirect' => $logout_redirect,
+						'registration_redirect' => $registration_redirect,
+						'first_login_redirect' => $first_login_redirect
+					];
+				}
 
 				update_option('capsman_role_redirects', $role_redirects);
-				
+
 	            ak_admin_notify(__('Settings updated.', 'capability-manager-enhanced'));
 			}
 		}
@@ -911,7 +1089,7 @@ class CapabilityManager
     }
 
 
-	
+
 	/**
 	 * Manages Dashboard
 	 *
@@ -1009,21 +1187,23 @@ class CapabilityManager
 	function processRoleUpdate() {
 		if (!empty($_SERVER['REQUEST_METHOD']) && ('POST' == $_SERVER['REQUEST_METHOD']) && ( ! empty($_REQUEST['SaveRole']) || ! empty($_REQUEST['AddCap']) ) ) {
 			check_admin_referer('capsman-general-manager');
-			
+
 			if ((!is_multisite() || !is_super_admin()) && !current_user_can('administrator') && !current_user_can('manage_capabilities')) {
 				// TODO: Implement exceptions.
 				wp_die('<strong>' . esc_html__('You do not have permission to manage capabilities.', 'capability-manager-enhanced') . '</strong>');
 			}
 
 			if ( ! empty($_REQUEST['current']) ) { // don't process role update unless form variable is received
-				$role = get_role(sanitize_key($_REQUEST['current']));
+				$current_subject = sanitize_key($_REQUEST['current']);
+				$is_application_password = function_exists('pp_capabilities_can_manage_application_password_subject') && pp_capabilities_can_manage_application_password_subject($current_subject);
+				$role = $is_application_password ? false : get_role($current_subject);
 				$current_level = ($role) ? ak_caps2level($role->capabilities) : 0;
 
 				$this->processAdminGeneral();
 
 				$set_level = (isset($_POST['level'])) ? (int) $_POST['level'] : 0;
 
-				if ($set_level != $current_level) {
+				if (!$is_application_password && ($set_level != $current_level)) {
 					global $wp_roles, $wp_version;
 
 					if ( version_compare($wp_version, '4.9', '>=') ) {
@@ -1032,18 +1212,33 @@ class CapabilityManager
 						$wp_roles->reinit();
 					}
 
-					foreach( get_users(array('role' => sanitize_key($_REQUEST['current']), 'fields' => 'ID')) as $ID ) {
+					foreach( get_users(array('role' => $current_subject, 'fields' => 'ID')) as $ID ) {
 						$user = new WP_User($ID);
 						$user->get_role_caps();
 						$user->update_user_level_from_caps();
 					}
+				}
+
+				if (!empty($this->network_sync_token)) {
+					$redirect_args = [
+						'page' => 'pp-capabilities',
+						'role' => sanitize_key($_REQUEST['current']),
+						'cme_network_sync_token' => $this->network_sync_token,
+					];
+
+					if (!empty($_REQUEST['pp_caps_tab'])) {
+						$redirect_args['pp_caps_tab'] = sanitize_key($_REQUEST['pp_caps_tab']);
+					}
+
+					wp_redirect(add_query_arg($redirect_args, admin_url('admin.php')));
+					exit;
 				}
 			}
 		}
 
 		if (!empty($_SERVER['REQUEST_METHOD']) && ('POST' == $_SERVER['REQUEST_METHOD']) && ( ! empty($_REQUEST['RenameRole']) ) ) {
 			check_admin_referer('capsman-general-manager');
-			
+
 			if ((!is_multisite() || !is_super_admin()) && !current_user_can('administrator') && !current_user_can('manage_capabilities')) {
 				// TODO: Implement exceptions.
 				wp_die('<strong>' . esc_html__('You do not have permission to manage capabilities.', 'capability-manager-enhanced') . '</strong>');
@@ -1067,6 +1262,19 @@ class CapabilityManager
 		    wp_die('<strong>' . esc_html__('You do not have permission to manage capabilities.', 'capability-manager-enhanced') . '</strong>');
 		}
 
+		if (isset($_REQUEST['cme_network_sync_token']) && is_scalar($_REQUEST['cme_network_sync_token'])) {
+			$token = sanitize_key(wp_unslash($_REQUEST['cme_network_sync_token']));
+
+			if ('' !== $token) {
+				if (get_site_transient('cme_network_sync_done_' . $token)) {
+					delete_site_transient('cme_network_sync_done_' . $token);
+					ak_admin_notify(__('Network sync completed.', 'capability-manager-enhanced'));
+				} else {
+					ak_admin_notify(__('Network sync has been queued and will continue in the background.', 'capability-manager-enhanced'));
+				}
+			}
+		}
+
 		if (!empty($_SERVER['REQUEST_METHOD']) && ('POST' == $_SERVER['REQUEST_METHOD'])) {
 			if ( empty($_REQUEST['SaveRole']) && empty($_REQUEST['AddCap']) && empty($_REQUEST['RenameRole']) ) {
 				check_admin_referer('capsman-general-manager');
@@ -1084,24 +1292,29 @@ class CapabilityManager
 
 		$this->generateNames();
 		$roles = array_keys($this->roles);
+		$application_password_subjects = function_exists('pp_capabilities_get_application_password_subjects')
+			? pp_capabilities_get_application_password_subjects()
+			: [];
 
 		if ( ! isset($this->current) ) { // By default, we manage the default role
 			if ('POST' !== $_SERVER['REQUEST_METHOD'] && !empty($_REQUEST['role'])) {
-				$role = sanitize_key($_REQUEST['role']);
+				$subject = sanitize_key($_REQUEST['role']);
 
-				if (!pp_capabilities_is_editable_role($role)) {
+				if (isset($application_password_subjects[$subject])) {
+					$this->set_current_role($subject);
+				} elseif (!pp_capabilities_is_editable_role($subject)) {
 					wp_die(esc_html__('The selected role is not editable.', 'capability-manager-enhanced'));
+				} else {
+					$this->set_current_role($subject);
 				}
-
-				$this->set_current_role($role);
 			}
 		}
 
-		if (!isset($this->current) || !get_role($this->current)) {
+		if (!isset($this->current) || (!get_role($this->current) && !isset($application_password_subjects[$this->current]))) {
 			$this->current = $this->get_last_role();
 		}
 
-		if ( ! in_array($this->current, $roles) ) {    // Current role has been deleted.
+		if (!in_array($this->current, $roles) && !isset($application_password_subjects[$this->current])) {    // Current role has been deleted.
 			$this->current = array_shift($roles);
 		}
 
@@ -1166,6 +1379,11 @@ class CapabilityManager
 	function generateSysNames ()
 	{
 		$this->max_level = 10;
+
+		if ( ! function_exists( 'ak_get_roles' ) ) {
+			require_once dirname( CME_FILE ) . '/framework/lib/users.php';
+		}
+
 		$this->roles = ak_get_roles(true);
 		$caps = array();
 
@@ -1204,10 +1422,14 @@ class CapabilityManager
 
 	    	$this->capabilities = ( $keys ) ? array_combine($keys, $names) : array();
 
+		    if ( ! function_exists( 'ak_get_roles' ) ) {
+				require_once dirname( CME_FILE ) . '/framework/lib/users.php';
+			}
+
 		    $roles = ak_get_roles(true);
     		unset($roles['administrator']);
 
-			if ( ( defined( 'CME_LEGACY_USER_EDIT_FILTER' ) && CME_LEGACY_USER_EDIT_FILTER ) || ( ! empty( $_REQUEST['page'] ) && 'pp-capabilities' == $_REQUEST['page'] ) ) {
+			       if ( ( defined( 'CME_LEGACY_USER_EDIT_FILTER' ) && CME_LEGACY_USER_EDIT_FILTER ) || is_pp_capabilities_admin_page() ) {
 				foreach ( $user->roles as $role ) {			// Unset the roles from capability list.
 					unset ( $this->capabilities[$role] );
 					unset ( $roles[$role]);					// User cannot manage his roles.
@@ -1259,10 +1481,10 @@ class CapabilityManager
 		include ( dirname(CME_FILE) . '/includes/backup.php' );
 	}
 
-	
+
 	/**
 	 * Processes export.
-     * 
+     *
      * This function need to run in admin init
      * to enable clean download.
 	 *
@@ -1284,10 +1506,38 @@ class CapabilityManager
             $backup_sections = pp_capabilities_backup_sections();
             $charset	     = get_option( 'blog_charset' );
             $data		     = [];
-            
+
             //add role
             if(in_array('user_roles', $export_option)){
-                $data['user_roles'] = get_option($wpdb->prefix . 'user_roles');
+                $all_roles = get_option($wpdb->prefix . 'user_roles');
+                $all_roles = is_array($all_roles) ? $all_roles : [];
+
+                if (!empty($_POST['pp_capabilities_export_roles_present'])) {
+                    $requested_roles = !empty($_POST['pp_capabilities_export_roles']) && is_array($_POST['pp_capabilities_export_roles'])
+                        ? array_map('sanitize_key', wp_unslash($_POST['pp_capabilities_export_roles']))
+                        : [];
+                    $selected_roles = array_intersect_key($all_roles, array_fill_keys($requested_roles, true));
+
+                    if (empty($selected_roles)) {
+                        ak_admin_error(__('Select at least one role to export.', 'capability-manager-enhanced'));
+                        return;
+                    }
+
+                    if (count($selected_roles) < count($all_roles)) {
+                        $data['user_roles'] = [
+                            'publishpress_capabilities_export' => [
+                                'type'    => 'selected_roles',
+                                'version' => 1,
+                            ],
+                            'roles' => $selected_roles,
+                        ];
+                    } else {
+                        $data['user_roles'] = $all_roles;
+                    }
+                } else {
+                    // Preserve compatibility with export requests made by older UIs.
+                    $data['user_roles'] = $all_roles;
+                }
             }
 
             //other section
@@ -1357,7 +1607,7 @@ class CapabilityManager
             $profile_element_updated = (array) get_option("capsman_profile_features_updated", []);
             $refresh_element = isset($_REQUEST['refresh_element']) ? (int) $_REQUEST['refresh_element'] : 0;
             $role_refresh    = isset($_REQUEST['role_refresh']) ? (int) $_REQUEST['role_refresh'] : 0;
-            
+
             //get user in current role
             $role_user = get_users(
                 [
@@ -1371,10 +1621,15 @@ class CapabilityManager
             if (empty($role_user) && $default_role !== 'administrator') {
                 $role_has_user = false;
             }
-            
+
+			// Check if role is enabled for profile features editing
+			if (!\PublishPress\Capabilities\PP_Capabilities_Profile_Features::isRoleEnabledForProfileFeatures($default_role)) {
+				return;
+			}
+
             if (
-                is_array($profile_element_updated) 
-                && isset($profile_element_updated[$default_role]) 
+                is_array($profile_element_updated)
+                && isset($profile_element_updated[$default_role])
                 && (int)$profile_element_updated[$default_role] > 0
             ) {
                 if ($refresh_element === 0 && $role_refresh === 0) {
@@ -1399,7 +1654,7 @@ class CapabilityManager
                 }
 
             }
-            
+
             if ($can_redirect) {
                 //redirect user to test link for validation and redirection
                 if (empty($role_user)) {
@@ -1449,10 +1704,6 @@ function cme_publishpressFooter() {
 	<li><a href="https://publishpress.com/knowledge-base/how-to-use-capability-manager/" target="_blank" rel="noopener noreferrer" title="<?php esc_attr_e('Capabilites Documentation', 'capability-manager-enhanced');?>"><?php esc_html_e('Documentation', 'capability-manager-enhanced');?>
 	</a></li>
 	<li><a href="https://publishpress.com/contact" target="_blank" rel="noopener noreferrer" title="<?php esc_attr_e('Contact the PublishPress team', 'capability-manager-enhanced');?>"><?php esc_html_e('Contact', 'capability-manager-enhanced');?>
-	</a></li>
-	<li><a href="https://twitter.com/publishpresscom" target="_blank" rel="noopener noreferrer"><span class="dashicons dashicons-twitter"></span>
-	</a></li>
-	<li><a href="https://facebook.com/publishpress" target="_blank" rel="noopener noreferrer"><span class="dashicons dashicons-facebook"></span>
 	</a></li>
 	</ul>
 	</nav>

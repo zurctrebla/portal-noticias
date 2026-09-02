@@ -28,7 +28,7 @@ $default_role      = $capsman->get_last_role();
 $role_redirects = !empty(get_option('capsman_role_redirects')) ? (array)get_option('capsman_role_redirects') : [];
 $current_role_redirects = array_key_exists($default_role, $role_redirects) ? (array)$role_redirects[$default_role] : [];
 
-$default_tab = 'login_redirect';
+$default_tab = (!empty($_REQUEST['pp_caps_tab'])) ? sanitize_key($_REQUEST['pp_caps_tab']) : 'login_redirect';
 
 $fields_tabs = [
     'login_redirect' => [
@@ -95,7 +95,7 @@ $fields = [
 
         <form method="post" action="" id="ppc-redirects-features-form" onkeydown="return event.key != 'Enter';">
             <?php wp_nonce_field('pp-capabilities-redirects-features'); ?>
-
+            <input type="hidden" name="pp_caps_tab" value="<?php echo esc_attr($default_tab); ?>" />
             <div class="pp-columns-wrapper pp-enable-sidebar clear">
                 <div class="pp-column-left">
                     <fieldset>
@@ -107,10 +107,18 @@ $fields = [
                                         <p>
                                         <div class="publishpress-filters" style="margin-bottom:5px;">
                                             <div class="pp-capabilities-submit-top" style="float:right;">
-                                                <input type="submit" name="redirects-features-submit"
-                                                    value="<?php esc_attr_e('Save Changes');?>"
-                                                    class="button-primary ppc-redirects-features-submit" />
+
+                                            <input type="submit" name="redirects-features-submit"
+                                                value="<?php esc_attr_e('Save Changes', 'capability-manager-enhanced');?>"
+                                                class="button-primary ppc-redirects-features-submit"
+                                                style="margin-right: 10px;" />
+
+                                            <input type="submit" name="redirects-features-all-submit"
+                                                value="<?php esc_attr_e('Save for all Roles', 'capability-manager-enhanced');?>"
+                                                class="button-secondary ppc-redirects-features-submit" />
+
                                             </div>
+                                            <div class="clear"></div>
 
                                             <select name="ppc-redirects-features-role" class="ppc-redirects-features-role">
                                                 <?php
@@ -132,21 +140,21 @@ $fields = [
 
                                     <div id="pp-capability-menu-wrapper" class="postbox">
                                         <div class="pp-capability-menus">
-	
+
 		                                    <div class="pp-capability-menus-wrap">
 		                                        <div id="pp-capability-menus-general"
 		                                             class="pp-capability-menus-content editable-role" style="display: block;">
-	
+
                                                      <div class="ppc-redirects-section postbox">
                                                         <div class="inside">
                                                             <div class="main">
 
                                                                 <ul class="ppc-redirects-tab">
-                                                                    <?php     
+                                                                    <?php
                                                                     foreach ($fields_tabs as $key => $args) {
                                                                         $active_tab = ($key === $default_tab) ? ' active' : '';
                                                                         ?>
-                                                                        <li class="<?php echo esc_attr($active_tab); ?>" 
+                                                                        <li class="<?php echo esc_attr($active_tab); ?>"
                                                                             data-tab="<?php echo esc_attr($key); ?>"
                                                                             >
                                                                             <a href="#">
@@ -155,21 +163,21 @@ $fields = [
                                                                             </a>
                                                                         </li>
                                                                         <?php
-                                                                    } 
+                                                                    }
                                                                     ?>
                                                                 </ul>
-                                       
+
                                                                 <div class="ppc-redirects-tab-content">
                                                                     <table class="form-table">
-                                                                        <?php     
+                                                                        <?php
                                                                         foreach ($fields as $key => $args) {
                                                                             $args['key']   = $key;
                                                                             $args['value'] = (is_array($current_role_redirects) && isset($current_role_redirects[$args['value_key']])) ? $current_role_redirects[$args['value_key']] : '';
-                                                                            
+
                                                                             $tab_class = 'pp-redirects-tab-tr pp-redirects-' . $args['tab'] . '-tab';
                                                                             $tab_style = ($args['tab'] === $default_tab) ? '' : 'display:none;';
                                                                             ?>
-                                                                            <tr valign="top" 
+                                                                            <tr valign="top"
                                                                                 class="<?php echo esc_attr('form-field role-' . $key . '-wrap '. $tab_class); ?>"
                                                                                 data-tab="<?php echo esc_attr($args['tab']); ?>"
                                                                                 style="<?php echo esc_attr($tab_style); ?>"
@@ -197,24 +205,24 @@ $fields = [
                                                                                     ?>
                                                                                     <div class="login-redirect-option">
                                                                                         <label>
-                                                                                            <input name="referer_redirect" 
-                                                                                            id="referer_redirect" 
+                                                                                            <input name="referer_redirect"
+                                                                                            id="referer_redirect"
                                                                                             type="checkbox"
                                                                                             value="1"
                                                                                             <?php checked(true, $referer_redirect); ?>
-                                                                                            <?php echo ($args['required'] ? 'required="true"' : '');?> 
+                                                                                            <?php echo ($args['required'] ? 'required="true"' : '');?>
                                                                                             <?php echo (!$args['editable'] ? 'readonly="readonly"' : ''); ?>/>
                                                                                             <span class="description"><?php echo esc_html__('Redirect users to the URL they were viewing before login.',  'capability-manager-enhanced'); ?></span>
                                                                                         </label>
                                                                                     </div>
                                                                                     <div class="login-redirect-option">
                                                                                         <label>
-                                                                                            <input name="custom_redirect" 
-                                                                                            id="custom_redirect" 
+                                                                                            <input name="custom_redirect"
+                                                                                            id="custom_redirect"
                                                                                             type="checkbox"
                                                                                             value="1"
                                                                                             <?php checked(true, $custom_redirect); ?>
-                                                                                            <?php echo ($args['required'] ? 'required="true"' : '');?> 
+                                                                                            <?php echo ($args['required'] ? 'required="true"' : '');?>
                                                                                             <?php echo (!$args['editable'] ? 'readonly="readonly"' : ''); ?>/>
                                                                                             <span class="description"><?php echo esc_html__('Redirect users to a specified URL.',  'capability-manager-enhanced'); ?></span>
                                                                                         </label>
@@ -224,7 +232,7 @@ $fields = [
                                                                                                     <?php esc_html_e(home_url()); ?>
                                                                                                 </div>
                                                                                                 <div class="base-input">
-                                                                                                    <input name="<?php echo esc_attr($key); ?>" 
+                                                                                                    <input name="<?php echo esc_attr($key); ?>"
                                                                                                     id="<?php echo esc_attr($key); ?>"
                                                                                                     type="text"
                                                                                                     value="<?php echo esc_attr($base_url); ?>"
@@ -235,7 +243,7 @@ $fields = [
                                                                                                     data-message="<?php esc_attr_e('Enter the relative path only without domain for login redirect.',  'capability-manager-enhanced'); ?>"
                                                                                                     data-required_message="<?php esc_attr_e('You must enter the Login Redirect URL.',  'capability-manager-enhanced'); ?>"
                                                                                                     autocomplete="off"
-                                                                                                <?php echo ($args['required'] ? 'required="true"' : '');?> 
+                                                                                                <?php echo ($args['required'] ? 'required="true"' : '');?>
                                                                                                 <?php echo (!$args['editable'] ? 'readonly="readonly"' : ''); ?>/>
                                                                                                 </div>
                                                                                             </div>
@@ -245,7 +253,7 @@ $fields = [
                                                                                         </div>
                                                                                     </div>
                                                                                 <?php  elseif ($args['type'] == 'url') : ?>
-                                                                                    <?php 
+                                                                                    <?php
                                                                                         $form_url = $args['value'];
                                                                                         $base_url = '';
                                                                                         if (!empty($form_url)) {
@@ -257,7 +265,7 @@ $fields = [
                                                                                             <?php esc_html_e(home_url()); ?>
                                                                                         </div>
                                                                                         <div class="base-input">
-                                                                                            <input name="<?php echo esc_attr($key); ?>" 
+                                                                                            <input name="<?php echo esc_attr($key); ?>"
                                                                                             id="<?php echo esc_attr($key); ?>"
                                                                                             type="text"
                                                                                             value="<?php echo esc_attr($base_url); ?>"
@@ -267,7 +275,7 @@ $fields = [
                                                                                             data-home_url="<?php echo esc_url(home_url()); ?>"
                                                                                             data-message="<?php esc_attr_e('Enter the relative path only without domain for logout redirect.',  'capability-manager-enhanced'); ?>"
                                                                                             autocomplete="off"
-                                                                                        <?php echo ($args['required'] ? 'required="true"' : '');?> 
+                                                                                        <?php echo ($args['required'] ? 'required="true"' : '');?>
                                                                                         <?php echo (!$args['editable'] ? 'readonly="readonly"' : ''); ?>/>
                                                                                         </div>
                                                                                     </div>
@@ -276,11 +284,11 @@ $fields = [
                                                                                             <?php endif; ?>
                                                                                     </div>
                                                                                 <?php else : ?>
-                                                                                    <input name="<?php echo esc_attr($key); ?>" 
+                                                                                    <input name="<?php echo esc_attr($key); ?>"
                                                                                         id="<?php echo esc_attr($key); ?>"
                                                                                         type="<?php echo esc_attr($args['type']); ?>"
                                                                                         value="<?php echo esc_attr($args['value']); ?>"
-                                                                                    <?php echo ($args['required'] ? 'required="true"' : '');?> 
+                                                                                    <?php echo ($args['required'] ? 'required="true"' : '');?>
                                                                                     <?php echo (!$args['editable'] ? 'readonly="readonly"' : ''); ?>/>
                                                                                         <?php if (isset($args['description'])) : ?>
                                                                                             <p class="description"><?php echo esc_html($args['description']); ?></p>
@@ -292,7 +300,7 @@ $fields = [
                                                                         }
                                                                         ?>
                                                                     </table>
-                                                                </div>                    
+                                                                </div>
                                                                 <div class="clear"></div>
 
                                                             </div>
@@ -305,8 +313,13 @@ $fields = [
                                     </div>
                                     <div class="pp-capabilities-submit-bottom" style="float:right;">
                                         <input type="submit" name="redirects-features-submit"
-                                            value="<?php esc_attr_e('Save Changes');?>"
-                                            class="button-primary ppc-redirects-features-submit"/>
+                                                value="<?php esc_attr_e('Save Changes', 'capability-manager-enhanced');?>"
+                                                class="button-primary ppc-redirects-features-submit"
+                                                style="margin-right: 10px;" />
+
+                                            <input type="submit" name="redirects-features-all-submit"
+                                                value="<?php esc_attr_e('Save for all Roles', 'capability-manager-enhanced');?>"
+                                                class="button-secondary ppc-redirects-features-submit" />
                                     </div>
                                     <div class="clear"></div>
                                 </td>
@@ -316,7 +329,7 @@ $fields = [
                     </fieldset>
                 </div><!-- .pp-column-left -->
                 <div class="pp-column-right pp-capabilities-sidebar">
-                <?php 
+                <?php
                 $banner_messages = ['<p>'];
                 $banner_messages[] = esc_html__('Redirect Features allows you to redirect users in a role after Registration, Login or Logout.', 'capability-manager-enhanced');
                 $banner_messages[] = '</p>';
@@ -333,6 +346,15 @@ $fields = [
         <script type="text/javascript">
             /* <![CDATA[ */
             jQuery(document).ready(function($) {
+
+
+                $(document).on('click', '.ppc-redirects-tab li', function (event) {
+                    event.preventDefault();
+
+                    var clicked_tab = $(this).attr('data-tab');
+
+                    $("[name='pp_caps_tab']").val(clicked_tab);
+                });
 
                 // -------------------------------------------------------------
                 //   Set form action attribute to include role
