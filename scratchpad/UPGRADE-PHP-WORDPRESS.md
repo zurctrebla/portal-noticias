@@ -1791,6 +1791,35 @@ tinha provado isso publicando.
 > era metade da sua justificativa. Continua sozinho e por último — 29 minors em quem governa
 > capacidade no admin é motivo bastante — mas o alvo mudou.
 
+## ✅ Sobreviveu ao rollout — e a prova de que veio da IMAGEM
+
+`git push origin develop` → **`dbb2bca0`**. O `Build e Deploy (homolog)` passou, e o *deployment*
+foi de **generation 130 → 131**, com a *tag* da imagem trocando para o SHA do commit:
+
+```
+antes : bahia-wordpress:647b8790...   (lote 2)     pod wordpress-b7b875686-5tf2f
+depois: bahia-wordpress:dbb2bca0...   (lote 3)     pod wordpress-79f56f5cb6-g27nl
+```
+
+**No pod novo, que nunca viu o `Plugin_Upgrader`:**
+
+| | |
+|---|---|
+| WordPress · PHP | **7.1 · 8.3.33** |
+| `siteurl` | `https://hml.bahia.ba` |
+| **Offload Media** | **3.3.1** ativo |
+| Smush · FooGallery · Site Kit | 3.22.1 · **3.2.6** · **1.186.0** — lotes 1 e 2 intactos |
+| `as3cf_schema_version` | `3.3.1` |
+| Guarda de remoção | `has_filter` **true** |
+
+Revalidado depois do rollout: **site 7 de 7 em 200**, e **mais um envio de mídia pelo REST**
+(201 em 6,7 s, 13 → 12 arquivos, offload verificado, `srcset` presente, CloudFront 200 nos dois
+tamanhos). Anexo removido: **155.600 / 155.675**, os mesmos números de antes do lote.
+
+> **Esta seção fica sem `push` de propósito.** Homolog roda em **um nó só**, com `maxSurge=0` — todo
+> rollout tem janela de indisponibilidade. Um `push` só para publicar parágrafo derruba homolog
+> com um repórter dentro. **Vai junto com o lote 4.**
+
 ## ⚠️ O resíduo no bucket compartilhado, e ele cresceu
 
 Anexos e rascunhos de teste **removidos, com resíduo zero**: `wp_as3cf_items` e a contagem de
