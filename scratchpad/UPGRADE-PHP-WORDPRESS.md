@@ -589,7 +589,7 @@ Consultado o `api.wordpress.org` para os plugins que vivem lá:
 | plugin | **nosso** | upstream | tested up to | req. PHP |
 |---|---|---|---|---|
 | `advanced-custom-fields` | **6.2.1.1** | 6.8.9 | **7.1** | 7.4 |
-| `wordpress-seo` (Yoast) | **27.7** | 28.3 | **7.1** | 7.4 |
+| `wordpress-seo` (Yoast) | **27.7** | 28.3 → **28.4 no dia da execução** | **7.1** | 7.4 |
 | `wp-smushit` | **3.22.1** | 4.3.2 | **7.1** | 7.4 |
 | `capability-manager-enhanced` | **2.21.0** | 2.50.1 | **7.1** | 7.2.5 |
 | `foogallery` | **2.4.32** | 3.2.6 | **7.1** | 7.0 |
@@ -1292,7 +1292,7 @@ a licença ser resolvida.** Isso é do Albert, não meu.
 | **3** ✅ | **WP Offload Media Lite** `3.2.11→3.3.1` | minor | **Sozinho, por pedido seu.** É o caminho de toda a mídia do site, e o bucket é **compartilhado com produção**. Bônus: as **244 depreciações de PHP 8.4 da Tarefa A** estão aqui — vale remedir depois |
 | **4** ✅ | **Smush** `3.22.1→4.3.2` | **major 3→4** | **Sozinho.** Mesmo pipeline do lote 3. Juntá-los destruiria a atribuição **exatamente onde ela mais importa**: se o upload quebrar, qual dos dois foi? |
 | **5** ✅ | **Co-Authors Plus** `3.6.6→4.1.1` | **major 3→4** | **Sozinho, por pedido seu.** Governa a autoria de toda matéria e a página de autor, que já teve incidente de desempenho (`author-archive-cap-lento`) |
-| **6** ✅ | **Yoast SEO** `27.7→`**`28.4`** (o canal andou) | **major** | **Sozinho, por pedido seu.** Salto de major **com migração de indexáveis**: `wp_yoast_indexable` tem ~323 mil linhas. É o lote mais lento e o de maior escrita no banco |
+| **6** ✅ | **Yoast SEO** `27.7→`**`28.4`** — ⚠️ o plano dizia **28.3**, o canal andou antes da execução | **major** | **Sozinho, por pedido seu.** ~~O lote mais lento e o de maior escrita no banco~~ — **a previsão não se confirmou**: a migração é DDL instantâneo (duas colunas anuláveis), os ~316 mil indexáveis **não** foram reconstruídos, e o `FILE_SIZE` não mudou. Ver a seção do lote 6 |
 | **7** | **PublishPress Capabilities** `2.21.0→2.50.1` | 29 minors | **Sozinho, e o alvo mudou em 02/09.** ~~Principal suspeito da caixa Publicar ausente~~ — a caixa existe, aquilo era artefato do meu `curl` sem JavaScript. O que ele governa é **capacidade e papel**, então o teste é **se a redação continua conseguindo publicar**, não se o botão está desenhado. Por último de propósito: até aqui o editor já terá sido validado seis vezes, então uma mudança nele fica atribuída |
 
 **Sete lotes, 12 plugins.** O 13º — ACF PRO — fica fora até a licença.
@@ -2227,6 +2227,11 @@ herda autorização de uma vez para a seguinte. Fica com o portão já pronto pa
 > execução de hoje a Yoast lançou a **28.4**, e o *updater* do WordPress instala **a versão atual
 > do canal**, não a que estava anotada. Não é desvio de procedimento — é o procedimento
 > funcionando —, mas **o número muda em todo registro que dizia 28.3**.
+>
+> **Corrigido em todo o documento em 02/09.** Se alguém procurar por *"Yoast 28.3"* mais tarde e
+> não achar, **não é que o lote não foi feito** — é que a versão instalada tem outro número. Os
+> lugares que diziam 28.3 são: esta seção, a linha 6 da tabela **Os lotes**, e a tabela do
+> levantamento de versões (onde `28.3 → 28.4 no dia da execução` ficou registrado com as duas).
 
 ## Rede antes de mexer
 

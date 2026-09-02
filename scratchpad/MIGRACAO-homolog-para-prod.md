@@ -1150,3 +1150,60 @@ a virada seja atômica, e confirme depois que **404 responde em ~2 s** e que
 da infraestrutura, os manifestos agora vivem em `kubernetes/prod/**` (seção 8.1) e a chave do
 cache distingue dispositivo: confira `X-Bahia-Device` em 20 acessos de desktop seguidos antes
 de dar a virada por encerrada (seção 8.5).
+
+---
+
+## 10. 🟡 ACOMPANHAR NA PRIMEIRA HORA depois que produção receber o Yoast 28.4
+
+**Acrescentado em 02/09/2026, no fechamento do lote 6.**
+
+A atualização do Yoast **não** faz o que se temia — a migração é DDL instantâneo e não reconstrói
+indexável nenhum. Mas ela **deixa um processo de fundo ligado**, e ele é novo:
+
+```
+cron   : wpseo_cleanup_cron        (nao existia na 27.7)
+quando : de hora em hora
+teto   : 1.000 linhas por consulta
+         apply_filters('wpseo_cron_query_limit_size', 1000)
+         src/integrations/cleanup-integration.php:241
+```
+
+Em homolog ele rodou **uma vez**, removeu **997 linhas de `yoast_indexable_hierarchy`** (997 de um
+teto de 1.000, assinatura clara de uma passada do lote), e depois as contagens ficaram estáveis.
+
+### Por que isso não se transporta direto para produção
+
+| | homolog | **produção** |
+|---|---|---|
+| Posts | 272 mil | **435 mil** |
+| `wp_posts` | — | **1,1 GB** |
+| Banco | `db.t3.micro`, *buffer pool* 256 MB | maior, mas **sem folga medida** |
+
+> **"Pressão limitada" não é "pressão nenhuma".** O incidente de capacidade desta manhã mostrou
+> que o pool satura com pouco, e o volume de produção é **1,6 vez** o de homolog. Uma limpeza de
+> mil linhas por hora numa tabela maior, competindo com tráfego real, é diferente da mesma
+> limpeza num ambiente parado.
+
+### O que medir, e quando
+
+**Na primeira hora depois do deploy**, e não no dia seguinte:
+
+1. **Quando o cron dispara** — `_get_cron_array()`, procurar `wpseo_cleanup_cron`
+2. **`Threads_running` e a fila do banco** nos minutos ao redor do disparo, comparados com a mesma
+   janela antes do deploy
+3. **`yoast_indexable_hierarchy` e `yoast_indexable`** antes e depois de cada passada — a queda
+   perto de 1.000 é a assinatura de que ele trabalhou
+4. **Quantas passadas seguidas** ele faz até parar: em homolog foi **uma**; se em produção houver
+   muito mais órfão acumulado, pode ser **hora após hora até drenar**
+
+### A saída, se apertar
+
+O teto é **filtrável**. Baixar de 1.000 para 200 é uma linha em mu-plugin, e não exige tocar no
+plugin:
+
+```php
+add_filter('wpseo_cron_query_limit_size', function () { return 200; });
+```
+
+**Não aplicar preventivamente** — mede-se primeiro. Mas é bom saber que a válvula existe antes de
+precisar dela às pressas.
