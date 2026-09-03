@@ -3322,5 +3322,90 @@ if ( false === $this->theme_plugin_has_update( $plugin['slug'] ) && tagdiv_util:
 4. Conferir `td_011` (500 chaves) e `active_plugins` (24) — e restaurar se mexer.
 5. Validar por **tamanho de HTML**, não por código HTTP.
 
-**Não executado: depende de decisão.** Homolog ficou na 12.7.6, íntegra e verificada — 3 leituras
-estáveis em 572.257 bytes, 241 blocos, 200, e zero fatal no log.
+## ✅ Lote 10, segunda tentativa — na ordem certa, e passou
+
+**Executado em 03/09/2026, autorizado pelo Albert.** A ordem prevista funcionou exatamente como o
+código da desativação anunciava.
+
+### O que confirma que a ordem era a variável
+
+| | Tentativa 1 (tema sozinho) | Tentativa 2 (plugins antes) |
+|---|---|---|
+| `plugins/td-*` | **APAGADOS do disco** | **intactos** — 3.730 / 258 / 40 |
+| `td_011` | 500 → **8 chaves** | **500 chaves**, sem alteração |
+| marcador `td_theme_deactivated_current_plugins` | gravado | **ausente** |
+| `active_plugins` | 24 → 22, **sem os arquivos para reativar** | 24 → 22, **reativados** |
+
+O tema **desativa mesmo quando não apaga** — `active_plugins` caiu para 22 nas duas instalações
+(a dos plugins e a do tema). Reativar é um `activate_plugins()`; conferido contra o snapshot,
+voltou a 24 com lista idêntica.
+
+### 🔴 O estado intermediário é quebrado, e é esperado
+
+Com **td-composer 5.4.6 sobre tema 12.7.6** — o meio da sequência — a matéria perde o `<h1>` e cai
+de **324 KB para 137 KB**. A home, que vem da Cloud Library, continua perfeita. **Só o par
+completo fecha.** Quem interromper a sequência no meio e olhar só a home vai concluir que está
+tudo bem.
+
+### Validação, por tamanho e não por código HTTP
+
+```
+home      572.510  (base 572.538)   241 td_block (base 241)
+editoria  307.218  (base 307.030)
+matéria   324.723  (base 324.517)   com <h1>
+busca     322.344  http 200
+```
+
+Mais: título de editoria correto em **desktop e celular**, assinatura de coautoria renderizando
+("Por Luana Neiva"), páginas de autor em 200 (`/colunistas/`), 404 respondendo 404, **meta
+description com o subtítulo intacta** (a dependência frágil do Yoast), zero fatal no log, e
+console idêntico à linha de base — a única exceção é a do OneSignal, anterior e alheia ao lote.
+
+### O `archive.php`, e uma armadilha de fim de linha
+
+As 7 linhas do commit `213dd7a7` foram reaplicadas. **O arquivo final ficou byte a byte idêntico
+ao que já estava no git** (`1b6211b7…`) — a tagDiv não mudou `archive.php` entre 12.7.6 e 12.7.7 —
+e por isso ele **não aparece no diff**.
+
+> ⚠️ O fabricante usa **CRLF**. A primeira reescrita saiu em LF e inflou o diff de **7 para 108
+> linhas** — 20 arquivos mudados viraram ruído onde deviam ser sinal. Ao aplicar patch em arquivo
+> de terceiro, **ler e escrever em binário**, preservando o fim de linha da origem.
+
+Árvore local conferida contra o pod: **4165/4165**. Commit `a7d4b83b`.
+
+## O Yoast já estava atualizado
+
+Pedido junto com o tema. **Não havia o que fazer:** a API do WordPress confirma que **28.4 é a
+versão corrente** — a que o lote 6 instalou. O painel não oferece nada.
+
+## 🟡 Apareceu um novo, e não entrou
+
+**WP Offload Media Lite 3.3.1 → 3.4.0**, publicado depois do lote 3. **Deixado de fora de
+propósito:** é o plugin de mídia, e o procedimento dele exige a guarda de remoção no bucket
+compartilhado confirmada por `has_filter`, mais validação de envio de imagem completo (derivadas,
+S3, srcset, aparecer na matéria). Isso é um lote próprio, não um apêndice.
+
+### 🔴 O envio foi barrado: a 5.4.6 traz tokens do Facebook de volta
+
+O `git push` foi **recusado pelo GitHub Push Protection** — 4 detecções de *Facebook Access Token*
+em `td-composer/legacy/common/wp_booster/wp-admin/js/td_wp_admin_panel_fb_ig_business.js`, linhas
+29, 49, 66 e 70.
+
+São **dados de demonstração fixos** no painel do tagDiv (`likes: 588, name: "WPion"`,
+`name: "TagDiv"`, `name: "iiFFloww"`), mas em **formato real** de token de página. Não é segredo
+nosso: é código que o fabricante publica assim.
+
+**Isto já tinha acontecido.** A versão anterior no repositório trazia `EXAMPLE_TOKEN_REDACTED` nas
+mesmas quatro linhas — alguém já censurou ao commitar a 5.4.5, e o site rodou semanas nessa forma.
+**A 5.4.6 os traz de volta.** Seguida a mesma convenção.
+
+> **O que isso prova sobre a atualização:** depois da censura, o arquivo fica **byte a byte
+> idêntico ao da 5.4.5**. Os tokens eram a **única** mudança dele entre as duas versões — os "8
+> +-" do diff eram as 4 linhas trocadas. O diff do lote caiu de 20 para 19 arquivos.
+
+**Esperar isto a cada atualização do td-composer**, e conferir por varredura, não por memória.
+
+Anotado e **não alterado**: `td_remote_video.php` carrega uma chave de API do Google
+(`AIzaSyCP…`). **Já estava na 5.4.5**, não mudou nesta atualização, e o Push Protection não a
+barra. Mexer nela seria alterar código de fabricante além do necessário — mas ela existe, e vale
+saber que existe.
