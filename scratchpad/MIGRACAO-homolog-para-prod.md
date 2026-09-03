@@ -1359,3 +1359,106 @@ o mu-plugin não está agindo.
 constante é o `bahia-flags.php`, sob `if ('homolog' === bahia_ambiente())`. **Em produção a
 constante não nasce.** Continua valendo o que está em `WEBP-UPLOAD-DESENHO.md`: ligar só depois da
 validação e da resposta da redação sobre a ferramenta que exporta em 620x400.
+
+---
+
+# 🔴 BLOQUEIO DE MERGE — o Yoast 28.4 exige WordPress 6.9, e produção está na 6.8.3
+
+**Descoberto em 03/09/2026, ao revisar o merge.** Este item **contradiz e substitui** a liberação
+do portão do Yoast registrada na seção 10.
+
+## O que eu errei na seção 10
+
+Aquela análise respondeu **exaustivamente ao eixo errado**. Perguntei se a migração de banco era
+segura em produção — se os indexáveis reindexariam, se o buffer pool aguentava, se o cron já
+rodava — e a resposta continua correta: **é DDL instantâneo, produção tem zero pendentes, o cron já
+roda lá.**
+
+**Nunca perguntei se o plugin suporta a versão de WordPress que produção roda.**
+
+```
+Yoast 27.7 (produção hoje)  ->  Requires at least: 6.8   ✅
+Yoast 28.4 (a subir)        ->  Requires at least: 6.9   ❌   produção está na 6.8.3
+```
+
+Três sinais concordantes sobre o banco não dizem nada sobre compatibilidade de núcleo. É o §16.12
+outra vez, num eixo novo: **a pergunta que não se faz não aparece como lacuna — aparece como
+liberação.**
+
+## O que acontece se subir assim
+
+**O Yoast NÃO se autodesativa por versão de WordPress.** Conferido no código: `yoast_wpseo_self_deactivate()`
+só é chamada por **SPL ausente** (`yoast_wpseo_missing_spl`) e **autoload ausente**
+(`yoast_wpseo_missing_autoload`). Não há checagem de `$wp_version` no caminho de carga.
+
+**Ou seja: ele sobe e roda.** O modo de falha não é uma tela de aviso — é **chamar uma função que
+só existe da 6.9 em diante e produzir fatal**, possivelmente no front de um portal ao vivo, e
+possivelmente só em algum caminho menos visitado (sitemap, feed, uma taxonomia). **Sem aviso e sem
+desativação.**
+
+## E há um segundo problema, que o merge PIORA
+
+A própria API do WordPress classifica a versão de produção:
+
+```
+produção roda 6.8.3  ->  "insecure"
+último do ramo 6.8   ->  6.8.8 ("outdated")
+último de todos      ->  7.1 ("latest")     <- o que homolog roda
+```
+
+| | `main` hoje | `develop` (o que o merge traz) |
+|---|---|---|
+| linha do Dockerfile | `FROM wordpress:6.8-php8.3-fpm` | `FROM wordpress:${WP_VERSION}` |
+| natureza | **tag flutuante** | **fixa**, `ARG WP_VERSION=6.8.3` |
+| efeito do próximo build | pegaria o topo do ramo 6.8 | **congela na 6.8.3** |
+
+O `deploy-prod.yml` faz `docker build` **sem** `--build-arg`, então produção usa o default. **O
+merge não leva a 7.1 para produção** — isso está certo e foi conferido. Mas ele **fixa produção
+numa versão marcada como insegura, e remove o mecanismo que a tiraria de lá no próximo build.**
+
+## 🔴 O problema de fundo: homolog não valida o que produção vai receber
+
+Os repórteres estão validando **WordPress 7.1 + os plugins novos**. Produção vai receber **os
+plugins novos + WordPress 6.8.3**. Essa combinação **não existe em lugar nenhum e nunca foi
+testada** — nem por nós, nem pelos repórteres.
+
+E o delta é maior do que os lotes: **25 componentes mudam de versão, 15 deles ATIVOS.** Produção
+nunca recebeu nenhum dos 7 lotes. Vários **não estavam em lote nenhum meu** e chegam sem validação
+desta série:
+
+| Componente | Produção | Vai receber | Observação |
+|---|---|---|---|
+| **foogallery** | 2.4.32 | **3.2.6** | salto de MAJOR, ativo, fora dos lotes |
+| **taxonomy-terms-order** | 1.9.1 | **2.0** | salto de major, ativo, fora dos lotes |
+| **disable-comments** | **2.5.3** | 2.9.0 | validei de 2.8.0; o trecho 2.5.3→2.8.0 não |
+| **onesignal** | **3.5.0** | 3.9.3 | validei de 3.9.2; o trecho 3.5.0→3.9.2 não |
+| google-site-kit | 1.180.0 | 1.186.0 | ativo, fora dos lotes |
+| twitter-auto-publish | 1.7.6 | 1.7.7 | ativo, fora dos lotes |
+| post-type-switcher | 4.0.0 | 4.0.1 | ativo, fora dos lotes |
+
+São **101 commits e 9.159 arquivos** — a `main` está muito atrás.
+
+## Os dois caminhos coerentes
+
+**(a) Alinhar o WordPress na mesma janela.** Trocar o default para `ARG WP_VERSION=7.1.0` e apagar
+o `--build-arg` do `deploy-homolog.yml`. É **exatamente a condição de saída escrita no topo do
+Dockerfile**, e o único caminho em que *o que os repórteres validaram* é *o que produção recebe*.
+Resolve o Yoast, resolve o `insecure`, e encerra a divergência de ambientes. **Custo:** é upgrade
+de núcleo em produção, não atualização de plugin — pede plano próprio, e existe um
+(`ROLLBACK-WP71-HOMOLOG.md`).
+
+**(b) Segurar o Yoast na 27.7 para produção** e subir o resto. Mantém a janela pequena, mas deixa
+produção numa combinação que ninguém testou, mantém a 6.8.3 insegura, e **acrescenta o Yoast à
+dívida de revalidação** que o item 15 dos gestores já descreve para o ACF.
+
+**Recomendação: (a).** O trabalho todo foi validado sobre a 7.1 durante semanas, por nós e pela
+redação. Subir os plugins sobre um núcleo diferente joga fora essa validação no exato momento em
+que ela deveria valer.
+
+## Se ainda assim for (b), o mínimo
+
+1. Reverter `plugins/wordpress-seo/` para a 27.7 no merge.
+2. **Não** fixar a versão: manter `FROM wordpress:6.8-php8.3-fpm` para produção continuar subindo
+   dentro do ramo, ou fixar em algo que não esteja marcado `insecure`.
+3. Validar **em produção, depois do deploy**, os que nunca passaram por lote: foogallery (galerias
+   nas matérias), taxonomy-terms-order (ordem das editorias), disable-comments.
