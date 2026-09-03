@@ -3115,3 +3115,212 @@ autoridade emprestada do domínio.
 **O item B fecha isso para os três caminhos.** Mas a função continua ligada para todo o resto do
 site — **desligá-la é um `remove_filter` de uma linha num mu-plugin**, e fica como tarefa própria,
 porque exige deploy de imagem.
+
+---
+
+# Lotes 8, 9 e 10 — os plugins e temas que faltavam (03/09/2026)
+
+Levantamento em homolog (WP 7.1, PHP 8.3.33, tema Newspaper 12.7.6). Fora do escopo por decisão
+do Albert: **AdRotate Professional 5.13.1** (licença em verificação com os responsáveis).
+
+## 🔴 O ACF PRO não é escolha — é impossibilidade
+
+O painel oferece **6.2.1.1 → 6.8.9**. O canal responde, mas:
+
+```
+[package]           =>            <- VAZIO
+acf_pro_license     => presente (176 chars)
+acf_pro_get_license_key() => vazia
+```
+
+**Sem licença o WordPress não tem de onde baixar.** O botão no painel é decorativo: o canal
+anuncia a versão para induzir a compra, e omite a URL. Nenhuma quantidade de tentativa resolve
+isto por código. É o **item 15 de PENDENCIAS-gestores.md** se manifestando na prática.
+
+## ✅ Lote 8 — os 7 inativos, num rollout só
+
+| Item | De | Para |
+|---|---|---|
+| Akismet | 5.3.1 | 5.7.2 |
+| All-in-One WP Migration | 6.77 | 7.110 |
+| NextScripts SNAP | 4.4.6 | 4.4.8 |
+| WPS Hide Login | 1.9.17.2 | 1.9.19 |
+| Twenty Twenty-Two | 1.6 | 2.2 |
+| Twenty Twenty-Three | 1.3 | 1.7 |
+| Twenty Twenty-Four | 1.0 | 1.6 |
+
+**O que junta o lote é que os sete estão INATIVOS.** Nenhum executa: não há como mudarem
+comportamento, enfileirarem JS ou escreverem no banco. O console **não** foi medido, e a razão
+está escrita para que ninguém leia como economia: *não há caminho físico* para o console mudar.
+
+Conferido: `active_plugins` idêntico (24), `td_011` idêntico (500 chaves), sem fatal, site em 200,
+e **839/839 checksums** batendo entre o pod e a árvore local. Commit `cdd34063`.
+
+## ✅ Lote 9 — os 2 ativos
+
+Disable Comments 2.8.0 → 2.9.0, OneSignal 3.9.2 → 3.9.3. Separados do lote 8 de propósito: se
+algo quebrasse, dois suspeitos e não nove.
+
+A verificação que importava aqui **não era a versão** — era a contagem. O Disable Comments tem
+ferramenta de apagar comentário em massa:
+
+```
+comentários no banco        : 318     -> 318      OK
+posts com comment_status=open: 92.755 -> 92.755   OK
+```
+
+Console medido **antes e depois**: idêntico, uma única exceção nas duas leituras — e ela **não é
+do lote**:
+
+> `OneSignalSDK: The "My site is not fully HTTPS" option is no longer supported starting with
+> version 16 (User Model) of the OneSignal SDK.`
+
+O OneSignal está configurado como *site não-HTTPS* num site inteiramente HTTPS, e o SDK v16 recusa
+inicializar por isso. **É configuração no painel do OneSignal, não versão de plugin** — a 3.9.3
+não muda nada. Medir antes E depois foi o que impediu de creditar isto à atualização.
+Commit `cd53c252`.
+
+## 🔴 Lote 10 — o incidente: o tema do tagDiv APAGA os plugins do tagDiv
+
+**Newspaper 12.7.6 → 12.7.7 foi aplicado, quebrou homolog, e foi revertido.**
+
+### O que se sabia antes de começar
+
+- `clear_destination => true` no pacote: o atualizador **apaga o diretório do tema** antes de
+  extrair. O único delta local era o commit `213dd7a7` — 7 linhas em `archive.php` que fazem o
+  título de archive de CPT sair como "Política"/"Municípios" em vez do genérico "Arquivos".
+- **Esse arquivo é código vivo.** Confirmado servindo desktop *e* celular; o
+  `td-composer/mobile/archive.php` não tem o ramo de CPT, então não é ele que responde.
+- Salvaguarda dirigida: 11 opções (incluindo `td_011` com 24 KB e `td_011_settings` com 121 KB),
+  13 `tdb_templates` com conteúdo e 98 `postmeta`. Mais tar do tema. Mais PITR do RDS confirmado
+  ativo (retenção 7 dias, último ponto restaurável de 1 minuto antes).
+
+### O desvio do "dump antes de cada lote", declarado
+
+Não foi feito dump completo (525 MiB, ~4min35). **Para um salto de patch de tema o raio de dano
+real são 24 KB de opções**, e a salvaguarda dirigida restaura em segundos, enquanto o dump
+completo reverteria tudo o mais junto. O PITR cobre o caso catastrófico. **Foi a decisão certa:
+o estrago real foi exatamente onde se previu, e a restauração levou segundos.**
+
+### O que aconteceu
+
+O upgrader terminou com fatal — mas **depois** de instalar os arquivos, no gancho
+`upgrader_process_complete`:
+
+```
+PHP Fatal error: Uncaught Error: Class "tagdiv_theme_plugins_setup" not found
+  in themes/Newspaper/functions.php:484
+```
+
+Artefato de CLI: a classe existe no disco, mas só é carregada em contexto de admin. **Não é tema
+quebrado.** O dano estava noutro lugar:
+
+| | Antes | Depois |
+|---|---|---|
+| `td_011` | 24.228 bytes, 500 chaves | **282 bytes, 8 chaves** |
+| `td_011_settings` | 121.088 bytes | 97.253 bytes |
+| `active_plugins` | 1.181 bytes | **1.039 bytes** |
+| `tdb_templates` | 13 | 13 — **intactos, byte a byte** |
+
+E o essencial, que a listagem de opções não mostrava:
+
+```
+plugins/td-composer/        APAGADO DO DISCO
+plugins/td-cloud-library/   APAGADO DO DISCO
+plugins/td-social-counter/  APAGADO DO DISCO
+```
+
+`class-tagdiv-current-plugins-deactivation.php` **não desativa: remove.** O `td_011` guardou os
+marcadores `td_theme_deactivated_current_plugins` e `theme_update_to_version`, que é o tema
+avisando que fez isso de propósito e espera que o admin reinstale pelo painel.
+
+### 🔴 A lição: o `200 OK` mentiu, e o `h1` correto mentiu junto
+
+Depois de restaurar o tema e as opções, medi e **declarei o site restaurado**. Estava errado.
+Naquele momento os plugins ainda estavam apagados e o site respondia assim:
+
+```
+http 200 ✅   |   h1 "Política" ✅   |   tempos normais ✅   |   home 131.475 bytes, 24 td_block
+```
+
+Tudo o que eu costumava checar dizia "de pé". Só depois de repor os arquivos apareceu o real:
+
+```
+home 572.257 bytes, 241 td_block
+```
+
+**A home estava servindo 23% do seu tamanho, com código HTTP 200 e título correto.** Três sinais
+positivos e todos compatíveis com um site quebrado — o mesmo padrão de §16.12, agora com o agravo
+de que **eu já tinha a regra escrita e ainda assim parei no primeiro sinal verde**.
+
+O que teria pego na hora, e passa a ser o critério: **para página montada por blocos, o tamanho
+do HTML é a medida; o código HTTP não é.** Um número absoluto comparado contra a linha de base,
+não um "respondeu".
+
+### Por que o site sobreviveu à remoção
+
+`opcache.validate_timestamps=1` com `revalidate_freq=60`. O PHP seguiu servindo código compilado
+de arquivos que já não existiam, e o WordPress apenas ignora `include` de plugin ausente. **Um
+site que funciona por inércia de cache é um site já quebrado** — o rollout seguinte o teria
+revelado inteiro.
+
+### A restauração
+
+1. Tema de volta à 12.7.6 pelo tar — 137 arquivos.
+2. `td_011`, `td_011_settings`, `active_plugins` reescritos com os **bytes exatos** do snapshot
+   (via `$wpdb`, não `update_option`, para não haver re-serialização). **10 de 11 idênticas.**
+3. Os 3 plugins do tagDiv repostos **a partir do git** (`plugins/` está versionado): 4.028
+   arquivos, **4028/4028 checksums batendo**.
+
+A 11ª opção é `theme_switched`: antes existia vazia, agora está ausente. **Inerte** — o WordPress
+só a lê para saber qual era o tema anterior e apagá-la em seguida; vazia e ausente são o mesmo
+`false`. Ausente é o estado normal.
+
+> ⚠️ **Armadilha do `tar` do macOS:** a primeira reposição levou **4.425 arquivos `._*`**
+> (AppleDouble) para dentro do pod — 8.453 arquivos onde deviam ser 4.028. Só apareceu porque a
+> conferência era **contagem + checksum**, não "extraiu sem erro". Usar `COPYFILE_DISABLE=1`.
+
+### ✅ O achado que compensa o incidente: os "3 tagDiv sem canal" TÊM canal
+
+A pendência dizia que td-composer, td-cloud-library e td-social-counter não têm canal de
+atualização. **Têm — e ele mora dentro do tema**, em `includes/tagdiv-config.php`, como URLs
+diretas com token:
+
+```
+https://cloud.tagdiv.com/td_plugins/td-composer/<hash>/td-composer.zip
+https://cloud.tagdiv.com/td_plugins/td-cloud-library/<hash>/td-cloud-library.zip
+https://cloud.tagdiv.com/td_plugins/td-social-counter/<hash>/td-social-counter.zip
+```
+
+Comparando os hashes da 12.7.6 com os da 12.7.7, **só dois mudaram**. E o que eles servem é
+modesto:
+
+| Plugin | Instalado | Exigido pela 12.7.7 |
+|---|---|---|
+| td-composer | 5.4.5 | **5.4.6** |
+| td-cloud-library | 3.9.5 | **3.9.6** |
+| td-social-counter | 5.7 | 5.7 — **mesmo hash, sem mudança** |
+
+**São dois patches.** O tema não empacota os plugins (o zip de 1,8 MB só traz um ícone), ele
+aponta para eles.
+
+### O caminho para fazer o lote 10 dar certo — ORDEM É TUDO
+
+O código da desativação dá a chave:
+
+```php
+if ( false === $this->theme_plugin_has_update( $plugin['slug'] ) && tagdiv_util::is_active( $plugin ) ) {
+    unset( $theme_deactivated_plugin_array[$plugin['slug']] );
+```
+
+**Plugin que já está na versão esperada e ativo sai da lista de remoção.** Logo:
+
+1. **Primeiro** os plugins: td-composer → 5.4.6 e td-cloud-library → 3.9.6, pelas URLs acima.
+2. **Depois** o tema → 12.7.7. Com os plugins já corretos, não há o que ele queira remover.
+3. Re-aplicar as 7 linhas do `archive.php` (`$SP/archive-cpt.patch`) — `clear_destination` vai
+   apagá-las de novo, e elas **não** estão na 12.7.7 de origem.
+4. Conferir `td_011` (500 chaves) e `active_plugins` (24) — e restaurar se mexer.
+5. Validar por **tamanho de HTML**, não por código HTTP.
+
+**Não executado: depende de decisão.** Homolog ficou na 12.7.6, íntegra e verificada — 3 leituras
+estáveis em 572.257 bytes, 241 blocos, 200, e zero fatal no log.

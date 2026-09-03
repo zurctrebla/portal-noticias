@@ -1633,6 +1633,41 @@ identificador da consulta**, que só se recupera pelo `PROCESSLIST`.
 consultas existiam só para achar um post pelo título — havia o `ID`, que é chave primária, e eu
 usei o `LIKE`. **A consulta certa teria custado milissegundos.**
 
+### 16.14 🔴 O `200 OK` mentiu — e o título correto mentiu junto
+
+**03/09/2026, lote 10.** O update do tema Newspaper apagou do disco os três plugins do tagDiv.
+Restaurei o tema e as opções, medi, e **declarei o site restaurado**. Os plugins ainda estavam
+apagados.
+
+O que eu vi, e por que cada sinal era compatível com um site quebrado:
+
+| Sinal | Leitura | Por que não provava nada |
+|---|---|---|
+| `http 200` | ✅ | O WordPress **ignora** `include` de plugin ausente — não é erro, é ausência |
+| `h1` = "Política" | ✅ | Vem do `archive.php` do **tema**, que eu tinha acabado de restaurar |
+| tempos normais | ✅ | Página menor renderiza **mais rápido**, não mais devagar |
+
+O real só apareceu com um número absoluto:
+
+```
+quebrado :  131.475 bytes,  24 td_block
+inteiro  :  572.257 bytes, 241 td_block
+```
+
+**A home servia 23% do seu tamanho respondendo 200.** E note o terceiro sinal: a velocidade
+melhorou **por causa** do defeito. Um site quebrado é mais rápido — a métrica não só falhou em
+acusar, ela apontou para o lado errado.
+
+> **Para página montada por blocos, a medida é o TAMANHO DO HTML contra a linha de base. O código
+> HTTP não mede montagem, mede entrega.**
+
+É o §16.12 outra vez — sinais concordantes e todos irrelevantes — com o agravo de que **a regra já
+estava escrita no topo deste documento e eu ainda parei no primeiro verde**. A diferença entre ter
+a regra e aplicá-la é ter, antes de medir, decidido **qual número refutaria** o que eu quero
+concluir.
+
+---
+
 ### A regra que fica
 
 Toda medição precisa de um **portão de contagem**: quantas linhas entraram, quantas saíram, e

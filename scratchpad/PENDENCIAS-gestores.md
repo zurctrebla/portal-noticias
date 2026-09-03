@@ -647,8 +647,15 @@ não há licença registrada, e o plugin **não oferece nenhuma atualização**.
 fabricante já tenha corrigido isso, **a correção não tem por onde chegar até nós.**
 
 O mesmo vale, por outro motivo, para o tema **Newspaper e os três plugins tagDiv**: eles também
-enfileiram recursos de forma incompatível com a área isolada, e também **não têm canal de
-atualização configurado**.
+enfileiram recursos de forma incompatível com a área isolada.
+
+> ✅ **Corrigido em 03/09/2026 — os três plugins tagDiv TÊM canal.** Era o que se acreditava até
+> aqui, e estava errado. O canal existe: ele mora **dentro do próprio tema**, e não na loja de
+> plugins do WordPress. É por isso que a tela de "Atualizações" nunca os mostrou.
+>
+> Isso muda o que se pede: **para o tagDiv não é preciso comprar nada nem esperar o fabricante**
+> — a atualização já está ao nosso alcance. A restrição de licença continua valendo **só para o
+> AdRotate**, que é o assunto do resto deste item.
 
 ### Por que importa
 
@@ -810,3 +817,42 @@ conta o retrabalho**, e não só o preço da anuidade:
 - **quanto mais cedo a licença aparecer, menos coisa haverá para revalidar**
 - cada atualização nova feita antes dela **acrescenta um item** à lista de revalidação
 - é a única pendência desta lista que **fica mais cara sozinha**, sem ninguém fazer nada
+
+---
+
+## 16. As notificações por push do site não estão funcionando — e não é falta de atualização
+
+### O que foi descoberto
+
+Em 03/09/2026, ao medir o console do navegador antes e depois de atualizar o plugin **OneSignal**,
+a mesma mensagem apareceu nas duas leituras:
+
+> *A opção "Meu site não é totalmente HTTPS" deixou de ser suportada a partir da versão 16 do
+> OneSignal.*
+
+O site **é** inteiramente HTTPS. Mas a conta do OneSignal está configurada como se **não** fosse,
+e o programa do OneSignal se recusa a iniciar por causa disso.
+
+### O que isso significa na prática
+
+**O sino de notificação não carrega, e ninguém é inscrito nem recebe aviso de matéria nova.**
+Não há erro visível para quem escreve nem para quem lê — a caixa simplesmente não aparece.
+
+### Por que não se resolve atualizando
+
+Foi exatamente o que se testou. A atualização do plugin (3.9.2 → 3.9.3) foi aplicada e **a
+mensagem continuou igual**. O ajuste não é no site: é **no painel da conta do OneSignal**, numa
+opção de configuração que ficou marcada de um tempo em que o site ainda não era todo HTTPS.
+
+### O que se pede
+
+**Acesso ao painel do OneSignal** — ou que alguém que já o tenha desmarque a opção "My site is not
+fully HTTPS" nas configurações da plataforma web. É uma caixa de seleção.
+
+Vale saber **desde quando** está assim, porque isso diz quantos leitores deixaram de ser
+alcançados. Não temos essa data: o plugin não registra a falha em lugar nenhum — ela só existe no
+console do navegador de quem visita.
+
+> **Nota de método.** Esta falha só apareceu porque o console foi medido **antes** e **depois** da
+> atualização. Se tivesse sido medido só depois, a leitura óbvia seria "a atualização quebrou o
+> push" — e o tempo teria ido para reverter um plugin que não tinha culpa nenhuma.
