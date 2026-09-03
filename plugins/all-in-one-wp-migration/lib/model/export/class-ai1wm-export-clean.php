@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2014-2018 ServMask Inc.
+ * Copyright (C) 2014-2025 ServMask Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
+ * Attribution: This code is part of the All-in-One WP Migration plugin, developed by
+ *
  * ███████╗███████╗██████╗ ██╗   ██╗███╗   ███╗ █████╗ ███████╗██╗  ██╗
  * ██╔════╝██╔════╝██╔══██╗██║   ██║████╗ ████║██╔══██╗██╔════╝██║ ██╔╝
  * ███████╗█████╗  ██████╔╝██║   ██║██╔████╔██║███████║███████╗█████╔╝
@@ -23,10 +25,27 @@
  * ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	die( 'Kangaroos cannot jump here' );
+}
+
 class Ai1wm_Export_Clean {
 
 	public static function execute( $params ) {
+
+		// Delete storage files. The ai1wm_status_<job_id> option lingers so poll
+		// clients still see the terminal state; the daily cron sweeps it later.
 		Ai1wm_Directory::delete( ai1wm_storage_path( $params ) );
+
+		if ( isset( $params['ai1wm_export_cancel'] ) ) {
+			do_action( 'ai1wm_status_export_canceled', $params );
+		}
+
+		// Exit in console
+		if ( defined( 'WP_CLI' ) ) {
+			return $params;
+		}
+
 		exit;
 	}
 }

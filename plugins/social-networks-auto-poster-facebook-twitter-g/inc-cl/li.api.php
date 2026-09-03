@@ -54,7 +54,7 @@ if (!class_exists("nxs_class_SNAP_LI")) { class nxs_class_SNAP_LI {
         //## Get Saved Login Info
         if (function_exists('nxs_getOption')) { $opVal = array(); $opNm = 'nxs_snap_li_'.sha1('nxs_snap_li'.$options['uName'].$options['uPass']); $opVal = nxs_getOption($opNm); if (!empty($opVal) & is_array($opVal)) $options = array_merge($options, $opVal); } //  prr($opVal);
         $uname = $options['uName']; $pass = (substr($options['uPass'], 0, 5)=='n5g9a'||substr($options['uPass'], 0, 5)=='g9c1a'||substr($options['uPass'], 0, 5)=='b4d7s')?nsx_doDecode(substr($options['uPass'], 5)):$options['uPass'];       
-        $ck = !empty($options['ck'])?maybe_unserialize($options['ck']):''; if (!empty($ck)) $ck = nxsClnCookies($ck);
+        $ck = !empty($options['ck'])?nxs_safe_unserialize($options['ck'], array()):''; if (!empty($ck)) $ck = nxsClnCookies($ck);
         $nt = new nxsAPI_LI(); if (!empty($ck)) $nt->ck = $ck; if (!empty($message['session']) || !empty($options['session'])) { $nt->sid = !empty($message['session'])?$message['session']:$options['session']; } 
         if (!empty($options['proxy'])&&!empty($options['proxyOn'])){ $nt->proxy['proxy'] = $options['proxy']['proxy']; if (!empty($options['proxy']['up'])) $nt->proxy['up'] = $options['proxy']['up']; }
         $loginErr = $nt->connect($uname, $pass); 

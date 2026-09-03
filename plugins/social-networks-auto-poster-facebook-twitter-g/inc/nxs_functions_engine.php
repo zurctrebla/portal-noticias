@@ -54,7 +54,7 @@ if (!function_exists("nxs_snapPublishTo")) { function nxs_snapPublishTo($postIDo
         foreach ($nxs_snapAvNts as $avNt) {
             if (!empty($networks[$avNt['lcode']]) && count($networks[$avNt['lcode']])>0) { $clName = 'nxs_snapClass'.$avNt['code']; $ntClInst = new $clName(); $publTempType = '';
                 if ($isPost && isset($NXS_POST[$avNt['lcode']])) $po = $NXS_POST[$avNt['lcode']]; else { $po =  get_post_meta($postID, 'snap'.$avNt['code'], true); $po =  maybe_unserialize($po);}
-                if (isset($po) && is_array($po)) $isPostMeta = true; else { $isPostMeta = false; $po = $networks[$avNt['lcode']]; update_post_meta($postID, 'snap'.$avNt['code'], $po); } // prr($po);
+                if (isset($po) && is_array($po)) $isPostMeta = true; else { $isPostMeta = false; $po = $networks[$avNt['lcode']]; update_post_meta($postID, 'snap'.$avNt['code'], nxs_protect_settings($po)); } // prr($po);
                 delete_post_meta($postID, 'snap_isAutoPosted'); add_post_meta($postID, 'snap_isAutoPosted', time());
                 $optMt = $networks[$avNt['lcode']][0]; if ($isPostMeta) $optMt = $ntClInst->adjMetaOpt($optMt, $po[0]); if (!$ntClInst->checkIfSetupFinished($optMt)) continue;  //prr($optMt);
                 if ($optMt['do']=='2') { $rMsg = nxs_snapCheckFilters($optMt, $postObj); if ($rMsg!==false) { nxs_LogIt('I', 'Skipped', $avNt['name'].' ('.$optMt['nName'].')','', 'Filter(Network) - Excluded - Post ID:('.$postID.')',$rMsg, 'snap', $uid ); continue; } else $optMt['do'] = 1;}
@@ -64,7 +64,9 @@ if (!function_exists("nxs_snapPublishTo")) { function nxs_snapPublishTo($postIDo
                         nxs_LogIt('I', 'Delayed', $avNt['name'].' ('.$optMt['nName'].')', '','Post has been delayed',' for '.$delay.' Seconds ('.($optMt['nHrs']>0?$optMt['nHrs'].' Hours':'')." ".($optMt['nMin']>0?$optMt['nMin'].' Minutes':'').')','snap',$uid );
                     } else $delay = rand(2,10);
                         $optMt['timeToRun'] = time() + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS )+$delay;  global $wpdb;
-                        $dbItem = array('datecreated'=>date_i18n('Y-m-d H:i:s'), 'type'=>'S', 'postid'=>$postID, 'nttype'=>$avNt['code'], 'refid'=>$optMt['ii'], 'timetorun'=> date_i18n('Y-m-d H:i:s', $optMt['timeToRun']), 'extInfo'=>serialize($optMt), 'descr'=> (!empty($optMt['nName'])?'('.$avNt['code'].' - '.$optMt['nName'].') ':'').'Post ID:('.$postID.')', 'uid'=>$postUser);
+                        // Credentials are loaded from the protected account store when the job runs;
+                        // never duplicate an account (and its secrets) into the queue table.
+                        $dbItem = array('datecreated'=>date_i18n('Y-m-d H:i:s'), 'type'=>'S', 'postid'=>$postID, 'nttype'=>$avNt['code'], 'refid'=>$optMt['ii'], 'timetorun'=> date_i18n('Y-m-d H:i:s', $optMt['timeToRun']), 'extInfo'=>'', 'descr'=> (!empty($optMt['nName'])?'('.$avNt['code'].' - '.$optMt['nName'].') ':'').'Post ID:('.$postID.')', 'uid'=>$postUser);
                         $nxDB = $wpdb->insert( $wpdb->prefix . "nxs_query", $dbItem );  $lid = $wpdb->insert_id;
                         nxs_LogIt('BI', 'Scheduled', $avNt['name'].' ('.$optMt['nName'].')','','Scheduled for '.date_i18n('Y-m-d H:i:s', $optMt['timeToRun']).")", ' PostID:('.$postID.')','snap',$uid );
                     } else { $ntClInst->nt[0] = $optMt; $ntClInst->publishWP(0, $postID); }
@@ -142,47 +144,10 @@ if (!function_exists("nxs_checkQuery")){ function nxs_checkQuery(){ set_time_lim
     global $wpdb, $doing_wp_cron;
     if ($isDebug) echo "==-- CRON --==";
 
-    //## Debug only - delete later - shows all reords in the Query
-	$sqql = $wpdb->prepare("SELECT * FROM {$wpdb->prefix}nxs_query ORDER BY timetorun DESC LIMIT %d", $options['numOfTasks']);
-	$quPosts = $wpdb->get_results($sqql, ARRAY_A);
-	if ($isDebug) { prr($sqql); prr($quPosts); prr(date_i18n('Y-m-d H:i:s')); }
-    //## / Debug only - delete later - shows all reords in the Query
-
-    //## Get count of tasks
-    $ttr = "FROM ". $wpdb->prefix . "nxs_query WHERE timetorun<'".date_i18n('Y-m-d H:i:s')."'";
-	$quPostsCnt = $wpdb->get_var($wpdb->prepare("SELECT COUNT(id) %s", $ttr));
-	if ($isDebug) prr($ttr, 'TTR:');
-	if ($isDebug) prr($quPostsCnt, 'COUNT:');
-	if ((int)$quPostsCnt<1) return; //## Nothing in Query - return;
-    //## Get 20 tasks
-	$sql = $wpdb->prepare( "SELECT * %s ORDER BY timetorun DESC LIMIT %d", $ttr, $options['numOfTasks'] );
-	$quPosts = $wpdb->get_results($sql, ARRAY_A);
-
-	// Assuming you have access to the $wpdb object and $options array
-
-	$current_datetime = date_i18n('Y-m-d H:i:s');
-	$ttr = "FROM {$wpdb->prefix}nxs_query WHERE timetorun < %s";
-	$prepared_count_query = $wpdb->prepare("SELECT COUNT(id) {$ttr}", $current_datetime);
-	$quPostsCnt = $wpdb->get_var($prepared_count_query);
-	if ($isDebug) {
-		prr($ttr, 'TTR:');
-		prr($quPostsCnt, 'COUNT:');
-	}
-	if ((int)$quPostsCnt < 1) {
-		return; // Nothing in Query - return
-	}
-// Define the query to get 20 tasks
-	$sql = $wpdb->prepare( "SELECT * %s ORDER BY timetorun DESC LIMIT %d", $ttr, $options['numOfTasks'] );
-	$quPosts = $wpdb->get_results($sql, ARRAY_A);
-
+    //## Select only due tasks. SQL structure is fixed; only data values are prepared.
 	$current_time = date_i18n('Y-m-d H:i:s');
 	$sql_count = $wpdb->prepare("SELECT COUNT(id) FROM {$wpdb->prefix}nxs_query WHERE timetorun < %s", $current_time);
 	$quPostsCnt = $wpdb->get_var($sql_count);
-
-	if ($isDebug) {
-		prr($sql_count, 'TTR:');
-		prr($quPostsCnt, 'COUNT:');
-	}
 
 	if ((int) $quPostsCnt < 1) {
 		return; // Nothing in query - return
@@ -204,7 +169,7 @@ if (!function_exists("nxs_checkQuery")){ function nxs_checkQuery(){ set_time_lim
 
 
 
-	if ($isDebug) { var_dump($quPosts); prr($quPosts); } $quPosts = array_reverse($quPosts);
+	$quPosts = array_reverse($quPosts);
     if (count($quPosts)>0) {
         foreach ($quPosts as $row){ $id = $row['id']; if (!empty($row['postid'])) $postID = $row['postid']; else $postID = ''; //prr($row); prr($row['type']);
             switch ( $row['type'] ) {
@@ -298,7 +263,7 @@ if (!function_exists("nxs_checkQuery")){ function nxs_checkQuery(){ set_time_lim
                 case 'F': //## Post from Quick Post From
                     $postUser = $row['uid']; $isItUserWhoCan = (!user_can($postUser, 'manage_options' ) && user_can($postUser, 'haveown_snap_accss')); //if ($isItUserWhoCan) $uid = $postUser;
                     if ($isItUserWhoCan) { $nxs_SNAP = new nxs_SNAP($postUser); $networks = $nxs_SNAP->nxs_acctsU; global $nxs_uid; $nxs_uid = $postUser; } else { $networks = $nxs_SNAP->nxs_accts; }
-                    $post  = unserialize($row['extInfo']);  $arrOut = nxs_postFromForm($post, $networks, true); $wpdb->delete($wpdb->prefix . "nxs_query", array('id'=>$id));
+                    $post  = nxs_safe_unserialize($row['extInfo'], array()); if (!is_array($post)) { $wpdb->delete($wpdb->prefix . "nxs_query", array('id'=>$id)); continue; } $post = nxs_unprotect_settings($post); $arrOut = nxs_postFromForm($post, $networks, true); $wpdb->delete($wpdb->prefix . "nxs_query", array('id'=>$id));
                     break;
             }
         } if (!empty($arrOut)) nxs_addToLogN('L', 'Cron Run ('.$doing_wp_cron.')', '', 'Cron:'. is_array($arrOut)?print_r($arrOut, true):$arrOut);
@@ -311,6 +276,10 @@ if (!function_exists("nxs_checkQuery")){ function nxs_checkQuery(){ set_time_lim
 
 //## Hook for Manual NXS Cron - ?nxs-cronrun=1
 if (!function_exists("nxs_cron_manual")) {  function nxs_cron_manual(){
-    if (isset($_GET['nxs-cronrun'])) { nxs_checkQuery(); /* nxs_recountQueryTimes(); */ die(); }
+    if (isset($_GET['nxs-cronrun'])) {
+        if (!current_user_can('manage_options')) wp_die(esc_html__('You are not allowed to run the SNAP queue.', 'social-networks-auto-poster-facebook-twitter-g'), '', array('response'=>403));
+        check_admin_referer('nxs_run_cron');
+        nxs_checkQuery(); /* nxs_recountQueryTimes(); */ die();
+    }
 }} add_action('wp_loaded','nxs_cron_manual');
 ?>

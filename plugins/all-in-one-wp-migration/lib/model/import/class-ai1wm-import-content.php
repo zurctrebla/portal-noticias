@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2014-2018 ServMask Inc.
+ * Copyright (C) 2014-2025 ServMask Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
+ * Attribution: This code is part of the All-in-One WP Migration plugin, developed by
+ *
  * ███████╗███████╗██████╗ ██╗   ██╗███╗   ███╗ █████╗ ███████╗██╗  ██╗
  * ██╔════╝██╔════╝██╔══██╗██║   ██║████╗ ████║██╔══██╗██╔════╝██║ ██╔╝
  * ███████╗█████╗  ██████╔╝██║   ██║██╔████╔██║███████║███████╗█████╔╝
@@ -23,9 +25,19 @@
  * ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	die( 'Kangaroos cannot jump here' );
+}
+
 class Ai1wm_Import_Content {
 
 	public static function execute( $params ) {
+
+		// Set decryption password
+		$decryption_password = null;
+		if ( isset( $params['decryption_password'] ) ) {
+			$decryption_password = $params['decryption_password'];
+		}
 
 		// Set archive bytes offset
 		if ( isset( $params['archive_bytes_offset'] ) ) {
@@ -39,6 +51,13 @@ class Ai1wm_Import_Content {
 			$file_bytes_offset = (int) $params['file_bytes_offset'];
 		} else {
 			$file_bytes_offset = 0;
+		}
+
+		// Set file bytes written
+		if ( isset( $params['file_bytes_written'] ) ) {
+			$file_bytes_written = (int) $params['file_bytes_written'];
+		} else {
+			$file_bytes_written = 0;
 		}
 
 		// Get processed files size
@@ -72,11 +91,22 @@ class Ai1wm_Import_Content {
 		// Close handle
 		ai1wm_close( $handle );
 
+		// Read package.json file
+		$handle = ai1wm_open( ai1wm_package_path( $params ), 'r' );
+
+		// Parse package.json file
+		$config = ai1wm_read( $handle, filesize( ai1wm_package_path( $params ) ) );
+		$config = json_decode( $config, true );
+
+		// Close handle
+		ai1wm_close( $handle );
+
 		// What percent of files have we processed?
 		$progress = (int) min( ( $processed_files_size / $total_files_size ) * 100, 100 );
 
 		// Set progress
-		Ai1wm_Status::info( sprintf( __( 'Restoring %d files...<br />%d%% complete', AI1WM_PLUGIN_NAME ), $total_files_count, $progress ) );
+		/* translators: 1: Number of files, 2: Progress. */
+		Ai1wm_Status::info( sprintf( __( 'Restoring %1$d files...<br />%2$d%% complete', 'all-in-one-wp-migration' ), $total_files_count, $progress ) );
 
 		// Flag to hold if file data has been processed
 		$completed = true;
@@ -84,91 +114,144 @@ class Ai1wm_Import_Content {
 		// Start time
 		$start = microtime( true );
 
+		// Get compression type
+		$compression_type = null;
+		if ( ! empty( $config['Compression']['Enabled'] ) ) {
+			$compression_type = $config['Compression']['Type'];
+		}
+
 		// Open the archive file for reading
-		$archive = new Ai1wm_Extractor( ai1wm_archive_path( $params ) );
+		$archive = new Ai1wm_Extractor( ai1wm_archive_path( $params ), $decryption_password, $compression_type );
 
 		// Set the file pointer to the one that we have saved
 		$archive->set_file_pointer( $archive_bytes_offset );
 
-		$old_paths = array();
-		$new_paths = array();
+		$old_paths = array( 'plugins', 'themes' );
+		$new_paths = array( ai1wm_get_plugins_dir(), get_theme_root() );
 
 		// Set extract paths
 		foreach ( $blogs as $blog ) {
-			if ( ai1wm_main_site( $blog['Old']['BlogID'] ) === false ) {
+			if ( ai1wm_is_mainsite( $blog['Old']['BlogID'] ) === false ) {
 				if ( defined( 'UPLOADBLOGSDIR' ) ) {
-					// Old sites dir style
-					$old_paths[] = ai1wm_files_path( $blog['Old']['BlogID'] );
-					$new_paths[] = ai1wm_files_path( $blog['New']['BlogID'] );
+					// Old files dir style
+					$old_paths[] = ai1wm_blog_files_relpath( $blog['Old']['BlogID'] );
+					$new_paths[] = ai1wm_blog_files_abspath( $blog['New']['BlogID'] );
+
+					// Old blogs.dir style
+					$old_paths[] = ai1wm_blog_blogsdir_relpath( $blog['Old']['BlogID'] );
+					$new_paths[] = ai1wm_blog_blogsdir_abspath( $blog['New']['BlogID'] );
 
 					// New sites dir style
-					$old_paths[] = ai1wm_sites_path( $blog['Old']['BlogID'] );
-					$new_paths[] = ai1wm_files_path( $blog['New']['BlogID'] );
+					$old_paths[] = ai1wm_blog_sites_relpath( $blog['Old']['BlogID'] );
+					$new_paths[] = ai1wm_blog_files_abspath( $blog['New']['BlogID'] );
 				} else {
-					// Old sites dir style
-					$old_paths[] = ai1wm_files_path( $blog['Old']['BlogID'] );
-					$new_paths[] = ai1wm_sites_path( $blog['New']['BlogID'] );
+					// Old files dir style
+					$old_paths[] = ai1wm_blog_files_relpath( $blog['Old']['BlogID'] );
+					$new_paths[] = ai1wm_blog_sites_abspath( $blog['New']['BlogID'] );
+
+					// Old blogs.dir style
+					$old_paths[] = ai1wm_blog_blogsdir_relpath( $blog['Old']['BlogID'] );
+					$new_paths[] = ai1wm_blog_sites_abspath( $blog['New']['BlogID'] );
 
 					// New sites dir style
-					$old_paths[] = ai1wm_sites_path( $blog['Old']['BlogID'] );
-					$new_paths[] = ai1wm_sites_path( $blog['New']['BlogID'] );
+					$old_paths[] = ai1wm_blog_sites_relpath( $blog['Old']['BlogID'] );
+					$new_paths[] = ai1wm_blog_sites_abspath( $blog['New']['BlogID'] );
 				}
 			}
 		}
 
 		// Set base site extract paths (should be added at the end of arrays)
 		foreach ( $blogs as $blog ) {
-			if ( ai1wm_main_site( $blog['Old']['BlogID'] ) === true ) {
+			if ( ai1wm_is_mainsite( $blog['Old']['BlogID'] ) === true ) {
 				if ( defined( 'UPLOADBLOGSDIR' ) ) {
-					// Old sites dir style
-					$old_paths[] = ai1wm_files_path( $blog['Old']['BlogID'] );
-					$new_paths[] = ai1wm_files_path( $blog['New']['BlogID'] );
+					// Old files dir style
+					$old_paths[] = ai1wm_blog_files_relpath( $blog['Old']['BlogID'] );
+					$new_paths[] = ai1wm_blog_files_abspath( $blog['New']['BlogID'] );
+
+					// Old blogs.dir style
+					$old_paths[] = ai1wm_blog_blogsdir_relpath( $blog['Old']['BlogID'] );
+					$new_paths[] = ai1wm_blog_blogsdir_abspath( $blog['New']['BlogID'] );
 
 					// New sites dir style
-					$old_paths[] = ai1wm_sites_path( $blog['Old']['BlogID'] );
-					$new_paths[] = ai1wm_files_path( $blog['New']['BlogID'] );
+					$old_paths[] = ai1wm_blog_sites_relpath( $blog['Old']['BlogID'] );
+					$new_paths[] = ai1wm_blog_files_abspath( $blog['New']['BlogID'] );
 				} else {
-					// Old sites dir style
-					$old_paths[] = ai1wm_files_path( $blog['Old']['BlogID'] );
-					$new_paths[] = ai1wm_sites_path( $blog['New']['BlogID'] );
+					// Old files dir style
+					$old_paths[] = ai1wm_blog_files_relpath( $blog['Old']['BlogID'] );
+					$new_paths[] = ai1wm_blog_sites_abspath( $blog['New']['BlogID'] );
+
+					// Old blogs.dir style
+					$old_paths[] = ai1wm_blog_blogsdir_relpath( $blog['Old']['BlogID'] );
+					$new_paths[] = ai1wm_blog_sites_abspath( $blog['New']['BlogID'] );
 
 					// New sites dir style
-					$old_paths[] = ai1wm_sites_path( $blog['Old']['BlogID'] );
-					$new_paths[] = ai1wm_sites_path( $blog['New']['BlogID'] );
+					$old_paths[] = ai1wm_blog_sites_relpath( $blog['Old']['BlogID'] );
+					$new_paths[] = ai1wm_blog_sites_abspath( $blog['New']['BlogID'] );
 				}
 			}
 		}
 
+		$old_paths[] = ai1wm_blog_sites_relpath();
+		$new_paths[] = ai1wm_blog_sites_abspath();
+
 		while ( $archive->has_not_reached_eof() ) {
-			$file_bytes_written = 0;
+			$file_bytes_read = 0;
 
 			// Exclude WordPress files
 			$exclude_files = array_keys( _get_dropins() );
 
 			// Exclude plugin files
-			$exclude_files = array_merge( $exclude_files, array(
-				AI1WM_PACKAGE_NAME,
-				AI1WM_MULTISITE_NAME,
-				AI1WM_DATABASE_NAME,
-				AI1WM_MUPLUGINS_NAME,
-			) );
+			$exclude_files = array_merge(
+				$exclude_files,
+				array(
+					AI1WM_PACKAGE_NAME,
+					AI1WM_MULTISITE_NAME,
+					AI1WM_DATABASE_NAME,
+					AI1WM_MUPLUGINS_NAME,
+				)
+			);
+
+			// Exclude theme files
+			$exclude_files = array_merge( $exclude_files, array( AI1WM_THEMES_FUNCTIONS_NAME ) );
+
+			// Exclude Elementor files
+			$exclude_files = array_merge( $exclude_files, array( AI1WM_ELEMENTOR_CSS_NAME ) );
+
+			// Exclude CiviCRM config, regenerable caches and temp files. These are
+			// environment specific and rebuilt on the destination, so restoring them
+			// would carry over the source paths, URLs and DB credentials. Real data
+			// under custom/, persist/ and ext/ is restored untouched.
+			$exclude_files = array_merge(
+				$exclude_files,
+				array(
+					AI1WM_CIVICRM_SETTINGS_NAME,
+					AI1WM_CIVICRM_TEMPLATES_C_NAME,
+					AI1WM_CIVICRM_CONFIG_AND_LOG_NAME,
+					AI1WM_CIVICRM_UPLOAD_NAME,
+					AI1WM_CIVICRM_DYNAMIC_NAME,
+				)
+			);
+
+			// Exclude content extensions
+			$exclude_extensions = array( AI1WM_LESS_CACHE_EXTENSION, AI1WM_SQLITE_DATABASE_EXTENSION );
 
 			// Extract a file from archive to WP_CONTENT_DIR
-			if ( ( $completed = $archive->extract_one_file_to( WP_CONTENT_DIR, $exclude_files, $old_paths, $new_paths, $file_bytes_written, $file_bytes_offset ) ) ) {
-				$file_bytes_offset = 0;
+			if ( ( $completed = $archive->extract_one_file_to( WP_CONTENT_DIR, $exclude_files, $exclude_extensions, $old_paths, $new_paths, $file_bytes_read, $file_bytes_offset, $file_bytes_written ) ) ) {
+				$file_bytes_offset = $file_bytes_written = 0;
 			}
 
 			// Get archive bytes offset
 			$archive_bytes_offset = $archive->get_file_pointer();
 
 			// Increment processed files size
-			$processed_files_size += $file_bytes_written;
+			$processed_files_size += $file_bytes_read;
 
 			// What percent of files have we processed?
 			$progress = (int) min( ( $processed_files_size / $total_files_size ) * 100, 100 );
 
 			// Set progress
-			Ai1wm_Status::info( sprintf( __( 'Restoring %d files...<br />%d%% complete', AI1WM_PLUGIN_NAME ), $total_files_count, $progress ) );
+			/* translators: 1: Number of files, 2: Progress. */
+			Ai1wm_Status::info( sprintf( __( 'Restoring %1$d files...<br />%2$d%% complete', 'all-in-one-wp-migration' ), $total_files_count, $progress ) );
 
 			// More than 10 seconds have passed, break and do another request
 			if ( ( $timeout = apply_filters( 'ai1wm_completed_timeout', 10 ) ) ) {
@@ -187,6 +270,9 @@ class Ai1wm_Import_Content {
 
 			// Unset file bytes offset
 			unset( $params['file_bytes_offset'] );
+
+			// Unset file bytes written
+			unset( $params['file_bytes_written'] );
 
 			// Unset processed files size
 			unset( $params['processed_files_size'] );
@@ -207,6 +293,9 @@ class Ai1wm_Import_Content {
 
 			// Set file bytes offset
 			$params['file_bytes_offset'] = $file_bytes_offset;
+
+			// Set file bytes written
+			$params['file_bytes_written'] = $file_bytes_written;
 
 			// Set processed files size
 			$params['processed_files_size'] = $processed_files_size;

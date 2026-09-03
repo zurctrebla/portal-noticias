@@ -98,6 +98,8 @@ if (!class_exists("nxs_class_SNAP_WP")) { class nxs_class_SNAP_WP {
         //## Check settings
         if (!is_array($options)) { $badOut['Error'] = 'No Options'; return $badOut; }
         if (!isset($options['uName']) || trim($options['uPass'])=='') { $badOut['Error'] = 'Not Configured'; return $badOut; }
+        $options['wpURL'] = isset($options['wpURL']) ? trim($options['wpURL']) : '';
+        if (!nxs_validate_remote_url($options['wpURL'])) { $badOut['Error'] = 'The remote WordPress URL must be a public HTTPS URL.'; return $badOut; }
         $pass = (substr($options['uPass'], 0, 5)=='n5g9a'||substr($options['uPass'], 0, 5)=='g9c1a'||substr($options['uPass'], 0, 5)=='b4d7s')?nsx_doDecode(substr($options['uPass'], 5)):$options['uPass'];
         if (empty($options['imgSize'])) $options['imgSize'] = '';
         //## Check is Exact Copy
@@ -122,7 +124,7 @@ if (!class_exists("nxs_class_SNAP_WP")) { class nxs_class_SNAP_WP {
 
         $params = array(0, $options['uName'], $pass, array('software_version')); // prr($params);
         if (!$nxsToWPclient->query('wp.getOptions', $params)) { $ret = 'Something went wrong - '.$nxsToWPclient->getErrorCode().' : '.$nxsToWPclient->getErrorMessage();} else $ret = 'OK';
-        $rwpOpt = $nxsToWPclient->getResponse(); if (!empty($rwpOpt['software_version'])) { $rwpOpt = $rwpOpt['software_version']['value']; $rwpOpt = floatval($rwpOpt); } else $rwpOpt = 0; prr($rwpOpt);prr($nxsToWPclient);
+        $rwpOpt = $nxsToWPclient->getResponse(); if (!empty($rwpOpt['software_version'])) { $rwpOpt = $rwpOpt['software_version']['value']; $rwpOpt = floatval($rwpOpt); } else $rwpOpt = 0;
         //## MAIN Post
         if ($rwpOpt==0) {
             $errMsg = $nxsToWPclient->getErrorMessage(); if ($errMsg!='') $ret = $errMsg; else  $ret = 'XMLRPC is not found or not active. WP admin - Settings - Writing - Enable XML-RPC';
@@ -130,12 +132,10 @@ if (!class_exists("nxs_class_SNAP_WP")) { class nxs_class_SNAP_WP {
 
             if ($rwpOpt>3.3){
                 $nxsToWPContent = array('title'=>$msgT, 'description'=>$msg, 'post_status'=>'draft', 'mt_excerpt'=>$ext, 'mt_allow_comments'=>1, 'mt_allow_pings'=>1, 'post_type'=>$options['pt'], 'mt_keywords'=>$message['tags'], 'categories'=>$message['catsA'], 'custom_fields' =>  '');
-                $params = array(0, $options['uName'], $pass, $nxsToWPContent, true); prr($params);
+                $params = array(0, $options['uName'], $pass, $nxsToWPContent, true);
                 if (!$nxsToWPclient->query('metaWeblog.newPost', $params)) { $ret = 'Something went wrong - #1.1'.$nxsToWPclient->getErrorCode().' : '.$nxsToWPclient->getErrorMessage();} else $ret = 'OK';
 
-                prr($nxsToWPclient, 'OBJ');
-
-                $pid = $nxsToWPclient->getResponse();  prr($pid);
+                $pid = $nxsToWPclient->getResponse();
 
                 if ($gid!='') {
                     $nxsToWPContent = array('post_thumbnail'=>$gid);  $params = array(0, $options['uName'], $pass, $pid, $nxsToWPContent, true);

@@ -18,6 +18,10 @@ if (!class_exists('nxsHttp2')) { class nxsHttp2 extends WP_Http {
     function sendReq($url, $type='GET', $args = array()) { $defaults = array('method' => $type); $r = wp_parse_args( $args, $defaults ); return $this->request($url, $r);}
     function imgUplcurl(&$handle){ curl_setopt($handle, CURLOPT_POSTFIELDS, $this->postData); }
     function request($url, $args = array()){
+        if (!function_exists('nxs_validate_remote_url') || !nxs_validate_remote_url($url)) return new WP_Error('nxs_unsafe_url', __('SNAP blocked a non-HTTPS, local, or otherwise unsafe remote URL.', 'social-networks-auto-poster-facebook-twitter-g'));
+        $args['sslverify'] = true; $args['reject_unsafe_urls'] = true;
+        $args['redirection'] = isset($args['redirection']) ? min(2, absint($args['redirection'])) : 0;
+        if (!isset($args['limit_response_size'])) $args['limit_response_size'] = 10 * MB_IN_BYTES;
         //## Add Proxy to the request.
         if (empty($this->proxy)&&!empty($args['proxy'])) $this->proxy = $args['proxy'];
 	    if (!empty($this->proxy)&&class_exists('nxaddn_prx')) nxaddn_prx::addPrx($this->proxy);
@@ -53,8 +57,8 @@ if (!function_exists("nxs_makeHeaders")) { function nxs_makeHeaders($ref='', $or
 }}
 if (!function_exists("nxs_getNXSHeaders")) {  function nxs_getNXSHeaders($ref='', $post=false){ return nxs_makeHeaders($ref, '', $post?'POST':'GET'); }} //## Compatibility function...
 //## AdvSet
-if (!function_exists("nxs_mkRemOptsArr")) {function nxs_mkRemOptsArr($hdrsArr, $ck='', $flds='', $p='', $rdr=0, $timt=45, $sslverify = false){ $ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36';
-    if (empty($hdrsArr)) $hdrsArr = nxs_makeHeaders('http://'.$_SERVER['HTTP_HOST']); $a = array('headers' => $hdrsArr, 'httpversion' => '1.1', 'timeout' => $timt, 'redirection' => $rdr, 'sslverify'=>$sslverify, 'user-agent'=>$ua);
+if (!function_exists("nxs_mkRemOptsArr")) {function nxs_mkRemOptsArr($hdrsArr, $ck='', $flds='', $p='', $rdr=0, $timt=45, $sslverify = true){ $ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36';
+    if (empty($hdrsArr)) $hdrsArr = nxs_makeHeaders(home_url('/')); $a = array('headers' => $hdrsArr, 'httpversion' => '1.1', 'timeout' => $timt, 'redirection' => $rdr, 'sslverify'=>true, 'reject_unsafe_urls'=>true, 'user-agent'=>$ua);
     if (!empty($flds)) $a['body'] = $flds; if (!empty($p)) $a['proxy'] = $p;  if (!empty($ck)) $a['cookies'] = $ck; return $a;
 }}
 //##########################################################
@@ -73,9 +77,9 @@ if (!function_exists("nxs_makeHdrs")) { function nxs_makeHdrs($args=[], $hdrs=[]
 //## AdvSet
 if (!function_exists("nxs_mkRmReqArgs")) {function nxs_mkRmReqArgs($args=[]){ if (empty($args)) $args = [];
     $ua = !empty($args['mblUA'])?'Mozilla/5.0 (iPhone; CPU iPhone OS 8_0_2 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12A366 Safari/600.1.4':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36';
-    $def = array('method'=>'GET', 'ref'=>'http://'.$_SERVER['HTTP_HOST'], 'org'=>'', 'aj'=>false, 'hdrsArr'=>'', 'ck'=>'', 'flds'=>'', 'proxy'=>'', 'rdr'=>0, 'limit'=>45, 'sslverify' => false, 'ua'=>$ua, 'extraHeaders'=>[]);  $args = array_merge($def, $args);
+    $def = array('method'=>'GET', 'ref'=>home_url('/'), 'org'=>'', 'aj'=>false, 'hdrsArr'=>'', 'ck'=>'', 'flds'=>'', 'proxy'=>'', 'rdr'=>0, 'limit'=>45, 'sslverify' => true, 'ua'=>$ua, 'extraHeaders'=>[]);  $args = array_merge($def, $args);
     if (!empty($args['flds'])) $args['method']='POST'; if (empty($args['hdrsArr'])) $args['hdrsArr'] = nxs_makeHdrs(['ref'=>$args['ref'], 'org'=>$args['org'], 'type'=>$args['method'], 'aj'=>$args['aj'], 'ua'=>$args['ua']], $args['extraHeaders']);
-    $a = array('method'=>$args['method'], 'headers' => $args['hdrsArr'], 'httpversion' => '1.1', 'timeout' => $args['limit'], 'redirection' =>  $args['rdr'], 'sslverify'=> $args['sslverify'], 'user-agent'=>$args['ua']);
+    $a = array('method'=>$args['method'], 'headers' => $args['hdrsArr'], 'httpversion' => '1.1', 'timeout' => $args['limit'], 'redirection' =>  $args['rdr'], 'sslverify'=>true, 'reject_unsafe_urls'=>true, 'user-agent'=>$args['ua']);
     if (!empty($args['flds'])) $a['body'] = $args['flds']; if (!empty($args['proxy'])) $a['proxy'] = $args['proxy'];  if (!empty($args['ck'])) $a['cookies'] = $args['ck']; return $a;
 }}
 if (!function_exists("nxs_getRawResp")) {function nxs_getRawResp($resp){ return htmlspecialchars( print_r($resp['http_response']->get_response_object()->raw, true)); }}

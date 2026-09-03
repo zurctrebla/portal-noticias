@@ -1,6 +1,11 @@
 <?php
 if (!function_exists("nxs_snapAjax")) { function nxs_snapAjax() { check_ajax_referer('nxsSsPageWPN'); $arg = ''; nxs_Filters::init(true);
-  global $nxs_SNAP; if (!isset($nxs_SNAP)) return; $networks = (!current_user_can( 'manage_options' ) && current_user_can( 'haveown_snap_accss' ) ) ? $nxs_SNAP->nxs_acctsU : $nxs_SNAP->nxs_accts; $options =  $nxs_SNAP->nxs_options; 
+  if (!nxs_snap_user_can_access()) wp_send_json_error(array('message'=>'You are not allowed to manage SNAP.'), 403);
+  $nxsact = isset($_POST['nxsact']) ? sanitize_text_field(wp_unslash($_POST['nxsact'])) : '';
+  $admin_actions = array('setNTset','hide-nxs-upg200-notice','resetSNAPInfoPosts','deleteAllSNAPInfo','restBackup','resetSNAPQuery','resetSNAPCron','resetSNAPCache');
+  if (in_array($nxsact, $admin_actions, true) && !current_user_can('manage_options')) wp_send_json_error(array('message'=>'Administrator access is required.'), 403);
+  global $nxs_SNAP; if (!isset($nxs_SNAP)) wp_send_json_error(array('message'=>'SNAP is not initialized.'), 500);
+  $networks = current_user_can('manage_options') ? $nxs_SNAP->nxs_accts : $nxs_SNAP->nxs_acctsU; $options = $nxs_SNAP->nxs_options; 
    
   if ($_POST['nxsact']=='getNTset') { $ii = sanitize_key($_POST['ii']); $nt = $_POST['nt']; $ntl = strtolower($nt); $pbo = $networks[$ntl][$ii];  $pbo['ntInfo']['lcode'] = $ntl; $clName = 'nxs_snapClass'.$nt; $ntObj = new $clName();
      $ntObj->showNTSettings($ii, $pbo);  
@@ -34,39 +39,44 @@ if (!function_exists("nxs_snapAjax")) { function nxs_snapAjax() { check_ajax_ref
   //############ Quick Post
   if ($_POST['nxsact']=='getNewPostDlg') nxs_showNewPostForm($networks);
   //## Save QP
-  if ($_POST['nxsact']=='nxs_doSaveQP') { $user_id = get_current_user_id();
+  if ($_POST['nxsact']=='nxs_doSaveQP') { if (!current_user_can('edit_posts')) wp_send_json_error(array('message'=>'You cannot create Quick Posts.'), 403); $user_id = get_current_user_id();
     $ttl = nsTrnc(!empty($_POST['mTitle'])?$_POST['mTitle']:$_POST['mText'], 200); if (empty($ttl)) $ttl = 'Quick post ['.date('F j, Y, g:i a', time()+( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS ) ).']';
     $my_post = array( 'post_title' => $ttl, 'post_content' => $_POST['mText'], 'post_status' => 'publish', 'post_author' => $user_id, 'post_type' => 'nxs_qp', 'post_category' => array(  ) );//               prr($_POST); die();
-    if (!empty($_POST['qpid'])) { $my_post['ID'] = $_POST['qpid']; wp_update_post( $my_post );} else $_POST['qpid'] = wp_insert_post( $my_post );   
+    if (!empty($_POST['qpid'])) { $qpid = absint($_POST['qpid']); if (get_post_type($qpid) !== 'nxs_qp' || !current_user_can('edit_post', $qpid)) wp_send_json_error(array('message'=>'Invalid Quick Post.'), 403); $my_post['ID'] = $qpid; wp_update_post( $my_post );} else $_POST['qpid'] = wp_insert_post( $my_post );   
     //## Insert Post meta
-    foreach ($_POST['mNts'] as $ntC){ $ntA = explode('--',$ntC); $ntOpts = $networks[$ntA[0]][$ntA[1]]; $nts[] = $ntA[0].$ntA[1]; }
+    $nts = array(); foreach ((isset($_POST['mNts']) && is_array($_POST['mNts']) ? $_POST['mNts'] : array()) as $ntC){ $ntA = explode('--',sanitize_text_field($ntC)); if (count($ntA)!==2 || !isset($networks[$ntA[0]][absint($ntA[1])])) continue; $nts[] = $ntA[0].absint($ntA[1]); }
      
     if (!empty($_POST['qpid'])) {  $metaArrEx = get_post_meta($_POST['qpid'], '_nxs_snap_data', true ); $metaArr = array('posts'=>array(), 'nts'=>$nts, 'postType'=>$_POST['mType'], 'imgURL'=>$_POST['mImg'], 'linkURL'=>$_POST['mLink']);  
         if (!empty($metaArrEx['posts'])) $metaArr['posts'] = $metaArrEx['posts']; update_post_meta($_POST['qpid'], '_nxs_snap_data', $metaArr); 
     }   echo 'OK'; die();
   }
   if ($_POST['nxsact']=='doNewPost') nxs_doNewNPPost($networks);
-  if ($_POST['nxsact']=='getQP') { $post =  get_post($_POST['id']); $or = get_post_meta($_POST['id'], '_nxs_snap_data', true );  
+  if ($_POST['nxsact']=='getQP') { $qpid = absint($_POST['id']); if (get_post_type($qpid) !== 'nxs_qp' || !current_user_can('edit_post', $qpid)) wp_send_json_error(array('message'=>'Invalid Quick Post.'), 403); $post = get_post($qpid); $or = get_post_meta($qpid, '_nxs_snap_data', true );  
     $info = new nxs_snapPostResults($or['posts']); $outTxt = $info->details;        
     $out = array('title'=>$post->post_title, 'text'=>$post->post_content, 'postType'=>$or['postType'], 'imgURL'=>$or['imgURL'], 'linkURL'=>$or['linkURL'], 'nts'=>nxs_showNetworksList($networks, !empty($or['nts'])?$or['nts']:''), 'oldResults'=>$outTxt); echo json_encode($out); die();      
   }
-  if ($_POST['nxsact']=='delQP') { wp_delete_post( $_POST['id'],  true );
+  if ($_POST['nxsact']=='delQP') { $qpid = absint($_POST['id']); if (get_post_type($qpid) !== 'nxs_qp' || !current_user_can('delete_post', $qpid)) wp_send_json_error(array('message'=>'Invalid Quick Post.'), 403); wp_delete_post($qpid, true);
       echo "OK";
   }
   if ($_POST['nxsact']=='cancQ') { $cid = sanitize_key($_POST['cid']); global $wpdb; $wpdb->delete( $wpdb->prefix . "nxs_query" , array( 'id' => $cid ) ); echo "== OK-".esc_attr($cid); }
   
   
   //## Get somrhting (like Boards or Cats) from NT
-  if ($_POST['nxsact']=='getItFromNT') { $ntU = strtoupper($_POST['nt']); $clName = 'nxs_snapClass'.$ntU; $ntObj = new $clName(); $fName = $_POST['fName']; $ntObj->$fName($networks); die();}
+  if ($_POST['nxsact']=='getItFromNT') { $nt = sanitize_key($_POST['nt']); $ntU = strtoupper($nt); $clName = 'nxs_snapClass'.$ntU; $fName = sanitize_key($_POST['fName']);
+    $allowed_methods = array('importcomments','getlistofpages','getlistwheretopost','getgpcomminfo','getlistofsubreddits','getlistofpnboards','getlistofblogs','getlistofpagesliv2','getlistofpagesnxs','getlistofgroupsnxs','getpgslist','getgrplist','getgrpforums','getlistofpagesnx');
+    if (!isset($networks[$nt]) || !class_exists($clName) || !in_array($fName, $allowed_methods, true)) wp_send_json_error(array('message'=>'Invalid network operation.'), 400);
+    if ($fName === 'importcomments') { $pid = isset($_POST['pid']) ? absint($_POST['pid']) : 0; if (!$pid || !current_user_can('edit_post', $pid)) wp_send_json_error(array('message'=>'You cannot edit this post.'), 403); }
+    $ntObj = new $clName(); if (!method_exists($ntObj, $fName)) wp_send_json_error(array('message'=>'Unsupported network operation.'), 400); $ntObj->$fName($networks); die();}
   
-  if ($_POST['nxsact']=='testPost' || $_POST['nxsact']=='manPost') {  $clName = 'nxs_snapClass'.strtoupper($_POST['nt']); $ntClInst = new $clName(); 
+  if ($_POST['nxsact']=='testPost' || $_POST['nxsact']=='manPost') { $ntl = sanitize_key($_POST['nt']); $clName = 'nxs_snapClass'.strtoupper($ntl); if (!isset($networks[$ntl]) || !class_exists($clName)) wp_send_json_error(array('message'=>'Invalid network.'), 400);
+    if ($_POST['nxsact']=='manPost') { $pid = isset($_POST['id']) ? absint($_POST['id']) : 0; if (!$pid || !current_user_can('edit_post', $pid)) wp_send_json_error(array('message'=>'You cannot publish this post.'), 403); } $ntClInst = new $clName(); 
     if (method_exists($ntClInst,'ajaxPost')) $ntClInst->ajaxPost($networks); else { $fNm = 'nxs_rePostTo'.strtoupper($_POST['nt']).'_ajax';  $fNm(); }  
   }
-  if ($_POST['nxsact']=='delPostSettings') { global $nxs_snapAvNts; $pid = (int)$_POST['pid'];
+  if ($_POST['nxsact']=='delPostSettings') { global $nxs_snapAvNts; $pid = absint($_POST['pid']); if (!$pid || !current_user_can('edit_post', $pid)) wp_send_json_error(array('message'=>'You cannot edit this post.'), 403);
     foreach ($nxs_snapAvNts as $avNt) delete_post_meta($pid, 'snap'.strtoupper($avNt['code']));  delete_post_meta($pid, 'snap_isAutoPosted'); delete_post_meta($pid, 'snap_MYURL');
     echo "OK"; die();
   }
-  if ($_POST['nxsact']=='saveRpst'){ if (!empty($_POST['pid'])) { $pid = sanitize_key($_POST['pid']);  }
+  if ($_POST['nxsact']=='saveRpst'){ if (!current_user_can('edit_posts')) wp_send_json_error(array('message'=>'You cannot manage reposters.'), 403); if (!empty($_POST['pid'])) { $pid = absint($_POST['pid']); if (get_post_type($pid) !== 'nxs_filter' || !current_user_can('edit_post', $pid)) wp_send_json_error(array('message'=>'Invalid reposter.'), 403); }
       $post = array(
         // 'ID'             => [ <post id> ] // Are you updating an existing post?
         'post_name'      => sanitize_text_field($_POST['post_title']),
@@ -99,9 +109,9 @@ if (!function_exists("nxs_snapAjax")) { function nxs_snapAjax() { check_ajax_ref
     
   
   if ($_POST['nxsact']=='svEdFlds') { 
-    $cn = str_replace(']','',$_POST['cname']); $cna = explode('[',$cn);  $id = $_POST['pid']; $nt = $cna[0]; $ntU = strtoupper($nt); $ii = $cna[1]; $fname = $cna[2];// prr($cna);
+    $cn = str_replace(']','',sanitize_text_field($_POST['cname'])); $cna = explode('[',$cn); $id = absint($_POST['pid']); if (!$id || !current_user_can('edit_post', $id) || count($cna)!==3) wp_send_json_error(array('message'=>'Invalid post setting.'), 403); $nt = sanitize_key($cna[0]); $ntU = strtoupper($nt); $ii = absint($cna[1]); $fname = sanitize_key($cna[2]);
     $savedMeta = maybe_unserialize(get_post_meta($id, 'snap'.$ntU, true)); if (empty($savedMeta)) $savedMeta = array();  $savedMeta[$ii][$fname] = $_POST['cval']; // prr($savedMeta);
-    delete_post_meta($id, 'snap'.$ntU); add_post_meta($id, 'snap'.$ntU, str_replace('\\','\\\\',serialize($savedMeta)));   
+    delete_post_meta($id, 'snap'.$ntU); add_post_meta($id, 'snap'.$ntU, str_replace('\\','\\\\',serialize(nxs_protect_settings($savedMeta))));   
   }
   if ($_POST['nxsact']=='tknzsrch') { $termsOut = array();
      if (($_POST['nxtype']=='post')) { $posts = get_posts( array('orderby'=>'title', 'post_status' => array( 'pending', 'publish', 'future' ), 'post_type' =>  'any', 'posts_per_page'=>100, 's'=> $_POST['srch'] ) );  
@@ -209,7 +219,7 @@ if (!function_exists("nxs_snapAjax")) { function nxs_snapAjax() { check_ajax_ref
     } $nxs_SNAP->saveNetworksOptions($networks); echo "Done";
   }
   
-  if ($_POST['nxsact']=='restBackup') { $dbNts = get_option('nxsSNAPNetworks_bck4'); $dbOpts = get_option('nxsSNAPOptions_bck4'); $nxs_SNAP->saveNetworksOptions($dbNts, $dbOpts); 
+  if ($_POST['nxsact']=='restBackup') { $dbNts = nxs_unprotect_settings(get_option('nxsSNAPNetworks_bck4')); $dbOpts = nxs_unprotect_settings(get_option('nxsSNAPOptions_bck4')); $nxs_SNAP->saveNetworksOptions($dbNts, $dbOpts); 
       _e('Done. Backup has been restored. <script> setTimeout(function () { location.reload(1); }, 3000); </script>', 'social-networks-auto-poster-facebook-twitter-g');
   }  
   if ($_POST['nxsact']=='resetSNAPQuery') { global $wpdb;  $table_name = $wpdb->prefix . "nxs_query";
@@ -250,7 +260,8 @@ if (!function_exists('nxsLstSort')){function nxsLstSort($a, $b) { if (empty($a['
 }}
 if (!function_exists("nxs_arrMergeCheck")) { function nxs_arrMergeCheck($a1, $a2){ foreach ($a2 as $ak=>$a) if (!in_array($ak, array_keys($a1))) $a1[$ak] = $a; return $a1; }}
 if (!function_exists("nxs_contCron_js")){ function nxs_contCron_js() { 
-    $contCron = get_option('nxs_contCron'); $output='<script type="text/javascript">jQuery.get( "'.home_url('?nxs-cronrun='.$contCron).'");</script>'; echo wp_kses($output, wp_kses_allowed_html( 'post' ));
+    $contCron = get_option('nxs_contCron'); $cronURL = wp_nonce_url(add_query_arg('nxs-cronrun', (string)$contCron, home_url('/')), 'nxs_run_cron');
+    echo '<script type="text/javascript">jQuery.get('.wp_json_encode(esc_url_raw($cronURL)).');</script>';
 }}
 //## Format Message (WP)
 if (!function_exists("nsFormatMessage")) { function nsFormatMessage($msg, $postID, $addURLParams='', $lng='', $ntOpts=''){ global $ShownAds, $nxs_SNAP, $nxs_urlLen;
@@ -367,20 +378,20 @@ if (!function_exists("nsFormatMessage")) { function nsFormatMessage($msg, $postI
 }}
 //## Save Global Settings
 if (!function_exists("nxs_save_glbNtwrks")) { function nxs_save_glbNtwrks($nt, $ii, $ntOptsOrVal, $field='', $networks='')  { if (empty($ii) && $ii!=0 && $ii!='0') return; if (empty($networks)) { if ($field=='*') {$field=''; $merge = true;} else $merge = false;
-    if (function_exists("nxs_settings_open")) $networks = nxs_settings_open(); else { if (class_exists('nxs_SNAP')) { global $nxs_SNAP; if (!isset($nxs_SNAP)) $nxs_SNAP = new nxs_SNAP(); $networks = $nxs_SNAP->nxs_accts; } }
+    if (function_exists("nxs_settings_open")) $networks = nxs_unprotect_settings(nxs_settings_open()); else { if (class_exists('nxs_SNAP')) { global $nxs_SNAP; if (!isset($nxs_SNAP)) $nxs_SNAP = new nxs_SNAP(); $networks = $nxs_SNAP->nxs_accts; } }
   } if (empty($networks[$nt][$ii])) $networks[$nt][$ii] = array(); if(!empty($field)) $networks[$nt][$ii][$field] = $ntOptsOrVal; else $networks[$nt][$ii] = $merge?(array_merge($networks[$nt][$ii],$ntOptsOrVal)):$ntOptsOrVal; 
-  if (function_exists('nxs_settings_save')) nxs_settings_save($networks); if (isset($nxs_SNAP))  $nxs_SNAP->saveNetworksOptions($networks); // prr($networks[$nt]); var_dump($merge);
+  if (function_exists('nxs_settings_save')) nxs_settings_save(nxs_protect_settings($networks)); if (isset($nxs_SNAP)) $nxs_SNAP->saveNetworksOptions($networks); // prr($networks[$nt]); var_dump($merge);
 }}
 if (!function_exists("nxs_save_ntwrksOpts")) { function nxs_save_ntwrksOpts($networks) { 
-  if (function_exists('nxs_settings_save')) nxs_settings_save($networks); else if (function_exists('get_option') && !empty($networks)) { global $nxs_SNAP; if (!isset($nxs_SNAP)) return; $nxs_SNAP->saveNetworksOptions($networks,1); }
+  if (function_exists('nxs_settings_save')) nxs_settings_save(nxs_protect_settings($networks)); else if (function_exists('get_option') && !empty($networks)) { global $nxs_SNAP; if (!isset($nxs_SNAP)) return; $nxs_SNAP->saveNetworksOptions($networks,1); }
 }}
 
 if (!function_exists("nxs_saveOption")) { function nxs_saveOption($optName, $val) { 
-  if (function_exists('nxs_settings_save') && function_exists('nxs_settings_open')) { $n = nxs_settings_open(); if (!empty($n) && is_array($n)) $n['_opts'][$optName] = $val; nxs_settings_save($n); } else if (function_exists('get_option')) update_option($optName, $val, false); 
+  if (function_exists('nxs_settings_save') && function_exists('nxs_settings_open')) { $n = nxs_unprotect_settings(nxs_settings_open()); if (!empty($n) && is_array($n)) $n['_opts'][$optName] = $val; nxs_settings_save(nxs_protect_settings($n)); } else if (function_exists('get_option')) update_option($optName, nxs_protect_settings($val), false); 
 }}
 if (!function_exists("nxs_getOption")) { function nxs_getOption($optName) { $val = '';
-  if (function_exists('nxs_settings_open')) { $n = nxs_settings_open(); if (!empty($n) && !empty($n['_opts']) && !empty($n['_opts'][$optName])) $val = $n['_opts'][$optName]; } else if (function_exists('get_option')) $val = get_option($optName); 
-  return maybe_unserialize($val);
+  if (function_exists('nxs_settings_open')) { $n = nxs_unprotect_settings(nxs_settings_open()); if (!empty($n) && !empty($n['_opts']) && !empty($n['_opts'][$optName])) $val = $n['_opts'][$optName]; } else if (function_exists('get_option')) { $stored = get_option($optName); $val = nxs_unprotect_settings($stored); if (nxs_settings_need_protection($stored)) update_option($optName, nxs_protect_settings($val), false); }
+  return nxs_safe_unserialize($val, array());
 }}
 
 //## No Lib Warning
@@ -427,42 +438,44 @@ if (!function_exists('nxs_rpstPopupCode')) { function nxs_rpstPopupCode() {
 }}
 
 //## ShortCode [nxs_links acctype='' accnum=0 useicons='']
-if (!function_exists('nxs_links_func')) { function nxs_links_func( $atts ) { extract( shortcode_atts( array('accnum' => '0', 'acctype' => '', 'useicons' => ''), $atts ) );  $txtOut = ''; global $nxs_snapAvNts; $pid = get_the_ID();   
-  if (!empty($acctype)) { $po =  maybe_unserialize(get_post_meta($pid, 'snap'.strtoupper($acctype), true)); foreach ($nxs_snapAvNts as $avNt) if (strtoupper($acctype)==$avNt['code']) break;
-    if (is_array($po)) {
-      if (!empty($accnum)) {
-        if (is_array($po[$accnum]) && !empty($po[$accnum]['postURL'])){ $po = $po[$accnum]['postURL'];
-          $txtOut .= '<a target="_blank" href="'.$po.'">'.(!empty($useicons)?'<img class="nxs-bklIcon" src="'.NXS_PLURL.'img/'.$avNt['lcode'].'16.png"/>':'').$avNt['name'].'</a><br/>';
+if (!function_exists('nxs_links_func')) { function nxs_links_func( $atts ) { extract( shortcode_atts( array('accnum' => '0', 'acctype' => '', 'useicons' => ''), $atts ) );  $txtOut = ''; global $nxs_snapAvNts; $pid = get_the_ID();
+    if (!empty($acctype)) { $requested_code = strtoupper(sanitize_key($acctype)); $avNt = null; foreach ($nxs_snapAvNts as $candidate) if ($requested_code === $candidate['code']) { $avNt = $candidate; break; }
+        if ($avNt === null) return '';
+        $po = nxs_get_safe_post_meta($pid, 'snap'.$requested_code, true);
+        if (is_array($po)) {
+            if (!empty($accnum)) {
+                $accnum = absint($accnum); if (isset($po[$accnum]) && is_array($po[$accnum]) && !empty($po[$accnum]['postURL'])){ $po = $po[$accnum]['postURL'];
+                    $txtOut .= '<a target="_blank" href="'.esc_url($po).'">'.(!empty($useicons)?'<img class="nxs-bklIcon" src="'.esc_url(NXS_PLURL.'img/'.$avNt['lcode'].'16.png').'"/>':'').esc_html($avNt['name']).'</a><br/>';
+                }
+            } else foreach ($po as $pp) {
+                if (is_array($pp) && !empty($pp['postURL'])){ $po = $pp['postURL'];
+                    $txtOut .= '<a target="_blank" href="'.esc_url($po).'">'.(!empty($useicons)?'<img class="nxs-bklIcon" src="'.esc_url(NXS_PLURL.'img/'.$avNt['lcode'].'16.png').'"/>':'').esc_html($avNt['name']).'</a><br/>';
+                }
+            }
         }
-      } else foreach ($po as $pp) { 
-        if (is_array($pp) && !empty($pp['postURL'])){ $po = $pp['postURL'];
-          $txtOut .= '<a target="_blank" href="'.$po.'">'.(!empty($useicons)?'<img class="nxs-bklIcon" src="'.NXS_PLURL.'img/'.$avNt['lcode'].'16.png"/>':'').$avNt['name'].'</a><br/>';
+    } else  foreach ($nxs_snapAvNts as $avNt) { $po = nxs_get_safe_post_meta($pid, 'snap'.strtoupper($avNt['code']), true);
+        if (is_array($po)) {
+            if (!empty($accnum)) {
+                if (is_array($po[$accnum]) && !empty($po[$accnum]['postURL'])){ $po = $po[$accnum]['postURL'];
+                    $txtOut .= '<a target="_blank" href="'.esc_url($po).'">'.(!empty($useicons)?'<img class="nxs-bklIcon" src="'.esc_url(NXS_PLURL.'img/'.$avNt['lcode'].'16.png').'"/>':'').esc_html($avNt['name']).'</a><br/>';
+                }
+            } else foreach ($po as $pp) {
+                if (is_array($pp) && !empty($pp['postURL'])){ $po = $pp['postURL'];
+                    $txtOut .= '<a target="_blank" href="'.esc_url($po).'">'.(!empty($useicons)?'<img style="padding-right: 3px;" src="'.esc_url(NXS_PLURL.'img/'.$avNt['lcode'].'16.png').'"/>':'').esc_html($avNt['name']).'</a><br/>';
+                }
+            }
         }
-      }
     }
-  } else  foreach ($nxs_snapAvNts as $avNt) { $po = maybe_unserialize(get_post_meta($pid, 'snap'.strtoupper($avNt['code']), true));
-    if (is_array($po)) {
-      if (!empty($accnum)) {
-        if (is_array($po[$accnum]) && !empty($po[$accnum]['postURL'])){ $po = $po[$accnum]['postURL'];
-          $txtOut .= '<a target="_blank" href="'.$po.'">'.(!empty($useicons)?'<img class="nxs-bklIcon" src="'.NXS_PLURL.'img/'.$avNt['lcode'].'16.png"/>':'').$avNt['name'].'</a><br/>';
-        }
-      } else foreach ($po as $pp) { 
-        if (is_array($pp) && !empty($pp['postURL'])){ $po = $pp['postURL'];
-          $txtOut .= '<a target="_blank" href="'.$po.'">'.(!empty($useicons)?'<img style="padding-right: 3px;" src="'.NXS_PLURL.'img/'.$avNt['lcode'].'16.png"/>':'').$avNt['name'].'</a><br/>';
-        }
-      }
-    }
-  }
-  return $txtOut;
+    return $txtOut;
 }}
 
 //## ShortCode [nxs_fbembed accnum=0]
 if (!function_exists("nxs_postedlinks_func")) {function nxs_postedlinks_func( $atts ) { extract( shortcode_atts( array('accnum' => '0'), $atts ) );  $pid = get_the_ID();   global $nxs_snapAvNts; $txtOut = '';
   global $plgn_NS_SNAutoPoster; if (!isset($plgn_NS_SNAutoPoster)) return; $options = $plgn_NS_SNAutoPoster->nxs_options;
 
-   foreach ($nxs_snapAvNts as $avNt) { $opt =  get_post_meta($pid, 'snap'.$avNt['code'], true); $opt =  maybe_unserialize($opt); 
-       if (!empty($opt) && is_array($opt)) foreach ($opt as $ii=>$op) { 
-          if (!empty($op['postURL'])) $txtOut .= '<a href="'.$op['postURL'].'">'.$avNt['name'].(!empty($options[$avNt['lcode']][$ii]['nName'])?' ('.$options[$avNt['lcode']][$ii]['nName'].')':'').'</a><br/>';
+   foreach ($nxs_snapAvNts as $avNt) { $opt = nxs_get_safe_post_meta($pid, 'snap'.$avNt['code'], true);
+       if (!empty($opt) && is_array($opt)) foreach ($opt as $ii=>$op) {
+           if (!empty($op['postURL'])) $txtOut .= '<a href="'.esc_url($op['postURL']).'">'.esc_html($avNt['name']).(!empty($options[$avNt['lcode']][$ii]['nName'])?' ('.esc_html($options[$avNt['lcode']][$ii]['nName']).')':'').'</a><br/>';
        }
    } return $txtOut;
 }}
@@ -473,7 +486,7 @@ if (function_exists("add_shortcode")) add_shortcode( 'nxs_postedlinks', 'nxs_pos
 if (!function_exists("nxs_scInstrList")) {function nxs_scInstrList( $atts ) { extract( shortcode_atts( array('accnum' => '0'), $atts ) ); global $nxs_snapAvNts; 
   $outHtml = '<div class="nxsright"><div style="padding-left: 0px; padding-bottom:5px;"><a style="font-size: 14px;" target="_blank" href="http://www.nextscripts.com/instructions/">'.__('Setup/Installation Instructions:', 'social-networks-auto-poster-facebook-twitter-g').'</a></div>';
   foreach ($nxs_snapAvNts as $avNt) { $clName = 'nxs_snapClass'.$avNt['code']; $nt = new $clName();
-    $outHtml .= '<div style="padding-left: 10px; padding-top:5px;"><a style="background-image:url('.NXS_PLURL.'img/'.$avNt['lcode'].'16.png) !important;" class="nxs_icon16" target="_parent" href="'.$nt->ntInfo['instrURL'].'">  '.$nt->ntInfo['name'].'</a></div>';
+    $outHtml .= '<div style="padding-left: 10px; padding-top:5px;"><a style="background-image:url('.esc_url(NXS_PLURL.'img/'.$avNt['lcode'].'16.png').') !important;" class="nxs_icon16" target="_parent" href="'.esc_url($nt->ntInfo['instrURL']).'">  '.esc_html($nt->ntInfo['name']).'</a></div>';
   }
   $outHtml .= '</div>'; return $outHtml;
 }}

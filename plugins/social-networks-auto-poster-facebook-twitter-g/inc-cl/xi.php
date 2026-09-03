@@ -19,28 +19,27 @@ if (!class_exists("nxs_snapClassXI")) { class nxs_snapClassXI extends nxs_snapCl
   //#### Show Unit  Settings  
   function checkIfSetupFinished($options) { return true;  return ((!empty($options['appAppUserID']) && !empty($options['accessToken'])) || !empty($options['uName']) );   }
   public function doAuth() { $ntInfo = $this->ntInfo; global $nxs_snapSetPgURL;
-    if (isset($_GET['acc'])) { $acc = sanitize_text_field($_GET['acc']); $options = $this->nt[$acc];
+    if (isset($_GET['acc'])) { $acc = absint($_GET['acc']); if (!nxs_snap_user_can_access() || !isset($this->nt[$acc])) return; $options = $this->nt[$acc];
         if ( isset($_GET['auth']) && $_GET['auth']==$ntInfo['lcode']){
-          $consumer_key = nxs_gak($options['appKey']); $consumer_secret = nxs_gas($options['appSec']); $callback_url = $nxs_snapSetPgURL."&auth=".$ntInfo['lcode']."a&acc=".$acc;
+          $consumer_key = nxs_gak($options['appKey']); $consumer_secret = nxs_gas($options['appSec']); $callback_url = add_query_arg(array('auth'=>$ntInfo['lcode'].'a','acc'=>$acc,'nxs_state'=>nxs_oauth_state_create('xi', $acc)), $nxs_snapSetPgURL);
           $tum_oauth = new nxs_OAuthBaseCl($consumer_key, $consumer_secret); $tum_oauth->baseURL = 'https://api.xing.com'; $tum_oauth->request_token_path = '/v1/request_token';
           $request_token = $tum_oauth->getReqToken($callback_url); $options['oAuthToken'] = $request_token['oauth_token']; $options['oAuthTokenSecret'] = $request_token['oauth_token_secret'];
-          prr($tum_oauth); prr($options);
           switch ($tum_oauth->http_code) { case 201: case 200: $url = 'https://api.xing.com/v1/authorize?oauth_token='.$options['oAuthToken']; nxs_save_glbNtwrks($ntInfo['lcode'],$acc,$options,'*');
-            echo '<br/><br/>All good?! Redirecting ..... <script type="text/javascript">window.location = "'.$url.'"</script>'; break;
+            echo '<br/><br/>All good. Redirecting ..... <script type="text/javascript">window.location = "'.esc_url($url).'"</script>'; break;
             default: echo '<br/><b style="color:red">Could not connect to XING. Refresh the page or try again later.</b>'; die();
           } die();
         }
-        if ( isset($_GET['auth']) && $_GET['auth']==$ntInfo['lcode'].'a'){ $consumer_key = nxs_gak($options['appKey']); $consumer_secret = nxs_gas($options['appSec']);
+        if ( isset($_GET['auth']) && $_GET['auth']==$ntInfo['lcode'].'a'){ if (empty($_GET['nxs_state']) || !nxs_oauth_state_validate(wp_unslash($_GET['nxs_state']), 'xi', $state_account) || absint($state_account)!==$acc) wp_die(esc_html__('Invalid or expired XING authorization state.', 'social-networks-auto-poster-facebook-twitter-g'), '', array('response'=>403)); $consumer_key = nxs_gak($options['appKey']); $consumer_secret = nxs_gas($options['appSec']);
           $tum_oauth = new nxs_OAuthBaseCl($consumer_key, $consumer_secret, $options['oAuthToken'], $options['oAuthTokenSecret']); //prr($tum_oauth);
-          $tum_oauth->baseURL = 'https://api.xing.com'; $tum_oauth->access_token_path = '/v1/access_token'; $access_token = $tum_oauth->getAccToken(sanitize_text_field($_GET['oauth_verifier'])); prr($access_token);
+          $tum_oauth->baseURL = 'https://api.xing.com'; $tum_oauth->access_token_path = '/v1/access_token'; $access_token = $tum_oauth->getAccToken(sanitize_text_field(wp_unslash($_GET['oauth_verifier'])));
           $options['accessToken'] = $access_token['oauth_token'];  $options['accessTokenSec'] = $access_token['oauth_token_secret'];
           $tum_oauth = new nxs_OAuthBaseCl($consumer_key, $consumer_secret, $options['accessToken'], $options['accessTokenSec']);
-          $uinfo = $tum_oauth->makeReq('https://api.xing.com/v1/users/me', ''); prr($uinfo);
+          $uinfo = $tum_oauth->makeReq('https://api.xing.com/v1/users/me', '');
           if (is_array($uinfo) && isset($uinfo['users']) && isset($uinfo['users'][0]) && is_array($uinfo['users'][0])) { $uinfo = $uinfo['users'][0]; $options['appPGUserName'] = $uinfo['page_name'];
             $options['appAppUserName'] = $uinfo['display_name']."(".$uinfo['page_name'].")"; $options['appAppUserID'] = $uinfo['id'];
           }  nxs_save_glbNtwrks($ntInfo['lcode'],$acc,$options,'*');  //prr($options); die();
-          if (!empty($options['appAppUserID'])) {  echo '<br/><br/>All good?! Redirecting ..... <script type="text/javascript">window.location = "'.$nxs_snapSetPgURL.'"</script>';  die();}
-            else die("<span style='color:red;'>ERROR: Authorization Error: <span style='color:darkred; font-weight: bold;'>".print_r($uinfo, true)."</span></span>");
+          if (!empty($options['appAppUserID'])) { echo '<br/><br/>All good. Redirecting ..... <script type="text/javascript">window.location = "'.esc_url(nxs_get_admin_url('admin.php?page=nxssnap')).'"</script>'; die();}
+            else die(esc_html__('XING authorization failed.', 'social-networks-auto-poster-facebook-twitter-g'));
         }
     }
   }

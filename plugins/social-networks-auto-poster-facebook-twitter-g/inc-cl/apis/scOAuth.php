@@ -82,7 +82,7 @@ if (!class_exists('nxssc_SigMethod_HMAC_SHA1')) { class nxssc_SigMethod_HMAC_SHA
 }}
 
 class wpScoopITOAuth{
-    public $baseURL = 'http://www.scoop.it';
+    public $baseURL = 'https://www.scoop.it';
     public $request_token_path = '/oauth/request';
     public $access_token_path = '/oauth/access';
     public $http_code;
@@ -146,7 +146,6 @@ class wpScoopITOAuth{
       $args['oauth_signature'] = $this->sign_method->sign2($req, $this->consumer_secret, $token);      
       $cbu = nxssc_SigMethod_HMAC_SHA1::urlencode_rfc3986($cbu);  
       $url = $this->baseURL.$this->request_token_path.'?oauth_nonce='.$args['oauth_nonce'].'&oauth_timestamp='.$args['oauth_timestamp'].'&oauth_consumer_key='.$this->consumer_key.'&oauth_signature_method='.$args['oauth_signature_method'].'&oauth_version='.$args['oauth_version'].'&oauth_callback='.$cbu.'&oauth_signature='.$args['oauth_signature'];      
-      echo "<br/>REQ Token URL: ".esc_url($url)."<br/>";
       $hdrsArr = $this->makeHTTPHeaders($url); $ckArr = '';   
       $response = nxs_remote_get($url, array( 'method' => 'GET', 'timeout' => 45, 'redirection' => 0,  'headers' => $hdrsArr, 'cookies' => $ckArr));  
       if ( is_nxs_error($response) ) return print_r($response, true);
@@ -156,7 +155,6 @@ class wpScoopITOAuth{
     function getAccToken($verifier){
       $args = array (
         'oauth_token' => $this->access_token,
-        'oauth_token_secret' => $this->access_secret,
         'oauth_timestamp' => time(),
         'oauth_nonce' => $this->genRndString(),
         'oauth_version' => $this->version,
@@ -167,8 +165,7 @@ class wpScoopITOAuth{
       $req = array();  $req['method'] = 'GET';  $req['normalized_url'] = $this->baseURL.$this->access_token_path;
       $req['normalized_parameters'] = $this->get_normalized_parameters($args);
       $args['oauth_signature'] = $this->sign_method->sign2($req, $this->consumer_secret, $this->access_secret); 
-      $url = $this->baseURL.$this->access_token_path.'?oauth_nonce='.$args['oauth_nonce'].'&oauth_timestamp='.$args['oauth_timestamp'].'&oauth_token_secret='.$this->access_secret.'&oauth_signature_method='.$args['oauth_signature_method'].'&oauth_consumer_key='.$this->consumer_key.'&oauth_verifier='.$verifier.'&oauth_version='.$args['oauth_version'].'&oauth_token='.$this->access_token.'&oauth_signature='.$args['oauth_signature'];
-      echo "<br/>REQ Token URL: ".esc_url($url)."<br/>";
+      $url = $this->baseURL.$this->access_token_path.'?oauth_nonce='.$args['oauth_nonce'].'&oauth_timestamp='.$args['oauth_timestamp'].'&oauth_signature_method='.$args['oauth_signature_method'].'&oauth_consumer_key='.$this->consumer_key.'&oauth_verifier='.rawurlencode($verifier).'&oauth_version='.$args['oauth_version'].'&oauth_token='.rawurlencode($this->access_token).'&oauth_signature='.rawurlencode($args['oauth_signature']);
       $hdrsArr = $this->makeHTTPHeaders($url); $ckArr = '';   
       $response = nxs_remote_get($url, array( 'method' => 'GET', 'timeout' => 45, 'redirection' => 0,  'headers' => $hdrsArr, 'cookies' => $ckArr));  
       if ( is_nxs_error($response) ) return $response;
@@ -176,13 +173,13 @@ class wpScoopITOAuth{
       if (stripos($response['body'],'oauth_token_secret=')===false) echo 'Bad oAuth Login:'.esc_html($response['body']); else return $this->oAuthRespToArr($response['body']);
     }
     
-    public function to_header($params, $realm=null) { $first = true; prr($params);
+    public function to_header($params, $realm=null) { $first = true;
       if($realm) { $out = 'OAuth realm="' . nxssc_SigMethod_HMAC_SHA1::urlencode_rfc3986($realm) . '"'; $first = false; } else $out = 'OAuth'; $total = array();
       foreach ($params as $k => $v) {
         if (substr($k, 0, 5) != "oauth") continue; 
         $out .= ($first) ? ' ' : ', '."\r"; $out .= nxssc_SigMethod_HMAC_SHA1::urlencode_rfc3986($k) . '="' . nxssc_SigMethod_HMAC_SHA1::urlencode_rfc3986($v) . '"';
         $first = false;
-      } prr($out); return $out;
+      } return $out;
     }
     
     function makeReq($url, $params='', $type='GET'){
@@ -208,7 +205,7 @@ class wpScoopITOAuth{
           $response = nxs_remote_post($url, array( 'timeout' => 45, 'redirection' => 0, 'body'=>$argsStr,  'headers' => $hdrsArr)); //prr($argsStr); prr($argsT);   prr($response);
       }
       if ( is_nxs_error($response) ) return $response;
-      $this->http_code = $response['response']['code']; $body = $response['body']; $body = maybe_unserialize($body); if (is_array($body)) return $body; else  return json_decode($body, true);   
+      $this->http_code = $response['response']['code']; $body = json_decode($response['body'], true); return is_array($body) ? $body : array();
     }
     
     private function joinParameters($parameters){ $keys = array_keys($parameters); sort($keys, SORT_STRING); $keyValuePairs = array();

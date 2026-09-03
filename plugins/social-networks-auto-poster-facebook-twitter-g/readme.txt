@@ -2,10 +2,10 @@
 
 Contributors: NextScripts, okapy
 Donate link: https://www.nextscripts.com/social-networks-auto-poster-for-wordpress
-Tags: automation, autopost, auto-post, auto post, socialnetworks, socialnetwork, social networks, social network, Flipboard, google,  Flickr, twitter, pinterest, google my business, 500px, tumblr, blogger, blogspot, linkedin, reddit, reddit.com, plugin, links, Post, posts, api, automatic, seo, scoop.it, integration, bookmark, bookmarks, admin, images, image, social, sharing, share, repost, re-post, wordpress.com, Diigo, vBulletin, Plurk, forums, vKontakte, open graph, LiveJournal, SETT, YouTube, Telegram, xing, medium, yo, Weibo, mailchimp, line, Odnoklassniki, ok.ru
-Requires at least: 5.0
-Tested up to: 6.5.3
-Stable tag: 4.4.6
+Tags: autopost, social networks, social media, sharing, repost
+Requires at least: 6.0
+Tested up to: 7.0.4
+Stable tag: 4.4.8
 License: GPLv2 or later
 
 Automatically publishes blogposts to profiles/pages/groups on Twitter, Google+, Pinterest, LinkedIn, Blogger, Tumblr ... 22 more
@@ -14,9 +14,7 @@ Automatically publishes blogposts to profiles/pages/groups on Twitter, Google+, 
 
 **This plugin automatically publishes posts from your blog to your Social Media accounts** such as Twitter, Blogger, Telegram, Tumblr, Flickr, LinkedIn, ok.ru, LiveJournal, DreamWidth, Flipboard, Google My Business, Line, Diigo, Instapaper, Pinterest, Plurk, VK.com (VKontakte), YouTube, Scoop.It, Wordpress, XING etc. The whole process is completely automated. Just write a new post and either entire post or it's nicely formatted announcement with backlink will be published to all your configured social networks. You can reach the most audience and tell all your friends, readers and followers about your new post. Plugin works with profiles, business pages, community pages, groups, etc. Messages are 100% customizable and adopted for each network requirements.
 
-[Great News - July 2022] After almost 2 years break, plugin is back to active development and support. Versions 4.5 and 5.0 are coming soon... 
-
-* **Version 4.4** - fully compatible with WordPress 6 and Guttenberg Blocks.
+[Great News - July 2026] After almost 2 years break, plugin is back to active development and support. Versions 4.5 and 5.0 are coming soon... 
 
 = Supported Networks =
 
@@ -87,8 +85,8 @@ Please see <a href="https://www.nextscripts.com/installation-of-social-networks-
 
 **Requirements**
 
-Wordpress 4.0+ (6.0+ is preferred)
-PHP 5.6+ (7.4 is preferred)
+Wordpress 6.0+ (6.9+ is preferred)
+PHP 7.4+ (8.2+ is preferred)
 cURL
 Correctly working WP cron is required for some functionality (Scheduled posts, Auto reposter, Comments Import, etc...)
 
@@ -149,6 +147,10 @@ There is a major difference between SNAP and other auto-posting plugins. Plugin 
 
 Please see more <a href="https://www.nextscripts.com/faq/">Frequently asked questions</a>
 
+= Where do I report security bugs found in this plugin? =
+
+Please report security bugs found in the source code of the undefined plugin through the [Patchstack Vulnerability Disclosure  Program](https://patchstack.com/database/vdp/d7947330-6e49-4e78-b25a-82f171a06559). The Patchstack team will assist you with verification, CVE assignment, and notify the developers of this plugin.
+
 == Screenshots ==
 
 1. Add new post metadata box
@@ -176,6 +178,24 @@ Please see more <a href="https://www.nextscripts.com/faq/">Frequently asked ques
 = Details = 
 
 == Changelog ==
+
+= 4.4.8 [12/08/2026] =
+
+* Security - Enforced explicit SNAP capabilities and object-level authorization for AJAX, export, log, Quick Post, and reposter operations.
+* Security - Fixed reflected and stored XSS sinks in OAuth callbacks, debug output, account labels, and log rendering.
+* Security - Prevented PHP object injection from SNAP metadata, queue records, and remote OAuth responses.
+* Security - Added nonce-protected deletion flows and strict post-type checks.
+* Security - Added random, user-bound, single-use OAuth state validation across OAuth 1.0 and OAuth 2.0 account connections.
+* Security - Enforced HTTPS, certificate verification, unsafe-URL rejection, response limits, and remote image size/type validation; insecure legacy transports now fail closed.
+* Security - Added authenticated encryption and automatic migration for credentials in options, post metadata, caches, backups, and queued jobs.
+* Security - Removed credential-bearing debug output, redacted sensitive log fields, and protected the manual queue runner.
+
+= 4.4.7 [26/02/2026] =
+
+* New - WordPress 6.9 compatibility.
+* Bug Fix - Possible XSS security issue [CVE-2026-3228]
+* Bug Fix - Possible XSS security issue [CVE-2024-37275]
+
 
 = 4.4.6 [11/06/2024] = 
 
@@ -601,8 +621,8 @@ Author: NextScripts
 
 Author URL: https://www.nextscripts.com
 
-Copyright 2012-2022  NextScripts Corp
+Copyright 2012-2026  NextScripts Corp
 
 PHP Twitter API: Copyright 2012 -  themattharris - tmhOAuth
 
-NextScripts.com, Inc
+NextScripts Corp

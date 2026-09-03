@@ -1,6 +1,8 @@
 <?php   
 //## NXS/OWS Common Functions.
-if (!function_exists('prr')){ function prr($str,$id='') { $f = ''; $t = debug_backtrace(); if (isset($t[2])) $f = $t[2]['function']; echo $f.(!empty($id)?' ('.$id.')':'')."<br/><pre>"; print_r($str); echo "</pre>\r\n"; }}
+if (!function_exists('prr')){ function prr($str,$id='') { $f = ''; $t = debug_backtrace(); if (isset($t[2])) $f = $t[2]['function'];
+  $label = $f.(!empty($id)?' ('.$id.')':''); echo esc_html($label)."<br/><pre>".esc_html(print_r($str, true))."</pre>\r\n";
+}}
 if (!function_exists('nsx_stripSlashes')){ function nsx_stripSlashes(&$value){$value = stripslashes($value);}}
 if (!function_exists('nsx_fixSlashes')){ function nsx_fixSlashes(&$value){ while (strpos($value, '\\\\')!==false) $value = str_replace('\\\\','\\',$value);
    if (strpos($value, "\\'")!==false) $value = str_replace("\\'","'",$value); if (strpos($value, '\\"')!==false) $value = str_replace('\\"','"',$value);
@@ -11,6 +13,125 @@ if (!function_exists('nsx_doEncode')){ function nsx_doEncode($string,$key='NSX')
 }}
 if (!function_exists('nsx_doDecode')){ function nsx_doDecode($string,$key='NSX') { $key = sha1($key); $keyLen = strlen($key); $hash = ''; $sX = str_split($string, 2560);
   foreach($sX as $ss){$j=0; $sA=str_split($ss, 2); foreach($sA as $oS){$oS=hexdec(base_convert(strrev($oS),36,16)); if ($j==$keyLen) $j=0; $oK=ord(substr($key,$j,1)); $j++; $hash.=chr($oS-$oK);}} return $hash;
+}}
+
+//## Authenticated encryption for credentials stored in WordPress options.
+if (!function_exists('nxs_crypto_key')) { function nxs_crypto_key() {
+  $material = function_exists('wp_salt') ? wp_salt('auth') : '';
+  foreach (array('AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY') as $constant) if (defined($constant)) $material .= constant($constant);
+  if ($material === '') $material = __FILE__.php_uname();
+  return hash('sha256', 'nxs-snap-credentials|'.$material, true);
+}}
+if (!function_exists('nxs_b64url_encode')) { function nxs_b64url_encode($value) { return rtrim(strtr(base64_encode($value), '+/', '-_'), '='); }}
+if (!function_exists('nxs_b64url_decode')) { function nxs_b64url_decode($value) { $value = strtr($value, '-_', '+/'); return base64_decode($value.str_repeat('=', (4 - strlen($value) % 4) % 4), true); }}
+if (!function_exists('nxs_secure_encrypt')) { function nxs_secure_encrypt($value) {
+  if (!is_string($value) || $value === '') return $value;
+  $key = nxs_crypto_key();
+  if (function_exists('sodium_crypto_secretbox')) {
+    $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+    return 'nxse1:s:'.nxs_b64url_encode($nonce.sodium_crypto_secretbox($value, $nonce, $key));
+  }
+  if (function_exists('openssl_encrypt')) {
+    $nonce = random_bytes(12); $tag = '';
+    $ciphertext = openssl_encrypt($value, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, '', 16);
+    if ($ciphertext !== false) return 'nxse1:o:'.nxs_b64url_encode($nonce.$tag.$ciphertext);
+  }
+  // Encrypt-then-MAC fallback for hosts without Sodium/OpenSSL.
+  $nonce = random_bytes(16); $stream = ''; $counter = 0;
+  while (strlen($stream) < strlen($value)) $stream .= hash_hmac('sha256', $nonce.pack('N', $counter++), $key, true);
+  $ciphertext = $value ^ substr($stream, 0, strlen($value)); $tag = hash_hmac('sha256', $nonce.$ciphertext, $key, true);
+  return 'nxse1:h:'.nxs_b64url_encode($nonce.$tag.$ciphertext);
+}}
+if (!function_exists('nxs_secure_decrypt')) { function nxs_secure_decrypt($value) {
+  if (!is_string($value) || strpos($value, 'nxse1:') !== 0) return $value;
+  $parts = explode(':', $value, 3); if (count($parts) !== 3) return '';
+  $raw = nxs_b64url_decode($parts[2]); if ($raw === false) return '';
+  $key = nxs_crypto_key();
+  if ($parts[1] === 's' && function_exists('sodium_crypto_secretbox_open') && strlen($raw) > SODIUM_CRYPTO_SECRETBOX_NONCEBYTES) {
+    $nonce = substr($raw, 0, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES); $plain = sodium_crypto_secretbox_open(substr($raw, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES), $nonce, $key);
+    return $plain === false ? '' : $plain;
+  }
+  if ($parts[1] === 'o' && function_exists('openssl_decrypt') && strlen($raw) > 28) {
+    $plain = openssl_decrypt(substr($raw, 28), 'aes-256-gcm', $key, OPENSSL_RAW_DATA, substr($raw, 0, 12), substr($raw, 12, 16));
+    return $plain === false ? '' : $plain;
+  }
+  if ($parts[1] === 'h' && strlen($raw) > 48) {
+    $nonce = substr($raw, 0, 16); $tag = substr($raw, 16, 32); $ciphertext = substr($raw, 48);
+    if (!hash_equals($tag, hash_hmac('sha256', $nonce.$ciphertext, $key, true))) return '';
+    $stream = ''; $counter = 0; while (strlen($stream) < strlen($ciphertext)) $stream .= hash_hmac('sha256', $nonce.pack('N', $counter++), $key, true);
+    return $ciphertext ^ substr($stream, 0, strlen($ciphertext));
+  }
+  return '';
+}}
+if (!function_exists('nxs_is_sensitive_setting')) { function nxs_is_sensitive_setting($key) {
+  return (bool) preg_match('/(?:pass|password|secret|token|api[_-]?key|appkey|appsec|cookie|session|oauthverifier|privatekey|authresp|authdata|credential|bearer|^ck$|svc$|^up$|^xs$|^sid$|^ssid$|^hsid$)/i', (string) $key);
+}}
+if (!function_exists('nxs_redact_sensitive_data')) { function nxs_redact_sensitive_data($value) {
+  if (is_array($value)) { $out = array(); foreach ($value as $k=>$v) $out[$k] = nxs_is_sensitive_setting($k) ? '[REDACTED]' : nxs_redact_sensitive_data($v); return $out; }
+  if (!is_string($value)) return $value;
+  $value = preg_replace('/\bBearer\s+[A-Za-z0-9._~+\/-]+=*/i', 'Bearer [REDACTED]', $value);
+  return preg_replace('/((?:access[_-]?token|oauth[_-]?(?:token|verifier)|client[_-]?secret|app(?:lication)?[_-]?secret|api[_-]?key|password|passwd|authorization|set-cookie|cookie)\s*(?:=>|=|:|&quot;\s*:\s*&quot;)\s*)[^\s,;&<>\]\)]+/i', '$1[REDACTED]', $value);
+}}
+if (!function_exists('nxs_protect_settings')) { function nxs_protect_settings($value, $key='') {
+  if (is_array($value)) { $out = array(); foreach ($value as $k=>$v) $out[$k] = nxs_protect_settings($v, $k); return $out; }
+  if (nxs_is_sensitive_setting($key) && is_scalar($value) && (string)$value !== '') return nxs_secure_encrypt((string)$value);
+  return $value;
+}}
+if (!function_exists('nxs_settings_need_protection')) { function nxs_settings_need_protection($value, $key='') {
+  if (is_array($value)) { foreach ($value as $k=>$v) if (nxs_settings_need_protection($v, $k)) return true; return false; }
+  return nxs_is_sensitive_setting($key) && is_scalar($value) && (string)$value !== '' && strpos((string)$value, 'nxse1:') !== 0;
+}}
+if (!function_exists('nxs_unprotect_settings')) { function nxs_unprotect_settings($value) {
+  if (is_array($value)) { $out = array(); foreach ($value as $k=>$v) $out[$k] = nxs_unprotect_settings($v); return $out; }
+  return is_string($value) ? nxs_secure_decrypt($value) : $value;
+}}
+
+//## Never instantiate PHP objects while decoding plugin-controlled metadata or remote data.
+if (!function_exists('nxs_contains_object')) { function nxs_contains_object($value) { if (is_object($value)) return true; if (is_array($value)) foreach ($value as $item) if (nxs_contains_object($item)) return true; return false; }}
+if (!function_exists('nxs_safe_unserialize')) { function nxs_safe_unserialize($value, $default=array()) {
+  if (!is_string($value) || !function_exists('is_serialized') || !is_serialized($value)) return nxs_contains_object($value) ? $default : $value;
+  $decoded = @unserialize($value, array('allowed_classes'=>false));
+  if ($decoded === false && $value !== 'b:0;') return $default;
+  return nxs_contains_object($decoded) ? $default : $decoded;
+}}
+if (!function_exists('nxs_get_safe_post_meta')) { function nxs_get_safe_post_meta($object_id, $meta_key, $single=true) {
+  global $wpdb; $rows = $wpdb->get_results($wpdb->prepare("SELECT meta_id, meta_value FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s ORDER BY meta_id ASC", (int)$object_id, $meta_key), ARRAY_A);
+  $values = array(); foreach ($rows as $row) {
+    $decoded = nxs_safe_unserialize($row['meta_value'], array());
+    if (is_array($decoded) && nxs_settings_need_protection($decoded)) $wpdb->update($wpdb->postmeta, array('meta_value'=>maybe_serialize(nxs_protect_settings($decoded))), array('meta_id'=>(int)$row['meta_id']), array('%s'), array('%d'));
+    $values[] = nxs_unprotect_settings($decoded);
+  }
+  return $single ? (isset($values[0]) ? $values[0] : '') : $values;
+}}
+if (!function_exists('nxs_safe_post_metadata')) { function nxs_safe_post_metadata($value, $object_id, $meta_key, $single, $meta_type='post') {
+  if ($meta_type !== 'post' || !preg_match('/^(?:snap|_snap|nxs_|_nxs_)/i', (string)$meta_key)) return $value;
+  $decoded = nxs_get_safe_post_meta($object_id, $meta_key, $single);
+  // get_metadata_raw() unwraps the first element of filter-returned arrays for
+  // single values, so wrap the decoded value once here.
+  return $single ? array($decoded) : $decoded;
+}}
+
+if (!function_exists('nxs_snap_user_can_access')) { function nxs_snap_user_can_access($admin_only=false) {
+  return is_user_logged_in() && ($admin_only ? current_user_can('manage_options') : (current_user_can('manage_options') || current_user_can('haveown_snap_accss')));
+}}
+
+//## OAuth states are random, user-bound, provider-bound, short-lived and single-use.
+if (!function_exists('nxs_oauth_state_create')) { function nxs_oauth_state_create($provider, $account) {
+  $provider = sanitize_key($provider); $account = (string) absint($account); $uid = get_current_user_id(); if (!$uid || !$provider) return '';
+  $state = 'nxs-'.$provider.'-'.nxs_b64url_encode(random_bytes(32)); $key = 'nxs_oauth_'.$uid.'_'.$provider; $states = get_transient($key); if (!is_array($states)) $states = array();
+  $now = time(); foreach ($states as $hash=>$entry) if (empty($entry['expires']) || $entry['expires'] < $now) unset($states[$hash]);
+  $states[hash('sha256', $state)] = array('account'=>$account, 'expires'=>$now+600); set_transient($key, $states, 600); return $state;
+}}
+if (!function_exists('nxs_oauth_state_validate')) { function nxs_oauth_state_validate($state, $provider, &$account=null) {
+  $provider = sanitize_key($provider); $uid = get_current_user_id(); if (!$uid || !is_string($state) || strpos($state, 'nxs-'.$provider.'-') !== 0) return false;
+  $key = 'nxs_oauth_'.$uid.'_'.$provider; $states = get_transient($key); $hash = hash('sha256', $state);
+  if (!is_array($states) || empty($states[$hash]) || $states[$hash]['expires'] < time()) return false;
+  $account = $states[$hash]['account']; unset($states[$hash]); if ($states) set_transient($key, $states, 600); else delete_transient($key); return true;
+}}
+
+if (!function_exists('nxs_validate_remote_url')) { function nxs_validate_remote_url($url) {
+  if (!is_string($url) || strtolower((string)wp_parse_url($url, PHP_URL_SCHEME)) !== 'https') return false;
+  return (bool) wp_http_validate_url($url);
 }}
 if (!function_exists('nxs_decodeEntitiesFull')){ function nxs_decodeEntitiesFull($string, $quotes = ENT_COMPAT, $charset = 'utf-8') {
   return html_entity_decode(preg_replace_callback('/&([a-zA-Z][a-zA-Z0-9]+);/', 'nxs_convertEntity', $string), $quotes, $charset); 
@@ -61,12 +182,13 @@ if (!function_exists('nxs_MergeCookieArr')){function nxs_MergeCookieArr($ArrO, $
 
 //## Upload image as file from URL to remote server
 if (!function_exists('nxs_curlUploadImg')){ function nxs_curlUploadImg($imgURL, $uplURL, $pstArray, $pstField, $ck='') { $remImgURL = urldecode($imgURL); $urlParced = pathinfo($remImgURL); $remImgURLFilename = $urlParced['basename']; 
+  if (!nxs_validate_remote_url($remImgURL) || !nxs_validate_remote_url($uplURL)) return array('err'=>'Only safe public HTTPS image and upload URLs are allowed.');
   $imgType = substr(  $remImgURL, strrpos( $remImgURL , '.' )+1 ); if (stripos($imgType,'?')!==false) { $itt = explode('?', $imgType); $imgType = @reset($itt); }
   $ia = array("jpg", "png", "gif", "jpeg"); if (!in_array($imgType, $ia)) $imgType = 'jpg';
   $hdrsArr = array('User-Agent'=>'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36', 'Referer'=>$remImgURL); 
-  $advSet = nxs_mkRemOptsArr($hdrsArr);  $imgData = nxs_remote_get($remImgURL, $advSet);// prr($remImgURL);  // prr($imgData);
+  $advSet = nxs_mkRemOptsArr($hdrsArr); $advSet['limit_response_size'] = 10485760; $advSet['redirection'] = 2; $imgData = nxs_remote_get($remImgURL, $advSet);// prr($remImgURL);  // prr($imgData);
   if(is_nxs_error($imgData) || empty($imgData['body']) || (!empty($imgData['headers']['content-length']) && (int)$imgData['headers']['content-length']<200) || 
-    $imgData['headers']['content-type'] == 'text/html' ||  $imgData['response']['code'] == '403' ) return array('err'=>print_r($imgData, true)); else $imgData = $imgData['body'];  
+    empty($imgData['headers']['content-type']) || strpos(strtolower($imgData['headers']['content-type']), 'image/') !== 0 ||  $imgData['response']['code'] == '403' || strlen($imgData['body']) > 10485760 ) return array('err'=>'The remote image response was rejected.'); else $imgData = $imgData['body'];  
   $tmpX=array_search('uri', @array_flip(stream_get_meta_data($GLOBALS[mt_rand()]=tmpfile()))); 
   if (!is_writable($tmpX)) { $msg = "Can't upload image. Your temporary folder or file (file - ".$tmpX.") is not writable.";
     if (function_exists('wp_upload_dir')) { $uDir = wp_upload_dir(); $tmpX = tempnam($uDir['path'], "nx"); if (!is_writable($tmpX)) return $msg." Your UPLOADS folder or file (file - ".$tmpX.") is not writable. ";} else return $msg;
@@ -171,14 +293,15 @@ function nxs_cURLTestCode($url){
 function nxs_cURLTest($url, $msg, $testText){ if ($testText=='getMyIP') echo 'Getting IP... <br/>'; else echo "<br/>--== Test Requested ... ".esc_url($url)."<br/>";
     $rq = new nxsHttp;  $ret = $rq->request($url, nxs_mkRmReqArgs()); $response = is_array($ret)?$ret['body']:'';
     if ($testText=='getMyIP')  echo "Your Server IP:".wp_kses($response, wp_kses_allowed_html( 'post' )).'<br/>';  else { echo "Testing ... ".esc_url($url)." - <br/>";
-        if (stripos($response, $testText)!==false) echo "....".wp_kses($msg, wp_kses_allowed_html( 'post' ))." - OK<br/>"; else { echo "....<b style='color:red;'>".$msg." - Problem</b><br/>"; prr($ret); echo nxs_cURLTestCode(esc_url($url));  }
+        if (stripos($response, $testText)!==false) echo "....".wp_kses($msg, wp_kses_allowed_html( 'post' ))." - OK<br/>"; else { echo "....<b style='color:red;'>".esc_html($msg)." - Problem</b><br/>"; echo nxs_cURLTestCode(esc_url($url));  }
     }
 }
 //## Get Client IP
 if (!function_exists("nxs_getClientIP")){ function nxs_getClientIP($loc=false) {
     if (isset($_SERVER['HTTP_CLIENT_IP'])) $ip['ip'] = $_SERVER['HTTP_CLIENT_IP']; else if(isset($_SERVER['REMOTE_ADDR'])) $ip['ip'] = $_SERVER['REMOTE_ADDR']; else $ip['ip'] = 'UNKNOWN';
     if ($loc){
-        $rq = new nxsHttp; $ret = $rq->request('http://ip-api.com/php/'.$ip['ip'].'?fields=countryCode,region', nxs_mkRmReqArgs()); $ip['loc'] = unserialize($ret['body']);
+        $rq = new nxsHttp; $ret = $rq->request('https://ipapi.co/'.rawurlencode($ip['ip']).'/json/', nxs_mkRmReqArgs()); $loc = (!is_nxs_error($ret) && !empty($ret['body'])) ? json_decode($ret['body'], true) : array();
+        $ip['loc'] = is_array($loc) ? array('countryCode'=>(isset($loc['country_code'])?$loc['country_code']:''), 'region'=>(isset($loc['region_code'])?$loc['region_code']:'')) : array();
     }
     return $ip;
 }}

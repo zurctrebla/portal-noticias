@@ -48,7 +48,7 @@ if (!class_exists("nxs_class_SNAP_SC")) { class nxs_class_SNAP_SC {
         //## Get Saved Login Info
         if (function_exists('nxs_getOption')) { $opVal = array(); $opNm = 'nxs_snap_sc_'.sha1('nxs_snap_sc'.$options['uName'].$options['uPass']); $opVal = nxs_getOption($opNm); if (!empty($opVal) & is_array($opVal)) $options = array_merge($options, $opVal); } //  prr($opVal);
         $uname = $options['uName']; $pass = (substr($options['uPass'], 0, 5)=='n5g9a'||substr($options['uPass'], 0, 5)=='g9c1a'||substr($options['uPass'], 0, 5)=='b4d7s')?nsx_doDecode(substr($options['uPass'], 5)):$options['uPass'];       
-        $ck = !empty($options['ck'])?maybe_unserialize($options['ck']):''; if (!empty($ck)) $ck = nxsClnCookies($ck);
+        $ck = !empty($options['ck'])?nxs_safe_unserialize($options['ck'], array()):''; if (!empty($ck)) $ck = nxsClnCookies($ck);
         $nt = new nxsAPI_SC(); if (!empty($ck)) $nt->ck = $ck; if (!empty($options['proxy'])&&!empty($options['proxyOn'])){ $nt->proxy['proxy'] = $options['proxy']['proxy']; if (!empty($options['proxy']['up'])) $nt->proxy['up'] = $options['proxy']['up']; }
         $loginErr = $nt->connect($uname, $pass); $nt->t = $options['topicURL'];//        prr($message);
         if ($loginErr) { $badOut['Error'] .= 'Can\'t Connect - '.print_r($loginErr, true); return $badOut; }        
@@ -59,13 +59,13 @@ if (!class_exists("nxs_class_SNAP_SC")) { class nxs_class_SNAP_SC {
         
       } else { 
         require_once('apis/scOAuth.php');   $tum_oauth = new wpScoopITOAuth(nxs_gak($options['appKey']), nxs_gas($options['appSec']), $options['accessToken'], $options['accessTokenSec']);
-        $tiID = $tum_oauth->makeReq('http://www.scoop.it/api/1/topic', array('urlName'=>$options['topicURL']));  
+        $tiID = $tum_oauth->makeReq('https://www.scoop.it/api/1/topic', array('urlName'=>$options['topicURL']));  
         if (!empty($tiID) && is_array($tiID) && !empty($tiID['topic']) && !empty($tiID['topic']['id'])) $tiID = $tiID['topic']['id']; else { $badOut['Error'] .= print_r($tiID, true); return $badOut; }
         $postArr = array('action'=>'create', 'title'=>$msgT, 'content'=>$text, 'url'=>$postType=='A'?$message['url']:'', 'imageUrl'=>(($postType=='I' || $postType=='A') && !empty($imgURL))?$imgURL:'', 'topicId'=>$tiID);  
-        $postinfo = $tum_oauth->makeReq('http://www.scoop.it/api/1/post', $postArr, 'POST'); // prr($postinfo);      
+        $postinfo = $tum_oauth->makeReq('https://www.scoop.it/api/1/post', $postArr, 'POST'); // prr($postinfo);      
         if (is_array($postinfo) && isset($postinfo['post'])) { $apNewPostID = $postinfo['post']['id']; $apNewPostURL = $postinfo['post']['scoopUrl']; 
           if ($options['inclTags']=='1') { $postArr = array('action'=>'edit', 'tag'=>$message['tags'], 'id'=>$apNewPostID);  
-            $postinfo = $tum_oauth->makeReq('http://www.scoop.it/api/1/post', $postArr, 'POST'); 
+            $postinfo = $tum_oauth->makeReq('https://www.scoop.it/api/1/post', $postArr, 'POST'); 
           }              
         } $code = $tum_oauth->http_code;
       }

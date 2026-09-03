@@ -19,7 +19,7 @@ if (!class_exists('nxsAPI_TW_Native')) { class nxsAPI_TW_Native {
         $auth = 'OAuth oauth_consumer_key="'.nxs_gak($this->conn['appKey']).'", oauth_nonce="'.$nounce.'", oauth_signature="'.$signature.'", oauth_signature_method="HMAC-SHA1", oauth_timestamp="'.$ts.'", oauth_token="'.$this->conn['accessToken'].'", oauth_version="1.0"';
         $argArr = ['extraHeaders'=>['Authorization'=>$auth]]; if ($tp=='POST') { $argArr['extraHeaders']['Content-Type'] = $isMediaUpl?'multipart/form-data':'application/json; charset=UTF-8'; $argArr['flds'] = $req; }
         if (!empty($gtArr)) $reqURL = $reqURL.'?'.http_build_query($gtArr); $args = nxs_mkRmReqArgs($argArr); unset($args['headers']['Connection']);
-        if ($isMediaUpl)  $this->rq->postData = $req;  $ret = $this->rq->request($reqURL, $args); if($this->d) prr($args);
+        if ($isMediaUpl)  $this->rq->postData = $req;  $ret = $this->rq->request($reqURL, $args);
         return $ret;
     }
 
@@ -305,7 +305,7 @@ if (!class_exists("nxs_snapClassTW")) { class nxs_snapClassTW extends nxs_snapCl
         foreach ($rplL as $comment){ $cid = $comment['id']; if (trim($cid)=='' || in_array('twxcw'.$cid, $impCmnts)) continue; else $impCmnts[] = 'twxcw'.$cid;
             $commentdata = array( 'comment_post_ID' => $postID, 'comment_author' => $comment['author']['name'], 'comment_agent' => "SNAP||".str_ireplace('_normal.','_bigger.',$comment['author']['profile_image_url']),
                 'comment_author_email' => $comment['author']['username'].'@twitter.com', 'comment_author_url' => 'https://twitter.com/'.$comment['author']['username'],
-                'comment_content' => $comment['text'], 'comment_date_gmt' => date('Y-m-d H:i:s', strtotime( $comment['created_at'] ) ), 'comment_type' => ''); prr($commentdata);
+                'comment_content' => $comment['text'], 'comment_date_gmt' => date('Y-m-d H:i:s', strtotime( $comment['created_at'] ) ), 'comment_type' => '');
             nxs_postNewComment($commentdata, $options['riCommentsAA']=='1'); $ci++; //echo $ci;
         }
         delete_post_meta($postID, 'snapImportedComments'); add_post_meta($postID, 'snapImportedComments', $impCmnts );

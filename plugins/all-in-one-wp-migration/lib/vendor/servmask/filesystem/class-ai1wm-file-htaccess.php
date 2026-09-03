@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2014-2018 ServMask Inc.
+ * Copyright (C) 2014-2025 ServMask Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
+ * Attribution: This code is part of the All-in-One WP Migration plugin, developed by
+ *
  * ███████╗███████╗██████╗ ██╗   ██╗███╗   ███╗ █████╗ ███████╗██╗  ██╗
  * ██╔════╝██╔════╝██╔══██╗██║   ██║████╗ ████║██╔══██╗██╔════╝██║ ██╔╝
  * ███████╗█████╗  ██████╔╝██║   ██║██╔████╔██║███████║███████╗█████╔╝
@@ -23,39 +25,95 @@
  * ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	die( 'Kangaroos cannot jump here' );
+}
+
 class Ai1wm_File_Htaccess {
 
 	/**
-	 * Create .htaccess file (ServMask)
+	 * Create backups .htaccess file
 	 *
 	 * @param  string  $path Path to file
 	 * @return boolean
 	 */
-	public static function create( $path ) {
-		return Ai1wm_File::create( $path, implode( PHP_EOL, array(
-			'<IfModule mod_mime.c>',
-			'AddType application/octet-stream .wpress',
-			'</IfModule>',
-			'<IfModule mod_dir.c>',
-			'DirectoryIndex index.php',
-			'</IfModule>',
-			'<IfModule mod_autoindex.c>',
-			'Options -Indexes',
-			'</IfModule>',
-		) ) );
+	public static function backups( $path ) {
+		return Ai1wm_File::create(
+			$path,
+			implode(
+				PHP_EOL,
+				array(
+					'<IfModule mod_mime.c>',
+					'	AddType application/octet-stream .wpress',
+					'</IfModule>',
+					'<IfModule mod_dir.c>',
+					'	DirectoryIndex index.php',
+					'</IfModule>',
+					'<IfModule mod_autoindex.c>',
+					'	Options -Indexes',
+					'</IfModule>',
+				)
+			)
+		);
 	}
 
 	/**
-	 * Create .htaccess file (LiteSpeed)
+	 * Create storage .htaccess file
+	 *
+	 * @param  string  $path Path to file
+	 * @return boolean
+	 */
+	public static function storage( $path ) {
+		return Ai1wm_File::create(
+			$path,
+			implode(
+				PHP_EOL,
+				array(
+					'<IfModule mod_authz_core.c>',
+					'	<FilesMatch ".*">',
+					'		Require all denied',
+					'	</FilesMatch>',
+					'	<FilesMatch "\.log$">',
+					'		Require all granted',
+					'	</FilesMatch>',
+					'</IfModule>',
+					'<IfModule !mod_authz_core.c>',
+					'	Order allow,deny',
+					'	Deny from all',
+					'	<FilesMatch "\.log$">',
+					'		Order allow,deny',
+					'		Allow from all',
+					'	</FilesMatch>',
+					'</IfModule>',
+					'<IfModule mod_mime.c>',
+					'	AddType text/plain .log',
+					'</IfModule>',
+					'<IfModule mod_dir.c>',
+					'	DirectoryIndex index.php',
+					'</IfModule>',
+					'<IfModule mod_autoindex.c>',
+					'	Options -Indexes',
+					'</IfModule>',
+				)
+			)
+		);
+	}
+
+	/**
+	 * Create LiteSpeed .htaccess file
 	 *
 	 * @param  string  $path Path to file
 	 * @return boolean
 	 */
 	public static function litespeed( $path ) {
-		return Ai1wm_File::create_with_markers( $path, 'LiteSpeed', array(
-			'<IfModule Litespeed>',
-			'SetEnv noabort 1',
-			'</IfModule>',
-		) );
+		return Ai1wm_File::insert_with_markers(
+			$path,
+			'LiteSpeed',
+			array(
+				'<IfModule Litespeed>',
+				'	SetEnv noabort 1',
+				'</IfModule>',
+			)
+		);
 	}
 }

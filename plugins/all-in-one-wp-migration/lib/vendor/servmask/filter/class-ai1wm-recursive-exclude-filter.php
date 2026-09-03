@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2014-2018 ServMask Inc.
+ * Copyright (C) 2014-2025 ServMask Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
+ * Attribution: This code is part of the All-in-One WP Migration plugin, developed by
+ *
  * ███████╗███████╗██████╗ ██╗   ██╗███╗   ███╗ █████╗ ███████╗██╗  ██╗
  * ██╔════╝██╔════╝██╔══██╗██║   ██║████╗ ████║██╔══██╗██╔════╝██║ ██╔╝
  * ███████╗█████╗  ██████╔╝██║   ██║██╔████╔██║███████║███████╗█████╔╝
@@ -23,21 +25,52 @@
  * ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	die( 'Kangaroos cannot jump here' );
+}
+
+/**
+ * @method RecursiveIterator getInnerIterator()
+ */
 class Ai1wm_Recursive_Exclude_Filter extends RecursiveFilterIterator {
 
 	protected $exclude = array();
 
 	public function __construct( RecursiveIterator $iterator, $exclude = array() ) {
 		parent::__construct( $iterator );
-
-		// Set exclude filter
-		$this->exclude = $exclude;
+		if ( is_array( $exclude ) ) {
+			foreach ( $exclude as $path ) {
+				$this->exclude[] = ai1wm_replace_forward_slash_with_directory_separator( $path );
+			}
+		}
 	}
 
+	#[\ReturnTypeWillChange]
 	public function accept() {
-		return ! in_array( $this->getInnerIterator()->getSubPathname(), $this->exclude );
+		if ( in_array( ai1wm_replace_forward_slash_with_directory_separator( $this->getInnerIterator()->getSubPathname() ), $this->exclude ) ) {
+			return false;
+		}
+
+		if ( in_array( ai1wm_replace_forward_slash_with_directory_separator( $this->getInnerIterator()->getPathname() ), $this->exclude ) ) {
+			return false;
+		}
+
+		if ( in_array( ai1wm_replace_forward_slash_with_directory_separator( $this->getInnerIterator()->getPath() ), $this->exclude ) ) {
+			return false;
+		}
+
+		if ( strpos( $this->getInnerIterator()->getSubPathname(), "\n" ) !== false ) {
+			return false;
+		}
+
+		if ( strpos( $this->getInnerIterator()->getSubPathname(), "\r" ) !== false ) {
+			return false;
+		}
+
+		return true;
 	}
 
+	#[\ReturnTypeWillChange]
 	public function getChildren() {
 		return new self( $this->getInnerIterator()->getChildren(), $this->exclude );
 	}

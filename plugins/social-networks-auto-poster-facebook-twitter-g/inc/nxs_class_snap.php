@@ -25,11 +25,11 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
   
   
   function rfrmAccts($acctsIn){ $conns = array();
-     foreach ($acctsIn as $int=>$ntss) { if (empty($int)) continue; prr($int,'##########################################################'); $clName = 'nxs_snapClass'.strtoupper($int); $nt = new $clName(); $nt->nt = $ntss;     
+     foreach ($acctsIn as $int=>$ntss) { if (empty($int)) continue; $clName = 'nxs_snapClass'.strtoupper($int); $nt = new $clName(); $nt->nt = $ntss;     
        if (property_exists($nt, 'accSets')) { $accs = $nt->sepAcc($ntss); //else $acctsOut = $acctsIn;
           if (!empty($accs)) { echo "*******************************"; $acctsIn[$int] = $accs['s']; $conns[$int] = $accs['c']; }       
        }
-     } prr($acctsIn, 'ACCSOUT');     
+     }
      return $acctsIn; 
   }
   
@@ -59,7 +59,13 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
     } $options['v'] = NXS_SETV; $this->saveNetworksOptions($nts,$options); delete_option($this->old_dbOptionsName); 
     return $options; 
   }   
-  function getAPOptions() { global $nxs_skipSSLCheck, $blog_id; $options = get_option($this->dbOptionsName); $this->nxs_accts = get_option($this->dbNtsName); $this->nxs_acctsU = get_option($this->dbNtsNameU); //$this->accts = $this->rfrmAccts($this->nxs_accts); prr($this->accts); die();
+  function getAPOptions() { global $nxs_skipSSLCheck, $blog_id; $stored_options = get_option($this->dbOptionsName); $options = nxs_unprotect_settings($stored_options); $stored_accts = get_option($this->dbNtsName); $stored_accts_u = get_option($this->dbNtsNameU);
+    $this->nxs_accts = nxs_unprotect_settings($stored_accts); $this->nxs_acctsU = nxs_unprotect_settings($stored_accts_u);
+    // Transparently migrate legacy clear/obfuscated credentials to authenticated encryption at rest.
+    if (is_array($this->nxs_accts) && nxs_settings_need_protection($stored_accts)) update_option($this->dbNtsName, nxs_protect_settings($this->nxs_accts), false);
+    if (is_array($this->nxs_acctsU) && nxs_settings_need_protection($stored_accts_u)) update_option($this->dbNtsNameU, nxs_protect_settings($this->nxs_acctsU), false);
+    if (is_array($options) && nxs_settings_need_protection($stored_options)) update_option($this->dbOptionsName, nxs_protect_settings($options), false);
+    //$this->accts = $this->rfrmAccts($this->nxs_accts); prr($this->accts); die();
     //var_dump($options); // global $nxs_snapAvNts; prr($nxs_snapAvNts); prr($options); prr($this->nxs_accts);// prr($this->nxs_accts, 'RER:');    
     //## VK Fix    
     if (!empty($this->nxs_accts)&&!empty($this->nxs_accts['vk'])&&!empty($this->nxs_accts['vk']['pgIntID'])) unset($this->nxs_accts['vk']['pgIntID']); if (!empty($this->nxs_acctsU)&&!empty($this->nxs_acctsU['vk'])&&!empty($this->nxs_acctsU['vk']['pgIntID'])) unset($this->nxs_acctsU['vk']['pgIntID']);
@@ -79,7 +85,7 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
 	//## Get Addns List
 	$this->addns = get_site_option('_nxs_aListV4'); if (empty($this->addns)) { $this->addns = nxs_addns::getAddnList(); update_site_option('_nxs_aListV4', $this->addns); }
     //## Backup
-    $lBckTime = get_option('nxs_lBckTime'); if (empty($lBckTime) || $lBckTime<strtotime("-1 week")) { update_option('nxsSNAPNetworks_bck4', $this->nxs_accts, false); update_option('nxsSNAPOptions_bck4', $this->nxs_options, false); update_option('nxs_lBckTime', time(), false); }
+    $lBckTime = get_option('nxs_lBckTime'); if (empty($lBckTime) || $lBckTime<strtotime("-1 week")) { update_option('nxsSNAPNetworks_bck4', nxs_protect_settings($this->nxs_accts), false); update_option('nxsSNAPOptions_bck4', nxs_protect_settings($this->nxs_options), false); update_option('nxs_lBckTime', time(), false); }
          
     //if (function_exists('nxs_getInitAdd')) nxs_getInitAdd($options); if (!empty($options['uk'])) $options['uk']='API'; 
     //if (defined('NXSAPIVER') && (empty($options['ukver']) || $options['ukver']!=NXSAPIVER)){$options['ukver']=NXSAPIVER; $this->saveNetworksOptions('',$options);}
@@ -95,14 +101,12 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
     //## CHeck for V4 API Update
     $g = get_site_option('nxs_v4APIMn'); if (empty($g) && defined('NXSAPIVER') && stripos(NXSAPIVER, 'NXSID')===false && (int)substr(NXSAPIVER,0,1)<4 && function_exists('nxs_doChAPIU')) { nxs_doChAPIU(); update_site_option('nxs_v4APIMn', 1); }
     
-    if (isset($_GET['page']) && $_GET['page']=='nxs-help' && isset($_GET['do']) && $_GET['do']=='test'){
-        error_reporting(E_ALL); ini_set('error_reporting', E_ALL); ini_set('display_errors', 1);
+    if (isset($_GET['page'], $_GET['do']) && sanitize_key(wp_unslash($_GET['page']))==='nxs-help' && sanitize_key(wp_unslash($_GET['do']))==='test' && current_user_can('manage_options')){
         echo "Testting... cURL (SSL/HTTPS Connections)<br/>SNAP Ver: ".NextScripts_SNAP_Version.(defined('NXSAPIVER')?"  API: ".NXSAPIVER:'').(defined('NextScripts_UPG_SNAP_Version')?" | SNAP Helper Ver: ".NextScripts_UPG_SNAP_Version:'')."<br/>Deflate - ";
         echo (function_exists('gzdeflate'))?"Yes":"No";  echo "<br/><br/>";
         $info = curl_version();  echo 'cURL Version: '.$info["version"].' | SSL Vesrion: '.$info["ssl_version"].' | libz Version: '.$info["libz_version"].' | libSSH Ver: '.$info["libssh_version"].' | Host: '.$info["host"].'<br/><br/>';
         nxs_cURLTest("https://api.ipify.org/", "HTTPS to whatismyip", 'getMyIP');
         nxs_cURLTest("https://www.nextscripts.com/", "HTTPS to NXS", "Social Networks");
-        nxs_cURLTest("http://45.79.4.45/", "HTTPS to NXSA", "NXS");
         nxs_cURLTest("https://www.google.com/appsstatus/dashboard/", "HTTPS to Google", "Status Dashboard");
         nxs_cURLTest("https://www.facebook.com/", "HTTPS to Facebook", 'id="facebook"');
         nxs_cURLTest("https://graph.facebook.com/", "HTTPS to API (Graph) Facebook", 'get');
@@ -114,14 +118,14 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
         nxs_cURLTest("https://www.livejournal.com/about/", "HTTPS to LiveJournal", 'livejournal.com/about');
         die('Done');
     }
-    if (isset($_GET['page']) && $_GET['page']=='nxs-help' && isset($_GET['do']) && $_GET['do']=='crtest'){ 
-      if (isset($_GET['redo']) && $_GET['redo']=='1'){ delete_option("NXS_cronCheck");  ?><script type="text/javascript">window.location = "<?php echo nxs_get_admin_url('admin.php?page=nxs-help&do=crtest'); ?>"</script><?php die(); }    
+    if (isset($_GET['page'], $_GET['do']) && sanitize_key(wp_unslash($_GET['page']))==='nxs-help' && sanitize_key(wp_unslash($_GET['do']))==='crtest' && current_user_can('manage_options')){ 
+      if (isset($_GET['redo']) && $_GET['redo']==='1'){ check_admin_referer('nxs_cron_test_redo'); delete_option("NXS_cronCheck");  ?><script type="text/javascript">window.location = <?php echo wp_json_encode(nxs_get_admin_url('admin.php?page=nxs-help&do=crtest')); ?>;</script><?php die(); }    
         $cr = get_option('NXS_cronCheck'); if (!empty($cr) && is_array($cr)) { $checks = $cr['cronChecks']; $numChecks = count($checks); echo '<div style="font-family:\'Open Sans\',sans-serif;font-size: 15px;">';
         if ( ($cr['cronCheckStartTime']+900)>(time())) echo "<b>Cron Check is in Progress.....</b> will be finished in ".($cr['cronCheckStartTime']+900-time()).' seconds. Please <input type="button" value="Reload" onClick="location.reload()"> this page to see more results.... <br/><br/>'; else { echo "Cron Check Results:<br/>";
           echo '<span style="color:#761616">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;==== Cron was executed <b>'.$numChecks.'</b> times in 15 minutes ===</span>';
           if ($numChecks>15 || $numChecks<2) echo '<b style="color:#FF0000"><br/><br/>Your WP Cron is not healthy</b><br/><br/><span style="color:#761616">'.(($numChecks>15)?('WP Cron should NOT be executed more then once per minute.'):('WP Cron should be executed at least once in 5-10 minutes.')).'  Some functionality (like auto-reposting) will be disabled.</span><br/><br/><span style="color:#005858; font-weight:bold;">Why this is important?</span><br/><span style="color:#005858">Please see this post: <a href="https://www.nextscripts.com/blog/troubles-wp-cron-existing-posts-auto-reposter/" target="_blank">Troubles with WP Cron and existing posts auto-reposter</a></span><br/><br/><span style="color:#005858; font-weight:bold;">Solution</span><br/><span style="color:#005858">Please see the instructions for the correct WP Cron setup: <a href="https://www.nextscripts.com/tutorials/wp-cron-scheduling-tasks-in-wordpress/" target="_blank">WP-Cron: Scheduling Tasks in WordPress</a></span>'; else  echo '<b style="color:#0000FF"><br/><br/>Your WP Cron is OK</b>';
         }
-         ?> <br/><br/><span style="color:#000058; font-weight:normal;">Technical Info:</span> <?php prr($cr);  ?>&nbsp;&nbsp;====&nbsp;<a href="<?php echo nxs_get_admin_url('admin.php?page=nxs-help&do=crtest&redo=1'); ?>">Re-do Cron Check</a> (it will take 15 minutes to complete)<?php
+         ?> <br/><br/><a href="<?php echo esc_url(wp_nonce_url(nxs_get_admin_url('admin.php?page=nxs-help&do=crtest&redo=1'), 'nxs_cron_test_redo')); ?>">Re-do Cron Check</a> (it will take 15 minutes to complete)<?php
        } else echo 'Check is not started yet... Please <input type="button" value="Reload" onClick="location.reload()"> this page in couple minutes.<br/>If you still see this message after several minutes, your cron is NOT RUNNING.';
        echo '</div>';
        die();
@@ -130,9 +134,9 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
   }
   function saveNetworksOptions($networks, $options='') { //## Set or just save (=1) Options and Networks
      if (!empty($networks)) { 
-         if (!current_user_can( 'manage_options' ) && current_user_can( 'haveown_snap_accss' )) { if ($networks!=1) $this->nxs_acctsU = $networks; update_option($this->dbNtsNameU, $this->nxs_acctsU, false); } 
-            else { if ($networks!=1) $this->nxs_accts = $networks; update_option($this->dbNtsName, $this->nxs_accts, false); }         
-     } if (!empty($options)) {  if ($options!=1) $this->nxs_options = $options; update_option($this->dbOptionsName, $this->nxs_options, false); } 
+         if (!current_user_can( 'manage_options' ) && current_user_can( 'haveown_snap_accss' )) { if ($networks!=1) $this->nxs_acctsU = $networks; update_option($this->dbNtsNameU, nxs_protect_settings($this->nxs_acctsU), false); } 
+            elseif (current_user_can('manage_options') || (defined('DOING_CRON') && DOING_CRON)) { if ($networks!=1) $this->nxs_accts = $networks; update_option($this->dbNtsName, nxs_protect_settings($this->nxs_accts), false); }
+     } if (!empty($options) && current_user_can('manage_options')) { if ($options!=1) $this->nxs_options = $options; update_option($this->dbOptionsName, nxs_protect_settings($this->nxs_options), false); }
   }  
   
   function showUsersSitesMUTab(){ global $nxs_snapAvNts;  $ntoptions = get_site_option('nxsSNAPOptions'); ?>
@@ -167,14 +171,17 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
   }
         
   function showAccountsTab(){ global $nxs_snapAvNts, $nxsOne; $nxsOne = ''; $trrd=0; $parts = parse_url( home_url() );
-    $nxs_snapThisPageUrl = "{$parts['scheme']}://{$parts['host']}" . esc_url(add_query_arg( NULL, NULL )); $cst=strrev('enifed'); $isMobile = nxs_isMobile();
+    $nxs_snapThisPageUrl = esc_url_raw(add_query_arg('page', 'nxssnap', nxs_get_admin_url('admin.php'))); $cst=strrev('enifed'); $isMobile = nxs_isMobile();
     if (function_exists('nxs_v4doSMAS2')) { $rf = new ReflectionFunction('nxs_v4doSMAS2'); $trrd++; $rff = $rf->getFileName(); if (stripos($rff, "'d code")===false) $cst(chr(100).$trrd,$trrd); }
     //## Import Settings            
     if (isset($_POST['upload_NS_SNAutoPoster_settings'])) { if (!empty($_POST['nxs_mqTest']) && $_POST['nxs_mqTest']=="\'") {array_walk_recursive($_POST, 'nsx_stripSlashes');}  array_walk_recursive($_POST, 'nsx_fixSlashes');             
       $secCheck =  wp_verify_nonce(sanitize_text_field( wp_unslash ($_POST['nxsChkUpl_wpnonce'])), 'nxsChkUpl');
-      if ($secCheck!==false && isset($_FILES['impFileSettings_button']) && is_uploaded_file($_FILES['impFileSettings_button']['tmp_name'])) { $fileData = trim(file_get_contents($_FILES['impFileSettings_button']['tmp_name']));
-        while (substr($fileData, 0,1)!=='a') $fileData = substr($fileData, 1);  
-        $uplOpt = maybe_unserialize($fileData); if (is_array($uplOpt) && (isset($uplOpt['imgNoCheck']) || isset($uplOpt['useSSLCert'])) ) { $options = $uplOpt; //### V3 import
+      if ($secCheck!==false && isset($_FILES['impFileSettings_button']) && is_uploaded_file($_FILES['impFileSettings_button']['tmp_name'])) {
+        if (!isset($_FILES['impFileSettings_button']['size']) || (int)$_FILES['impFileSettings_button']['size'] > 2 * MB_IN_BYTES) { echo '<div class="error"><p><strong>'.esc_html__('Import file is too large.', 'social-networks-auto-poster-facebook-twitter-g').'</strong></p></div>'; return; }
+        $fileData = trim(file_get_contents($_FILES['impFileSettings_button']['tmp_name'])); $arrayStart = strpos($fileData, 'a:');
+        if ($arrayStart === false) { echo '<div class="error"><p><strong>'.esc_html__('Incorrect import file.', 'social-networks-auto-poster-facebook-twitter-g').'</strong></p></div>'; return; } $fileData = substr($fileData, $arrayStart);
+        $uplOpt = nxs_safe_unserialize($fileData, array()); if (is_array($uplOpt) && (isset($uplOpt['imgNoCheck']) || isset($uplOpt['useSSLCert'])) ) { $options = $uplOpt; //### V3 import
+          if (!current_user_can('manage_options')) { echo '<div class="error"><p><strong>'.esc_html__('Only an administrator can import legacy site-wide settings.', 'social-networks-auto-poster-facebook-twitter-g').'</strong></p></div>'; return; }
           if (!empty($options)&&(empty($options['v'])||($options['v']<NXS_SETV))) { if (empty($options['v'])) add_action( 'admin_enqueue_scripts', 'nxs_snap_pointer_admin_enqueue_scripts' ); $options = $this->toLatestVer($options);  }  //## Check if first run after V3-V4 update.
             else $this->saveNetworksOptions($options['n'], $options['o']); 
         } elseif (is_array($uplOpt) && (isset($uplOpt['o']) || isset($uplOpt['u'])) ) { //### V4 import
@@ -263,7 +270,7 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
   </div>
 </div>
          
-    <form method="post" enctype="multipart/form-data"  id="nsStFormUpl" action="<?php echo $nxs_snapThisPageUrl?>">
+    <form method="post" enctype="multipart/form-data"  id="nsStFormUpl" action="<?php echo esc_url($nxs_snapThisPageUrl); ?>">
       <input type="file" accept="text/plain" onchange="jQuery('#nsStFormUpl').submit();" id="impFileSettings_button" name="impFileSettings_button" style="display: block; visibility: hidden; width: 1px; height: 0;" size="chars">
       <input type="hidden" value="1" name="upload_NS_SNAutoPoster_settings" /> <input value="'" type="hidden" name="nxs_mqTest" /> <input value="0" type="hidden" name="nxs_doAccMrg" id="nxs_doAccMrg"/>  <?php wp_nonce_field( 'nxsChkUpl', 'nxsChkUpl_wpnonce' ); ?> 
     </form><?php // prr($networks);
@@ -315,7 +322,7 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
               <div style="margin-left: 20px;">
               
               <?php $cr = get_option('NXS_cronCheck'); if (!empty($cr) && is_array($cr) && isset($cr['status']) && $cr['status']=='0') { ?> <span style="color: red"> *** <?php _e('Your WP Cron is not working correctly. This feature may not work properly, and might cause duplicate postings and stability problems.<br/> Please see the test results and recommendations here:', 'social-networks-auto-poster-facebook-twitter-g'); ?>
-     &nbsp;-&nbsp;<a target="_blank" href="<?php global $nxs_snapThisPageUrl; echo $nxs_snapThisPageUrl; ?>&do=crtest">WP Cron Test Results</a></span> <br/>
+     &nbsp;-&nbsp;<a target="_blank" href="<?php global $nxs_snapThisPageUrl; echo esc_url(add_query_arg('do', 'crtest', $nxs_snapThisPageUrl)); ?>">WP Cron Test Results</a></span> <br/>
             <?php  } ?>
               
               <input type="checkbox" name="quLimit" value="1" <?php if (isset($options['quLimit']) && $options['quLimit']=='1') echo 'checked="checked"'; ?> /> <b><?php _e('Limit autoposting speed', 'social-networks-auto-poster-facebook-twitter-g') ?></b> - <i><?php _e('Recommended for busy sites with a lot of new posts.', 'social-networks-auto-poster-facebook-twitter-g') ?> </i><br/> 
@@ -627,7 +634,7 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
              <div class="nxs_box_inside"> 
              
              <?php $cr = get_option('NXS_cronCheck'); if (!empty($cr) && is_array($cr) && isset($cr['status']) && $cr['status']=='0') { ?> <span style="color: red"> *** <?php _e('Your WP Cron is not working correctly. This feature may not work properly, and might cause duplicate postings and stability problems.<br/> Please see the test results and recommendations here:', 'social-networks-auto-poster-facebook-twitter-g'); ?>
-     &nbsp;-&nbsp;<a target="_blank" href="<?php global $nxs_snapThisPageUrl; echo $nxs_snapThisPageUrl; ?>&do=crtest">WP Cron Test Results</a></span> <br/>
+     &nbsp;-&nbsp;<a target="_blank" href="<?php global $nxs_snapThisPageUrl; echo esc_url(add_query_arg('do', 'crtest', $nxs_snapThisPageUrl)); ?>">WP Cron Test Results</a></span> <br/>
             <?php  } ?>             
              
              <span style="font-size: 11px; margin-left: 1px;">Plugin will automatically grab the comments posted on Social Networks and insert them as "Comments to your post". Plugin will check for the new comments every hour. </span> <br/>
@@ -767,7 +774,7 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
              <option <?php if ($options['imgSizeImg']=='full') echo "selected" ?> value ="full"><?php _e('Original Size'); ?></option>
              <?php
              foreach ($imgSizes as $sn=>$sa) { 
-                 ?><option <?php if ($options['imgSizeImg']==$sn) echo "selected" ?> value="<?php echo $sn; ?>"><?php echo ucfirst($sn); ?>&nbsp;(<?php echo $sa['width']." x ".$sa['height']; ?>)</option>
+               ?><option <?php selected($options['imgSizeImg'], $sn); ?> value="<?php echo esc_attr($sn); ?>"><?php echo esc_html(ucfirst($sn)); ?>&nbsp;(<?php echo esc_html($sa['width']." x ".$sa['height']); ?>)</option>
              <?php } ?>
               </select> <br/>
              <b>&nbsp;&nbsp;&nbsp;&nbsp;<?php _e('Attachment images:', 'social-networks-auto-poster-facebook-twitter-g') ?></b><select name="imgSizeAttch">
@@ -775,7 +782,7 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
              <option <?php if ($options['imgSizeAttch']=='full') echo "selected" ?> value="full"><?php _e('Original Size'); ?></option>
              <?php
              foreach ($imgSizes as $sn=>$sa) { 
-                 ?><option <?php if ($options['imgSizeAttch']==$sn) echo "selected" ?> value="<?php echo $sn; ?>"><?php echo ucfirst($sn); ?>&nbsp;(<?php echo $sa['width']." x ".$sa['height']; ?>)</option>
+               ?><option <?php selected($options['imgSizeAttch'], $sn); ?> value="<?php echo esc_attr($sn); ?>"><?php echo esc_html(ucfirst($sn)); ?>&nbsp;(<?php echo esc_html($sa['width']." x ".$sa['height']); ?>)</option>
              <?php } ?>
               </select>           
               
@@ -846,7 +853,7 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
               <?php $cr = get_option('NXS_cronCheck'); if (!empty($cr) && is_array($cr) && isset($cr['status']) && $cr['status']=='0') { ?> 
                 <div class="itemDiv">             
              <span style="color: red"> *** <?php _e('Your WP Cron is not working correctly.', 'social-networks-auto-poster-facebook-twitter-g'); ?>
-             &nbsp;-&nbsp;<a target="_blank" href="<?php global $nxs_snapThisPageUrl; echo $nxs_snapThisPageUrl; ?>&do=crtest">WP Cron Test Results</a></span> <br/>             
+             &nbsp;-&nbsp;<a target="_blank" href="<?php global $nxs_snapThisPageUrl; echo esc_url(add_query_arg('do', 'crtest', $nxs_snapThisPageUrl)); ?>">WP Cron Test Results</a></span> <br/>             
               <input value="set" id="forceBrokenCron" name="forceBrokenCron"  type="checkbox" <?php if (isset($options['forceBrokenCron']) && (int)$options['forceBrokenCron'] == 1) echo "checked"; ?> /> 
               <strong>Enable Cron functions even if WP Cron is not working correctly.</strong>
                <br/><span style="color:red; font-weight: bold;"><?php _e('I understand that this could cause duplicate postings as well as performance and stability problems.', 'social-networks-auto-poster-facebook-twitter-g') ?></span> - 
@@ -907,15 +914,16 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
               elseif ($logline['type']=='I') $actSt = "color:#0000FF;"; elseif ($logline['type']=='W') $actSt = "color:#DB7224;"; elseif ($logline['type']=='BI') $actSt = "color:#0000FF; font-weight:bold;"; 
               elseif ($logline['type']=='GR') $actSt = "color:#008080;"; elseif ($logline['type']=='S') $actSt = "color:#005800; font-weight:bold;"; else $actSt = "color:#585858;";              
             if ($logline['type']=='E') $msgSt = "color:#FF0000;"; elseif ($logline['type']=='BG') $msgSt = "color:#008000; font-weight:bold;"; else $msgSt = "color:#585858;";                            
-            if ($logline['nt']!='') $ntInfo = ' ['.$logline['nt'].'] '; else $ntInfo = '';    
-            if (empty($uidQ) && !empty($logline['uid'])) $uu = ' [User ID:'.$logline['uid'].']'; else $uu = '';
-            echo '<snap style="color:#008000">['.$logline['date'].']</snap>'.$uu.' - <snap style="'.$actSt.'">['.$logline['act'].']</snap>'.$ntInfo.'-  <snap style="'.$msgSt.'">'.htmlentities($logline['msg']).'</snap> '.htmlentities($logline['extInfo']).'<br/>';
+            if ($logline['nt']!='') $ntInfo = ' ['.esc_html($logline['nt']).'] '; else $ntInfo = '';    
+            if (empty($uidQ) && !empty($logline['uid'])) $uu = ' [User ID:'.absint($logline['uid']).']'; else $uu = '';
+            echo '<span style="color:#008000">['.esc_html($logline['date']).']</span>'.$uu.' - <span style="'.esc_attr($actSt).'">['.esc_html($logline['act']).']</span>'.$ntInfo.'-  <span style="'.esc_attr($msgSt).'">'.esc_html($logline['msg']).'</span> '.esc_html($logline['extInfo']).'<br/>';
           } ?>
       </div>                  
     </div> <?php }        
   function showQueryTab() { global $wpdb, $nxs_snapAvNts, $nxsOne, $nxs_isWPMU, $nxs_tpWMPU; $nxsOne = ''; $options = $this->nxs_options; 
-          $uidQ = (!current_user_can( 'manage_options' ) && current_user_can( 'haveown_snap_accss' ) ) ? ' WHERE uid = '.get_current_user_id().' ' : ''; //echo "SELECT * FROM ". $wpdb->prefix . "nxs_query ".$uidQ." ORDER BY timetorun DESC";
-	      $sql = $wpdb->prepare("SELECT * FROM %s ORDER BY timetorun DESC", $wpdb->prefix.'nxs_query'.$uidQ);
+	      $table = $wpdb->prefix.'nxs_query';
+	      if (!current_user_can('manage_options')) $sql = $wpdb->prepare("SELECT * FROM {$table} WHERE uid = %d ORDER BY timetorun DESC", get_current_user_id());
+	      else $sql = "SELECT * FROM {$table} ORDER BY timetorun DESC";
 	      $quPosts = $wpdb->get_results($sql, ARRAY_A);
         ?>
          <div style="width:99%;">
@@ -934,8 +942,8 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
       <?php //prr($quPosts);
          if (is_array($quPosts)) 
           foreach (array_reverse($quPosts) as $logline) { $btns = ''; $actSt = ''; $typeTXT = ''; $pstLine = '';              
-            if (!empty($logline['postid'])) { $post = get_post($logline['postid']); if (empty($post)) continue; $pstLine = $logline['postid'].' - '.$post->post_title;;} else $pstLine = $logline['descr'];
-            $btnC = '<a href="#" id="nxs_PQ_'.$logline['id'].'" class="nxs_Cancel_Q">[Cancel]</a>';
+            if (!empty($logline['postid'])) { $post = get_post($logline['postid']); if (empty($post)) continue; $pstLine = absint($logline['postid']).' - '.$post->post_title;} else $pstLine = $logline['descr'];
+            $rowID = absint($logline['id']); $btnC = '<a href="#" id="nxs_PQ_'.$rowID.'" class="nxs_Cancel_Q">[Cancel]</a>';
             switch ( $logline['type'] ) {
               case 'Q': $typeTXT = 'Queried Post'; $actSt = "color:#0000FF;"; $btns = $btnC;
 
@@ -950,8 +958,8 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
 
               break;
             }
-            $userInfo = (empty($uidQ) && !empty($logline['uid']))?'&nbsp;User ID: '.$logline['uid'].'&nbsp;':'';
-            echo '<div id="nxs_QU_'.$logline['id'].'"><snap style="color:#008000">['.$logline['timetorun'].']</snap> '.$btns.$userInfo.' - <snap style="'.$actSt.'">['.$typeTXT.']</snap>&nbsp;'.$pstLine.' - '.print_r($logline, true).'<br/></div>'; 
+            $userInfo = (empty($uidQ) && !empty($logline['uid']))?'&nbsp;User ID: '.absint($logline['uid']).'&nbsp;':'';
+            echo '<div id="nxs_QU_'.$rowID.'"><span style="color:#008000">['.esc_html($logline['timetorun']).']</span> '.$btns.$userInfo.' - <span style="'.esc_attr($actSt).'">['.esc_html($typeTXT).']</span>&nbsp;'.esc_html($pstLine).'<br/></div>'; 
           }
       ?>
       </div>
@@ -979,13 +987,13 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
             if (($tm-$tmL)>60) echo '&nbsp;<span style="color:red;"> - NOT OK</span>';
             echo "<br/>"; 
             
-            ?><a style="font-weight: normal; font-size: 16px; line-height: 24px;" target="_blank" href="<?php echo $nxs_snapThisPageUrl; ?>&do=crtest">Show Cron Test Results</a><br/></div>
+            ?><a style="font-weight: normal; font-size: 16px; line-height: 24px;" target="_blank" href="<?php echo esc_url(add_query_arg('do', 'crtest', $nxs_snapThisPageUrl)); ?>">Show Cron Test Results</a><br/></div>
 
 
               <h5 style="margin-top: 5px; margin-bottom: 2px; padding-left: 0px; font-size: 16px;"><?php _e('Connections', 'social-networks-auto-poster-facebook-twitter-g');?></h5>
 
 
-              <a style="font-weight: normal; font-size: 14px; line-height: 24px;" target="_blank" href="<?php echo $nxs_snapThisPageUrl; ?>&do=test">Check HTTPS/SSL Connections</a><br/>
+              <a style="font-weight: normal; font-size: 14px; line-height: 24px;" target="_blank" href="<?php echo esc_url(add_query_arg('do', 'test', $nxs_snapThisPageUrl)); ?>">Check HTTPS/SSL Connections</a><br/>
 
               <h3 style="margin-top: 20px; padding-left: 0px; font-size: 16px;"><?php _e('Plugin Features Documentation', 'social-networks-auto-poster-facebook-twitter-g');?></h3>
               <a style="font-weight: normal; font-size: 14px; line-height: 24px;" target="_blank" href="https://www.nextscripts.com/snap-features/">All SNAP Features</a><br/>
@@ -1052,7 +1060,7 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
           
           <b>URL to use for links, attachments and %MYURL%:&nbsp;</b>    
           <?php if ($post->post_status != "auto-draft") { ?>
-          <div style="float: right;"> <?php if ($post->post_status == "publish") { ?><a href="#" class="NXSButtonSm manualAllPostBtn" onclick="return false;">Post to All Checked Networks</a><?php } ?>&nbsp;&nbsp;&nbsp;&nbsp;<a href="#" class="NXSButtonSm" onclick="nxs_doResetPostSettings('<?php echo $post_id; ?>'); return false;">Reset all SNAP data</a></div>
+      <div style="float: right;"> <?php if ($post->post_status == "publish") { ?><a href="#" class="NXSButtonSm manualAllPostBtn" onclick="return false;">Post to All Checked Networks</a><?php } ?>&nbsp;&nbsp;&nbsp;&nbsp;<a href="#" class="NXSButtonSm" onclick="nxs_doResetPostSettings('<?php echo esc_js($post_id); ?>'); return false;">Reset all SNAP data</a></div>
           <?php } ?>
           
           <input type="checkbox" class="isAutoURL" <?php  $forceSURL = get_post_meta($post_id, '_snap_forceSURL', true); 
@@ -1061,7 +1069,7 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
           <input type="checkbox" class="isAutoURL" <?php $urlToUse = get_post_meta($post_id, 'snap_MYURL', true); 
             if ($urlToUse=='') { ?>checked="checked"<?php } ?>  id="isAutoURL-" name="isAutoURL" value="A"/> <?php _e('Auto', 'social-networks-auto-poster-facebook-twitter-g'); ?> - <i><?php _e('Post URL will be used', 'social-networks-auto-poster-facebook-twitter-g'); ?></i>                  
                     <div class="nxs_prevURLDiv" <?php if (trim($urlToUse)=='') { ?> style="display:none;"<?php } ?> id="isAutoURLFld-">
-                      &nbsp;&nbsp;&nbsp;<?php _e('URL:', 'social-networks-auto-poster-facebook-twitter-g') ?> <input size="90" type="text" name="urlToUse" value="<?php echo $urlToUse ?>" id="URLToUse" /> 
+       &nbsp;&nbsp;&nbsp;<?php _e('URL:', 'social-networks-auto-poster-facebook-twitter-g') ?> <input size="90" type="text" name="urlToUse" value="<?php echo esc_attr($urlToUse); ?>" id="URLToUse" />
                     </div>
           </div></div></div>
           <div id="NXS_MetaFieldsBox" class="postbox" style="border: 0px #E0E0E0 solid;"><div class="inside" style="padding-left:0px; padding-right:0px; border: 0px #E0E0E0 solid;"><div id="postftfp"> <input value="1" type="hidden" name="snapEdIT" />   
@@ -1179,7 +1187,7 @@ if (!class_exists("nxs_SNAP")) { class nxs_SNAP {//## SNAP General Class
                   }
               } $newMeta = $NXS_POST[$avNt['lcode']];  
               if (is_array($savedMeta) && is_array($newMeta)) $newMeta = nxsMergeArraysOV($savedMeta, $newMeta); // echo "#####~~~~~~~~~ ".$id."| snap".$avNt['code']; prr($savedMeta); echo "||"; prr($newMeta);// $newMeta = 'AAA';
-              delete_post_meta($id, 'snap'.$avNt['code']); add_post_meta($id, 'snap'.$avNt['code'], str_replace('\\','\\\\',serialize($newMeta)));   
+              delete_post_meta($id, 'snap'.$avNt['code']); add_post_meta($id, 'snap'.$avNt['code'], str_replace('\\','\\\\',serialize(nxs_protect_settings($newMeta))));   
               }
             }         //   die('KK');
           //## Check for Guttenberg Delayed Post
@@ -1440,11 +1448,11 @@ class nxs_ReposterListTable extends WP_List_Table {
 			    wp_die( 'Security check failed!' );
 		    }
 
+		    if (!nxs_snap_user_can_access()) wp_die(esc_html__('You are not allowed to manage SNAP reposters.', 'social-networks-auto-poster-facebook-twitter-g'), '', array('response'=>403));
 		    if ( 'delete' === $ca ) {   //prr($_REQUEST);
 			    foreach ( $items as $item ) {
-				    $item = sanitize_key( $item );
-				    wp_delete_post( $item, true );
-				    $jj ++;
+				    $item = absint($item); if (get_post_type($item) !== 'nxs_filter' || !current_user_can('delete_post', $item)) continue;
+				    wp_delete_post($item, true); $jj++;
 			    }
 			    wp_die( $jj . ' Items deleted.' );
 		    }
@@ -1537,8 +1545,8 @@ class nxs_QPListTable extends WP_List_Table {
         );
         //Return the title contents
         return sprintf('%1$s <span style="color:silver">(id:%2$s)</span>%3$s',
-            /*$1%s*/ $item->post_title,
-            /*$2%s*/ $item->ID,
+            /*$1%s*/ esc_html($item->post_title),
+            /*$2%s*/ absint($item->ID),
             /*$3%s*/ $this->row_actions($actions)
         );
     }
@@ -1559,7 +1567,7 @@ class nxs_QPListTable extends WP_List_Table {
        return $outTxt;
     }
     
-    function column_author($item){ return get_the_author_meta('display_name', $item->post_author); }
+    function column_author($item){ return esc_html(get_the_author_meta('display_name', $item->post_author)); }
 
     function get_columns(){
         $columns = array(
@@ -1587,9 +1595,13 @@ class nxs_QPListTable extends WP_List_Table {
         return $actions;
     }
     function process_bulk_action() {
-        if( 'delete'===$this->current_action() ) {               
-            if (is_array($_REQUEST['nxs_qpost'])) foreach ($_REQUEST['nxs_qpost'] as $qp) { $qp = sanitize_key($qp);  wp_delete_post($qp, true); }     $url = nxs_get_admin_url().'admin.php?page=nxssnap-post';    echo '<script type="text/javascript">parent.location.replace(\''.$url.'\');</script>'; die();
-                
+        if ('delete' === $this->current_action()) {
+            if (!nxs_snap_user_can_access()) wp_die(esc_html__('You are not allowed to manage Quick Posts.', 'social-networks-auto-poster-facebook-twitter-g'), '', array('response'=>403));
+            if (!empty($_REQUEST['item'])) { $items = array(absint($_REQUEST['item'])); check_admin_referer('nxsNPDel_'.$items[0]); }
+            else { check_admin_referer('bulk-'.$this->_args['plural']); $items = (isset($_REQUEST['nxs_qpost']) && is_array($_REQUEST['nxs_qpost'])) ? array_map('absint', $_REQUEST['nxs_qpost']) : array(); }
+            foreach ($items as $qp) if ($qp && get_post_type($qp) === 'nxs_qp' && current_user_can('delete_post', $qp)) wp_delete_post($qp, true);
+            wp_safe_redirect(nxs_get_admin_url().'admin.php?page=nxssnap-post'); exit;
+                 
         }
     }
 
@@ -1665,6 +1677,7 @@ class nxs_QPListTable extends WP_List_Table {
 }    
 
 function nxs_ajax_fetch_custom_list_callback() {
+    if (!nxs_snap_user_can_access()) wp_send_json_error(array('message'=>'You are not allowed to view SNAP Quick Posts.'), 403);
     $wp_list_table = new nxs_QPListTable();
     $wp_list_table->ajax_response();
 }

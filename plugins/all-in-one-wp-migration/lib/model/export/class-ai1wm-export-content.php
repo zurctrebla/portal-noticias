@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2014-2018 ServMask Inc.
+ * Copyright (C) 2014-2025 ServMask Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
+ * Attribution: This code is part of the All-in-One WP Migration plugin, developed by
+ *
  * ███████╗███████╗██████╗ ██╗   ██╗███╗   ███╗ █████╗ ███████╗██╗  ██╗
  * ██╔════╝██╔════╝██╔══██╗██║   ██║████╗ ████║██╔══██╗██╔════╝██║ ██╔╝
  * ███████╗█████╗  ██████╔╝██║   ██║██╔████╔██║███████║███████╗█████╔╝
@@ -23,9 +25,25 @@
  * ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	die( 'Kangaroos cannot jump here' );
+}
+
 class Ai1wm_Export_Content {
 
 	public static function execute( $params ) {
+
+		// Set encrypt password
+		$encrypt_password = null;
+		if ( isset( $params['options']['encrypt_backups'], $params['options']['encrypt_password'] ) ) {
+			$encrypt_password = $params['options']['encrypt_password'];
+		}
+
+		// Set compression type
+		$compression_type = null;
+		if ( isset( $params['options']['compression_type'] ) ) {
+			$compression_type = $params['options']['compression_type'];
+		}
 
 		// Set archive bytes offset
 		if ( isset( $params['archive_bytes_offset'] ) ) {
@@ -41,11 +59,18 @@ class Ai1wm_Export_Content {
 			$file_bytes_offset = 0;
 		}
 
-		// Set filemap bytes offset
-		if ( isset( $params['filemap_bytes_offset'] ) ) {
-			$filemap_bytes_offset = (int) $params['filemap_bytes_offset'];
+		// Set file bytes written
+		if ( isset( $params['file_bytes_written'] ) ) {
+			$file_bytes_written = (int) $params['file_bytes_written'];
 		} else {
-			$filemap_bytes_offset = 0;
+			$file_bytes_written = 0;
+		}
+
+		// Set content bytes offset
+		if ( isset( $params['content_bytes_offset'] ) ) {
+			$content_bytes_offset = (int) $params['content_bytes_offset'];
+		} else {
+			$content_bytes_offset = 0;
 		}
 
 		// Get processed files size
@@ -55,25 +80,33 @@ class Ai1wm_Export_Content {
 			$processed_files_size = 0;
 		}
 
-		// Get total files size
-		if ( isset( $params['total_files_size'] ) ) {
-			$total_files_size = (int) $params['total_files_size'];
+		// Get total content files size
+		if ( isset( $params['total_content_files_size'] ) ) {
+			$total_content_files_size = (int) $params['total_content_files_size'];
 		} else {
-			$total_files_size = 1;
+			$total_content_files_size = 1;
 		}
 
-		// Get total files count
-		if ( isset( $params['total_files_count'] ) ) {
-			$total_files_count = (int) $params['total_files_count'];
+		// Get total content files count
+		if ( isset( $params['total_content_files_count'] ) ) {
+			$total_content_files_count = (int) $params['total_content_files_count'];
 		} else {
-			$total_files_count = 1;
+			$total_content_files_count = 1;
+		}
+
+		// Set file CRC
+		if ( isset( $params['file_crc'] ) ) {
+			$file_crc = $params['file_crc'];
+		} else {
+			$file_crc = null;
 		}
 
 		// What percent of files have we processed?
-		$progress = (int) min( ( $processed_files_size / $total_files_size ) * 100, 100 );
+		$progress = (int) min( ( $processed_files_size / $total_content_files_size ) * 100, 100 );
 
 		// Set progress
-		Ai1wm_Status::info( sprintf( __( 'Archiving %d files...<br />%d%% complete', AI1WM_PLUGIN_NAME ), $total_files_count, $progress ) );
+		/* translators: 1: Number of files, 2: Progress. */
+		Ai1wm_Status::info( sprintf( __( 'Archiving %1$d content files...<br />%2$d%% complete', 'all-in-one-wp-migration' ), $total_content_files_count, $progress ) );
 
 		// Flag to hold if file data has been processed
 		$completed = true;
@@ -81,38 +114,43 @@ class Ai1wm_Export_Content {
 		// Start time
 		$start = microtime( true );
 
-		// Get map file
-		$filemap = ai1wm_open( ai1wm_filemap_path( $params ), 'r' );
+		// Get content list file
+		$content_list = ai1wm_open( ai1wm_content_list_path( $params ), 'r' );
 
-		// Set filemap pointer at the current index
-		if ( fseek( $filemap, $filemap_bytes_offset ) !== -1 ) {
+		// Set the file pointer at the current index
+		if ( fseek( $content_list, $content_bytes_offset ) !== -1 ) {
 
 			// Open the archive file for writing
-			$archive = new Ai1wm_Compressor( ai1wm_archive_path( $params ) );
+			$archive = new Ai1wm_Compressor( ai1wm_archive_path( $params ), $encrypt_password, $compression_type );
 
 			// Set the file pointer to the one that we have saved
 			$archive->set_file_pointer( $archive_bytes_offset );
 
 			// Loop over files
-			while ( $path = trim( fgets( $filemap ) ) ) {
-				$file_bytes_written = 0;
+			while ( ( $row = ai1wm_getcsv( $content_list ) ) !== false ) {
+				list( $file_abspath, $file_relpath, $file_size, $file_mtime ) = $row;
+				$file_bytes_read = 0;
 
 				// Add file to archive
-				if ( ( $completed = $archive->add_file( WP_CONTENT_DIR . DIRECTORY_SEPARATOR . $path, $path, $file_bytes_written, $file_bytes_offset ) ) ) {
-					$file_bytes_offset = 0;
+				if ( ( $completed = $archive->add_file( $file_abspath, $file_relpath, $file_bytes_read, $file_bytes_offset, $file_bytes_written, $file_crc ) ) ) {
+					$file_crc = null;
 
-					// Get filemap bytes offset
-					$filemap_bytes_offset = ftell( $filemap );
+					// Reset file bytes
+					$file_bytes_offset = $file_bytes_written = 0;
+
+					// Get content bytes offset
+					$content_bytes_offset = ftell( $content_list );
 				}
 
 				// Increment processed files size
-				$processed_files_size += $file_bytes_written;
+				$processed_files_size += $file_bytes_read;
 
 				// What percent of files have we processed?
-				$progress = (int) min( ( $processed_files_size / $total_files_size ) * 100, 100 );
+				$progress = (int) min( ( $processed_files_size / $total_content_files_size ) * 100, 100 );
 
 				// Set progress
-				Ai1wm_Status::info( sprintf( __( 'Archiving %d files...<br />%d%% complete', AI1WM_PLUGIN_NAME ), $total_files_count, $progress ) );
+				/* translators: 1: Number of files, 2: Progress. */
+				Ai1wm_Status::info( sprintf( __( 'Archiving %1$d content files...<br />%2$d%% complete', 'all-in-one-wp-migration' ), $total_content_files_count, $progress ) );
 
 				// More than 10 seconds have passed, break and do another request
 				if ( ( $timeout = apply_filters( 'ai1wm_completed_timeout', 10 ) ) ) {
@@ -133,8 +171,8 @@ class Ai1wm_Export_Content {
 			$archive->close();
 		}
 
-		// End of the filemap?
-		if ( feof( $filemap ) ) {
+		// End of the content list?
+		if ( feof( $content_list ) ) {
 
 			// Unset archive bytes offset
 			unset( $params['archive_bytes_offset'] );
@@ -142,17 +180,23 @@ class Ai1wm_Export_Content {
 			// Unset file bytes offset
 			unset( $params['file_bytes_offset'] );
 
-			// Unset filemap bytes offset
-			unset( $params['filemap_bytes_offset'] );
+			// Unset file bytes written
+			unset( $params['file_bytes_written'] );
+
+			// Unset content bytes offset
+			unset( $params['content_bytes_offset'] );
 
 			// Unset processed files size
 			unset( $params['processed_files_size'] );
 
-			// Unset total files size
-			unset( $params['total_files_size'] );
+			// Unset total content files size
+			unset( $params['total_content_files_size'] );
 
-			// Unset total files count
-			unset( $params['total_files_count'] );
+			// Unset total content files count
+			unset( $params['total_content_files_count'] );
+
+			// Unset file CRC
+			unset( $params['file_crc'] );
 
 			// Unset completed flag
 			unset( $params['completed'] );
@@ -165,24 +209,30 @@ class Ai1wm_Export_Content {
 			// Set file bytes offset
 			$params['file_bytes_offset'] = $file_bytes_offset;
 
-			// Set filemap bytes offset
-			$params['filemap_bytes_offset'] = $filemap_bytes_offset;
+			// Set file bytes written
+			$params['file_bytes_written'] = $file_bytes_written;
+
+			// Set content bytes offset
+			$params['content_bytes_offset'] = $content_bytes_offset;
 
 			// Set processed files size
 			$params['processed_files_size'] = $processed_files_size;
 
-			// Set total files size
-			$params['total_files_size'] = $total_files_size;
+			// Set total content files size
+			$params['total_content_files_size'] = $total_content_files_size;
 
-			// Set total files count
-			$params['total_files_count'] = $total_files_count;
+			// Set total content files count
+			$params['total_content_files_count'] = $total_content_files_count;
+
+			// Set file CRC
+			$params['file_crc'] = $file_crc;
 
 			// Set completed flag
 			$params['completed'] = $completed;
 		}
 
-		// Close the filemap file
-		ai1wm_close( $filemap );
+		// Close the content list file
+		ai1wm_close( $content_list );
 
 		return $params;
 	}

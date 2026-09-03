@@ -163,7 +163,7 @@ function nxsToolbarLinkToPostToFavs($wpAdminBar){
     if (is_single()) { $favNts = [];
         //## Make list of Favorite Networks
         global $nxs_SNAP; if (!isset($nxs_SNAP)) return; $networks = (!current_user_can( 'manage_options' ) && current_user_can( 'haveown_snap_accss' ) ) ? $nxs_SNAP->nxs_acctsU : $nxs_SNAP->nxs_accts; $options =  $nxs_SNAP->nxs_options;
-        foreach ($networks as $ntC=>$nt) foreach ($nt as $ii=>$acc) if (!empty($acc['fav'])) $favNts[] = ['nName'=>$acc['nName'], 'NTL'=>strtoupper($ntC), 'code'=>strtolower($ntC).'-'.$ii.'-'.get_the_ID()];
+        foreach ($networks as $ntC=>$nt) foreach ($nt as $ii=>$acc) if (!empty($acc['fav'])) $favNts[] = ['nName'=>sanitize_text_field($acc['nName']), 'NTL'=>strtoupper($ntC), 'code'=>strtolower($ntC).'-'.$ii.'-'.get_the_ID()];
         //## Add list to Menu
         if (!empty($favNts)) { $wpAdminBar->add_node(array( 'id' => 'postTo', 'title' => '[SNAP] Post to...', 'href' => esc_url(admin_url('upload.php')), 'meta' => false ));
             foreach ($favNts as $fNt) $wpAdminBar->add_node(array( 'parent' => 'postTo', 'id' => 'fNt' . $fNt['code'], 'title' => '[' . $fNt['NTL'] . '] ' . $fNt['nName'], 'href' => "#", 'meta' => ['onclick'=>'nxsPostToFav(this); return false;', 'target'=>$fNt['code']] ));
@@ -174,7 +174,7 @@ function nxsToolbarLinkToPostToFavs($wpAdminBar){
 add_action('wp_head', 'jsPostToFAV'); add_action( 'wp_footer', 'nxsFavFooter' );
 
 //## [Posts to Favorite Accounts] Add JS and CSS
-if (!function_exists("jsPostToFAV")) { function jsPostToFAV(){ if( current_user_can('editor') || current_user_can('administrator') ) { ?>
+if (!function_exists("jsPostToFAV")) { function jsPostToFAV(){ if (function_exists('nxs_snap_user_can_access') && nxs_snap_user_can_access()) { ?>
     <script type="text/javascript">
         function nxsPostToFav(obj){ obj.preventDefault;
             var k = obj.target.split("-"); var nt = k[0]; var ii = k[1];  var pid = k[2];
@@ -383,8 +383,8 @@ if (!function_exists("nxs_getImgfrOpt")) { function nxs_getImgfrOpt($imgOpts, $d
    if (isset($imgOpts['thumb']) && trim($imgOpts['thumb'])!='') return $imgOpts['thumb'];
    if (isset($imgOpts['medium']) && trim($imgOpts['medium'])!='') return $imgOpts['medium'];
 }}
-if (!function_exists('nxs_chckRmImage')){ function nxs_chckRmImage($url, $chType='head'){ if( ini_get('allow_url_fopen')=='1' && @getimagesize($url)!==false) return true;
-  $hdrsArr = nxs_getNXSHeaders(); $nxsWPRemWhat = 'wp_remote_'.$chType; $url = str_replace(' ', '%20', $url); $rsp  = $nxsWPRemWhat($url, nxs_mkRemOptsArr($hdrsArr));  
+if (!function_exists('nxs_chckRmImage')){ function nxs_chckRmImage($url, $chType='head'){ $url = str_replace(' ', '%20', $url); if (!nxs_validate_remote_url($url)) return false;
+  $hdrsArr = nxs_getNXSHeaders(); $nxsWPRemWhat = 'wp_safe_remote_'.$chType; $rsp  = $nxsWPRemWhat($url, nxs_mkRemOptsArr($hdrsArr));  
   if(is_nxs_error($rsp)) { nxsLogIt(array('type'=>'E', 'msg'=>'Could not get image ('.$url.'), will post without it', 'extInfo'=>serialize($rsp))); return false; }
   if (is_array($rsp) && ($rsp['response']['code']=='200' || ( $rsp['response']['code']=='403' &&  $rsp['headers']['server']=='cloudflare-nginx') )) return true; 
     else { if ($chType=='head') { return  nxs_chckRmImage($url, 'get'); } else { nxsLogIt(array('type'=>'E', 'msg'=>'Could not get image ('.$url.'), will post without it', 'extInfo'=>serialize($rsp))); return false; } } 
@@ -452,10 +452,10 @@ if (!function_exists('nsFindAudioInPost')){function nsFindAudioInPost($post, $ra
   $output = preg_match_all( $regex_pattern, $postCnt, $matches );  if ($output === false){return false;}    
   foreach ($matches[0] as $match) { $postAu[] = $match; } if (is_array($postAu)) $postAu = array_unique($postAu); if (isset($ShownAds)) $ShownAds = $ShownAdsL; return $postAu;
 }}
-if (!function_exists('nsGetYTThumb')){function nsGetYTThumb($yt) {  
-  $out = 'http://img.youtube.com/vi/'.$yt.'/maxresdefault.jpg'; $response  = wp_remote_get($out); 
-  if (is_nxs_error($response) || $response['response']['code']!='200' ) { $out = 'http://img.youtube.com/vi/'.$yt.'/sddefault.jpg';  
-    $response  = wp_remote_get($out); if (is_nxs_error($response) || $response['response']['code']!='200' ) $out = 'http://img.youtube.com/vi/'.$yt.'/0.jpg';
+if (!function_exists('nsGetYTThumb')){function nsGetYTThumb($yt) { $yt = preg_replace('/[^A-Za-z0-9_-]/', '', (string)$yt);
+  $out = 'https://img.youtube.com/vi/'.$yt.'/maxresdefault.jpg'; $response = wp_safe_remote_get($out, array('sslverify'=>true,'reject_unsafe_urls'=>true));
+  if (is_nxs_error($response) || $response['response']['code']!='200' ) { $out = 'https://img.youtube.com/vi/'.$yt.'/sddefault.jpg';
+    $response = wp_safe_remote_get($out, array('sslverify'=>true,'reject_unsafe_urls'=>true)); if (is_nxs_error($response) || $response['response']['code']!='200' ) $out = 'https://img.youtube.com/vi/'.$yt.'/0.jpg';
   } return $out;  
 }}
 if (!function_exists('nsFindVidsInPost')){function nsFindVidsInPost($post, $raw=true) {  //### !!!  $raw=false ## Breaks ob_start() [ref.outcontrol]: Cannot use output buffering in output buffering display handlers - Investigate
@@ -490,7 +490,7 @@ if (!function_exists('nxs_showImgToUseDlg')){ function nxs_showImgToUseDlg($nt, 
                     <div class="nxs_prevImagesDiv" id="nxs_<?php echo esc_attr($nt); ?><?php echo esc_attr($ii); ?>_idivD"><img class="nxs_prevImages" src="<?php echo $imgToUse; ?>"><div style="display:block;" class="nxs_checkIcon"><div class="media-modal-icon"></div></div></div>
                   <?php } else { ?><?php } ?>
                     <div id="imgPrevList-<?php echo esc_attr($nt); ?><?php echo esc_attr($ii); ?>" class="nxs_imgPrevList" style="display: none;"></div>  
-                    <input type="hidden" name="<?php echo esc_attr($nt); ?>[<?php echo esc_attr($ii); ?>][imgToUse]" class="nxsEdElem" value="<?php echo $imgToUse ?>" id="imgToUse-<?php echo esc_attr($nt); ?><?php echo esc_attr($ii); ?>" data-ii="<?php echo esc_attr($ii); ?>" data-nt="<?php echo esc_attr($nt); ?>" /> 
+                    <input type="hidden" name="<?php echo esc_attr($nt); ?>[<?php echo esc_attr($ii); ?>][imgToUse]" class="nxsEdElem" value="<?php echo esc_attr($imgToUse); ?>" id="imgToUse-<?php echo esc_attr($nt); ?><?php echo esc_attr($ii); ?>" data-ii="<?php echo esc_attr($ii); ?>" data-nt="<?php echo esc_attr($nt); ?>" /> 
      </div>
    </div> 
 <?php }}
@@ -498,23 +498,18 @@ if (!function_exists('nxs_showURLToUseDlg')){ function nxs_showURLToUseDlg($nt, 
  <div class="nxsPostEd_ElemWrap" style=""><div class="nxsPostEd_ElemLabel" style="display: inline;"><?php _e('URL to use:', 'social-networks-auto-poster-facebook-twitter-g') ?></div>
    <div class="nxsPostEd_Elem" style="display: inline;"><input type="checkbox" class="isAutoURL nxsEdElem" data-ii="<?php echo esc_attr($ii); ?>" data-nt="<?php echo esc_attr($nt); ?>" <?php if ($urlToUse=='') { ?>checked="checked"<?php } ?>  id="isAutoURL-<?php echo esc_attr($nt); ?><?php echo esc_attr($ii); ?>" name="<?php echo esc_attr($nt); ?>[<?php echo esc_attr($ii); ?>][isAutoURL]" value="A"/> <?php _e('Auto', 'social-networks-auto-poster-facebook-twitter-g'); ?> - <i><?php _e('Post URL or globally defined URL will be used', 'social-networks-auto-poster-facebook-twitter-g'); ?></i>                  
      <div class="nxs_prevURLDiv" <?php if (trim($urlToUse)=='') { ?> style="display:none;"<?php } ?> id="isAutoURLFld-<?php echo esc_attr($nt); ?><?php echo esc_attr($ii); ?>"><br/>
-       &nbsp;&nbsp;&nbsp;<?php _e('URL:', 'social-networks-auto-poster-facebook-twitter-g') ?> <input style="width:60%;max-width: 610px;" class="nxsEdElem" data-ii="<?php echo esc_attr($ii); ?>" data-nt="<?php echo esc_attr($nt); ?>" type="text" name="<?php echo esc_attr($nt); ?>[<?php echo esc_attr($ii); ?>][urlToUse]" value="<?php echo $urlToUse ?>" id="URLToUse-<?php echo esc_attr($nt); ?><?php echo esc_attr($ii); ?>" />                       
+       &nbsp;&nbsp;&nbsp;<?php _e('URL:', 'social-networks-auto-poster-facebook-twitter-g') ?> <input style="width:60%;max-width: 610px;" class="nxsEdElem" data-ii="<?php echo esc_attr($ii); ?>" data-nt="<?php echo esc_attr($nt); ?>" type="text" name="<?php echo esc_attr($nt); ?>[<?php echo esc_attr($ii); ?>][urlToUse]" value="<?php echo esc_attr($urlToUse); ?>" id="URLToUse-<?php echo esc_attr($nt); ?><?php echo esc_attr($ii); ?>" />                       
      </div>                  
  </div><div style="clear: both;"></div></div> 
 <?php }}
 
 //## Log Functions
-if (!function_exists('nxs_getnxsLog')){ function nxs_getnxsLog($prm='',$pg=0){ global $wpdb; $pg = $pg*300; $wh = array();  $wh2 = '';  $whOut = '';
-  $uidQ = (!current_user_can( 'manage_options' ) && current_user_can( 'haveown_snap_accss' ) ) ? ' uid = '.get_current_user_id().' ' : '';
+if (!function_exists('nxs_getnxsLog')){ function nxs_getnxsLog($prm='',$pg=0){ global $wpdb; $pg = absint($pg)*300; $wh = array(); $params = array();
   if (!empty($prm) && is_array($prm)) { 
     if (!empty($prm[1]) && $prm[1]==1) $wh[] = 'flt = "snap"'; elseif (!empty($prm[0]) && $prm[0]==1) $wh[] = '(flt = "snap" AND (type = "E" OR type="W"))'; 
     if (!empty($prm[3]) && $prm[3]==1) $wh[] = 'flt = "cron"'; elseif (!empty($prm[2]) && $prm[2]==1) $wh[] = '(flt = "cron" AND (type = "E" OR type="W"))';     
     if (!empty($prm[4]) && $prm[4]==1) $wh[] = 'flt = "sys"';       
-    if (!empty($wh)) $wh = ' ('.implode(' OR ', $wh).') '; 
-    if (!empty($wh2)) $wh2 = ' ('.implode(' OR ', $wh2).') ';
-    $whOut = ((!empty($wh) || !empty($wh2))?' WHERE ':'').(!empty($wh)?$wh:'').((!empty($wh) && !empty($wh2))?' AND ':'').$wh2;    
-    if (!empty($uidQ)) $whOut .= (!empty($whOut)?' AND':' WHERE').$uidQ;    
-    echo "| ".$whOut." |<br/>";
+    if (!empty($wh)) $wh = array('('.implode(' OR ', $wh).')');
       
     /*  
       
@@ -526,17 +521,17 @@ if (!function_exists('nxs_getnxsLog')){ function nxs_getnxsLog($prm='',$pg=0){ g
     $whOut = ((!empty($wh) || !empty($wh2))?' WHERE ':'').$wh.((!empty($wh) && !empty($wh2))?' AND ':'').$wh2;
     echo "| ".$whOut." |<br/>"; */
   }
-	$sql = $wpdb->prepare( "SELECT * FROM %s ORDER BY id DESC LIMIT %d, 300", $wpdb->prefix.'nxs_log'.$whOut, $pg);
+  if (!current_user_can('manage_options')) { $wh[] = 'uid = %d'; $params[] = get_current_user_id(); }
+  $table = $wpdb->prefix.'nxs_log'; $sql = "SELECT * FROM `{$table}`".(!empty($wh)?' WHERE '.implode(' AND ', $wh):'').' ORDER BY id DESC LIMIT %d, 300'; $params[] = $pg; $sql = $wpdb->prepare($sql, $params);
 	$log = $wpdb->get_results($sql, ARRAY_A);  if (!is_array($log)) return array(); else return $log;
 }}
 
-if (!function_exists('nxs_do_this_hourly')){ function nxs_do_this_hourly() { global $wpdb, $nxs_SNAP; // nxsLogIt('Hourly Event');
+if (!function_exists('nxs_do_this_hourly')){ function nxs_do_this_hourly() { global $wpdb, $nxs_SNAP; $table = $wpdb->prefix . 'nxs_log'; // nxsLogIt('Hourly Event');
   if (isset($nxs_SNAP)) $options = $nxs_SNAP->nxs_options;  if (!empty($options) && !empty($options['numLogRows'])) $numLogRows = $options['numLogRows']; else $numLogRows = 1000;
 	// Update the 'flt' column to "snap" where 'flt' is NULL or empty
 	$wpdb->query(
 		$wpdb->prepare(
-			'UPDATE %s SET flt = %s WHERE flt IS NULL OR flt = %s',
-			$wpdb->prefix . 'nxs_log',
+			"UPDATE `{$table}` SET flt = %s WHERE flt IS NULL OR flt = %s",
 			'snap',
 			''
 		)
@@ -547,14 +542,12 @@ if (!function_exists('nxs_do_this_hourly')){ function nxs_do_this_hourly() { glo
 // Delete rows where 'flt' is "cron" and 'id' is not in the last 360 records
 	$wpdb->query(
 		$wpdb->prepare(
-			'DELETE FROM %s WHERE flt = %s AND id NOT IN (
+			"DELETE FROM `{$table}` WHERE flt = %s AND id NOT IN (
             SELECT id FROM (
-                SELECT id FROM %s ORDER BY id DESC LIMIT 360
+                SELECT id FROM `{$table}` ORDER BY id DESC LIMIT 360
             ) foo
-        )',
-			$wpdb->prefix . 'nxs_log',
-			'cron',
-			$wpdb->prefix . 'nxs_log'
+        )",
+			'cron'
 		)
 	);
 // prr($wpdb->last_query);
@@ -563,13 +556,11 @@ if (!function_exists('nxs_do_this_hourly')){ function nxs_do_this_hourly() { glo
 // Delete rows where 'id' is less than or equal to the 'id' at the offset specified by $numLogRows
 	$wpdb->query(
 		$wpdb->prepare(
-			'DELETE FROM %s WHERE id <= (
+			"DELETE FROM `{$table}` WHERE id <= (
             SELECT id FROM (
-                SELECT id FROM %s ORDER BY id DESC LIMIT 1 OFFSET %d
+                SELECT id FROM `{$table}` ORDER BY id DESC LIMIT 1 OFFSET %d
             ) foo
-        )',
-			$wpdb->prefix . 'nxs_log',
-			$wpdb->prefix . 'nxs_log',
+        )",
 			$numLogRows
 		)
 	);
@@ -577,10 +568,10 @@ if (!function_exists('nxs_do_this_hourly')){ function nxs_do_this_hourly() { glo
 // prr($wpdb->last_error);
   //## ErrorLog to Email
   if (isset($options['errNotifEmailCB']) && (int)$options['errNotifEmailCB'] == 1 && isset($options['errNotifEmail']) && trim($options['errNotifEmail']) != '') { $logToSend = maybe_unserialize(get_option('NSX_LogToEmail')); //  prr($logToSend);
-    if (is_array($logToSend) && count($logToSend)>0) { $to = $options['errNotifEmail']; $subject = "SNAP Error Log for ".$_SERVER["SERVER_NAME"]; $message = print_r($logToSend, true);
-      $eml = get_bloginfo('admin_email'); if (trim($eml)=='') $eml = "snap-notify@".str_ireplace('www.','',$_SERVER["SERVER_NAME"]); 
+    if (is_array($logToSend) && count($logToSend)>0) { $to = sanitize_email($options['errNotifEmail']); $siteHost = sanitize_text_field((string)wp_parse_url(home_url('/'), PHP_URL_HOST)); $subject = "SNAP Error Log for ".$siteHost; $message = esc_html(print_r(nxs_redact_sensitive_data($logToSend), true));
+      $eml = sanitize_email(get_bloginfo('admin_email')); if (trim($eml)=='') $eml = sanitize_email("snap-notify@".str_ireplace('www.','',$siteHost)); 
       $headers = "From: " . $eml . "\r\n"; $headers .= "Reply-To: ". $eml . "\r\n"; $headers .= "MIME-Version: 1.0\r\n";
-      $headers .= "Content-Type: text/html; charset=ISO-8859-1\r\n"; $retval = wp_mail($to, $subject, $message, $headers); echo ($to ."|". $subject."|". $message."|". $headers); nxsLogIt('Ready to Send');
+      $headers .= "Content-Type: text/html; charset=UTF-8\r\n"; $retval = wp_mail($to, $subject, $message, $headers); nxsLogIt('Ready to Send');
       if ($retval == true) $logMsg = array('type'=>'S', 'msg'=>'Log sent to email '.$options['errNotifEmail'], 'extInfo'=>count($logToSend).' records sent');  
         else  $logMsg = array('type'=>'ER', 'msg'=>'[FALIED] Log to email '.$options['errNotifEmail'], 'extInfo'=>count($logToSend).' records were NOT sent');          
       nxsLogIt($logMsg); delete_option("NSX_LogToEmail");  
@@ -594,7 +585,7 @@ if (!function_exists('nxs_getSNAP_post_meta')){ function nxs_getSNAP_post_meta($
 if (!function_exists('nxsLogIt')){ function nxsLogIt($log){ global $wpdb; if (!is_array($log)) $log = array('msg'=>$log); if (empty($log['uid'])) { global $nxs_uid;  $log['uid'] = !empty($nxs_uid)?$nxs_uid:get_current_user_id(); }  
   if (empty($log['act']) && !empty($log['type']) && $log['type']=='E') $log['act'] = 'Error';  
   $logItem = array('date'=>date_i18n('Y-m-d H:i:s'), 'act'=>!empty($log['act'])?$log['act']:'SNAP', 'type'=>!empty($log['type'])?$log['type']:'L', 'nt'=>!empty($log['ntName'])?$log['ntName']:'',  'nttype'=>!empty($log['ntType'])?$log['ntType']:'', 
-    'flt'=>!empty($log['flt'])?$log['flt']:'snap', 'uid'=>!empty($log['uid'])?$log['uid']:'0', 'msg'=> strip_tags($log['msg']), 'extInfo'=>!empty($log['extInfo'])?$log['extInfo']:'0');     
+    'flt'=>!empty($log['flt'])?$log['flt']:'snap', 'uid'=>!empty($log['uid'])?$log['uid']:'0', 'msg'=>nxs_redact_sensitive_data(strip_tags($log['msg'])), 'extInfo'=>!empty($log['extInfo'])?nxs_redact_sensitive_data($log['extInfo']):'0');     
   $nxDB = $wpdb->insert( $wpdb->prefix . "nxs_log", $logItem );// prr($wpdb->last_query); //prr($wpdb->last_error); //$wpdb->show_errors = true; $wpdb->print_error(); // $lid = $wpdb->insert_id; prr($lid,'IDD'); prr($wpdb->last_query); // $lid = $lid-$numLogRows;  
   if (!empty($log['type']) && $log['type']=='E' && (isset($options['errNotifEmailCB']) && (int)$options['errNotifEmailCB'] == 1 && isset($options['errNotifEmail']) && trim($options['errNotifEmail']) != '')) { 
     $logDB = maybe_unserialize(get_option('NSX_LogToEmail')); if (!is_array($logDB)) $logDB = array(); $logDB[] = $logItem; delete_option("NSX_LogToEmail"); add_option("NSX_LogToEmail", $logDB, '', 'no');
@@ -615,19 +606,11 @@ if (!function_exists('nxs_addToLog')){ function nxs_addToLog ($type, $action, $n
 if (!function_exists('nxs_addToLogN')){ function nxs_addToLogN ($type, $action, $nt, $msg, $extInfo='', $flt='snap'){ nxs_LogIt($type, $action, $nt, '', $msg, $extInfo, $flt);}}
 
 
-if (!function_exists("nxs_clLgo_ajax")) { function nxs_clLgo_ajax() { check_ajax_referer('nxsSsPageWPN'); global $wpdb; $uidQ = (!current_user_can( 'manage_options' ) && current_user_can( 'haveown_snap_accss' ) ) ? ' WHERE uid = '.get_current_user_id().' ' : '';
-  //update_option('NS_SNAutoPosterLog', ''); 
-	$wpdb->query(
-		$wpdb->prepare(
-			'DELETE FROM %s %s',
-			$wpdb->prefix . 'nxs_log',
-			$uidQ
-		)
-	);
+if (!function_exists("nxs_clLgo_ajax")) { function nxs_clLgo_ajax() { check_ajax_referer('nxsSsPageWPN'); if (!nxs_snap_user_can_access()) wp_send_json_error(array('message'=>'You are not allowed to clear SNAP logs.'), 403); global $wpdb; $table = $wpdb->prefix . 'nxs_log';
+	if (current_user_can('manage_options')) $wpdb->query("DELETE FROM `{$table}`"); else $wpdb->delete($table, array('uid'=>get_current_user_id()), array('%d'));
 	echo "OK";
 }} 
-if (!function_exists("nxs_rfLgo_ajax")) { function nxs_rfLgo_ajax() { check_ajax_referer('nxsSsPageWPN');  echo "Y:"; $prm = $_POST['prm'];
-  $uidQ = (!current_user_can( 'manage_options' ) && current_user_can( 'haveown_snap_accss' ) ) ? ' WHERE uid = '.get_current_user_id().' ' : '';
+if (!function_exists("nxs_rfLgo_ajax")) { function nxs_rfLgo_ajax() { check_ajax_referer('nxsSsPageWPN'); if (!nxs_snap_user_can_access()) wp_send_json_error(array('message'=>'You are not allowed to view SNAP logs.'), 403); echo "Y:"; $prm = (isset($_POST['prm']) && is_array($_POST['prm'])) ? array_map('absint', $_POST['prm']) : array();
   //$log = get_option('NS_SNAutoPosterLog'); $logInfo = maybe_unserialize(get_option('NS_SNAutoPosterLog')); 
   $logInfo = nxs_getnxsLog($prm);
   if (is_array($logInfo))foreach ($logInfo as $logline) { 
@@ -636,8 +619,8 @@ if (!function_exists("nxs_rfLgo_ajax")) { function nxs_rfLgo_ajax() { check_ajax
       elseif ($logline['type']=='BI') $actSt = "color:#0000FF; font-weight:bold;"; elseif ($logline['type']=='GR') $actSt = "color:#008080;"; 
       elseif ($logline['type']=='S') $actSt = "color:#005800; font-weight:bold;"; else $actSt = "color:#585858;";              
     if ($logline['type']=='E') $msgSt = "color:#FF0000;"; elseif ($logline['type']=='BG') $msgSt = "color:#008000; font-weight:bold;"; else $msgSt = "color:#585858;";                            
-    if ($logline['nt']!='') $ntInfo = ' ['.$logline['nt'].'] '; else $ntInfo = '';           
-    echo '<snap style="color:#008000">['.$logline['date'].']</snap> - <snap style="'.$actSt.'">['.$logline['act'].']</snap>'.$ntInfo.'-  <snap style="'.$msgSt.'">'.$logline['msg'].'</snap> '.$logline['extInfo'].'<br/>'; 
+    if ($logline['nt']!='') $ntInfo = ' ['.esc_html($logline['nt']).'] '; else $ntInfo = '';           
+    echo '<span style="color:#008000">['.esc_html($logline['date']).']</span> - <span style="'.esc_attr($actSt).'">['.esc_html($logline['act']).']</span>'.$ntInfo.'-  <span style="'.esc_attr($msgSt).'">'.wp_kses_post($logline['msg']).'</span> '.wp_kses_post($logline['extInfo']).'<br/>'; 
   }
 }} 
 //## Comments import
@@ -665,10 +648,10 @@ if (!function_exists('nxs_makeURLParams')){ function nxs_makeURLParams($params) 
 }}
 //## Settings Export
 if (!function_exists("nxs_noR")) { function nxs_noR(&$item, &$key){ $item = is_string($item)?(str_replace("\r","\n",str_replace("\n\r","\n",str_replace("\r\n","\n",$item)))):$item; }}
-if (!function_exists("nxs_getExpSettings_ajax")) { function nxs_getExpSettings_ajax() {  check_ajax_referer('nxsSsPageWPN');
+if (!function_exists("nxs_getExpSettings_ajax")) { function nxs_getExpSettings_ajax() {  check_ajax_referer('nxsSsPageWPN'); if (!nxs_snap_user_can_access()) wp_send_json_error(array('message'=>'You are not allowed to export SNAP settings.'), 403);
  $filename = preg_replace('/[^a-z0-9\-\_\.]/i','',$_POST['filename']);
  header("Cache-Control: "); header("Content-type: text/plain"); header('Content-Disposition: attachment; filename="'.$filename.'"'); 
- global $nxs_SNAP;  if (!isset($nxs_SNAP)) return;  $exp['u'] = (!current_user_can( 'manage_options' ) && current_user_can( 'haveown_snap_accss' ) ) ? $nxs_SNAP->nxs_acctsU : $nxs_SNAP->nxs_accts;  
+ global $nxs_SNAP;  if (!isset($nxs_SNAP)) return;  $exp['u'] = current_user_can('manage_options') ? $nxs_SNAP->nxs_accts : $nxs_SNAP->nxs_acctsU;  
  if (!empty($_POST['chN'])) { $arr = explode(',',$_POST['chN']);
    if (!empty($arr)) { $outArr = array(); foreach ($exp['u'] as $ntN=>$nt) foreach ($nt as $ii=>$dt) if (in_array($ntN.'-'.$ii,$arr)) $outArr[$ntN][$ii] = $dt; $exp['u'] = $outArr; }
  } if (current_user_can( 'manage_options' )) $exp['o'] = $nxs_SNAP->nxs_options; array_walk_recursive($exp,"nxs_noR");  $ser = serialize($exp); echo $ser;  die();
@@ -759,7 +742,7 @@ if (!function_exists('nxs_doNewNPPost')){ function nxs_doNewNPPost($networks){ g
     nxs_addToLogN('S', '-=== New Quick Form Post '.($isSch?'Schedulled for '.sanitize_text_field($_POST['ddt']):'requested').' ===-', 'Form', count($_POST['mNts']).' Networks', sanitize_text_field(print_r($_POST['mNts'], true)));
     $message = array('title'=>'', 'text'=>'', 'siteName'=>'', 'url'=>'', 'imageURL'=>'', 'videoURL'=>'', 'tags'=>'', 'urlDescr'=>'', 'urlTitle'=>'');      
     if ($isSch) { 
-      $dbItem = array('datecreated'=>date_i18n('Y-m-d H:i:s'), 'type'=>'F', 'timetorun'=> date_i18n('Y-m-d H:i:s', $ddt), 'postid'=>$qpid, 'extInfo'=>serialize($pst), 'descr'=>$ttl, 'uid'=>get_current_user_id()); //prr($dbItem);
+      $dbItem = array('datecreated'=>date_i18n('Y-m-d H:i:s'), 'type'=>'F', 'timetorun'=> date_i18n('Y-m-d H:i:s', $ddt), 'postid'=>$qpid, 'extInfo'=>serialize(nxs_protect_settings($pst)), 'descr'=>$ttl, 'uid'=>get_current_user_id()); //prr($dbItem);
       $nxDB = $wpdb->insert( $wpdb->prefix . "nxs_query", $dbItem );  $lid = $wpdb->insert_id; echo '<br/>Post ID: '.$lid.'. Schedulled for '.esc_html(sanitize_text_field($_POST['ddt']));
     } else echo nxs_postFromForm($pst, $networks);
   }
@@ -772,7 +755,7 @@ if (!function_exists('nxs_postFromForm')){ function nxs_postFromForm($post, $net
       $message['pText'] = nxs_doSpin(sanitize_text_field($post['mText'])); $message['pTitle'] = nxs_doSpin(sanitize_text_field($post['mTitle']));
       //## Get URL info
       if (!empty($post['mLink']) && substr($post['mLink'], 0, 4)=='http') { $message['url'] = sanitize_text_field($post['mLink']);
-        $flds = array('id'=>$message['url'], 'scrape'=>'true');      $response =  wp_remote_post('http://graph.facebook.com', array('body' => $flds)); 
+        $flds = array('id'=>$message['url'], 'scrape'=>'true'); $response = wp_safe_remote_post('https://graph.facebook.com', array('body'=>$flds,'sslverify'=>true,'reject_unsafe_urls'=>true));
         if (is_wp_error($response)) $badOut['Error'] = print_r($response, true)." - ERROR"; else { $response = json_decode($response['body'], true);  
           if (!empty($response['description'])) $message['urlDescr'] = $response['description'];  if (!empty($response['title'])) $message['urlTitle'] =  $response['title'];
           if (!empty($response['site_name'])) $message['siteName'] = $response['site_name'];
@@ -844,7 +827,7 @@ if (!class_exists('nxs_snapPostResults')) { class nxs_snapPostResults { var $inf
       $this->summary .= $out.'<br/>';
     }
     function createDetailedList($info){ $dt = date('F j, Y, g:i a', $info['date']+( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS ) );  $info = $info['data']; $out = '';
-        foreach ($info as $inf) $out .= '['.$dt.'] '.$inf['nName'].' - '.'<a href="'.$inf['link'].'" target="_blank">Post Link</a><br/>'; 
+        foreach ($info as $inf) $out .= '['.esc_html($dt).'] '.esc_html($inf['nName']).' - <a href="'.esc_url($inf['link']).'" target="_blank" rel="noopener noreferrer">Post Link</a><br/>';
         $this->details .= $out;
     }
 }}
@@ -921,7 +904,7 @@ if (!function_exists('nxs_showNetworksList')){ function nxs_showNetworksList ($n
           $out .= '<div class="nsx_iconedTitle" style="margin-bottom:10px;margin-top:10px;background-image:url('.NXS_PLURL.'img/'.$avNt['lcode'].'16.png);">'.$avNt['name'].'<br/></div><div style="margin-left: 14px;">';
           $ntOpts = $networks[$avNt['lcode']]; foreach ($ntOpts as $indx=>$pbo){ if (!is_array($pbo)) continue;
             $out .= '<input class="nxsNPDoChb" value="'.$avNt['lcode'].'--'.$indx.'" name="nxs_NPNts" type="checkbox"'.(( (empty($selected)&&(int)$pbo['do'] == 1) || (!empty($selected)&&(in_array($avNt['lcode'].$indx,$selected))) )? "checked":'').' />';
-            $out .= $avNt['name'].'<i style="color: #005800;">'.(($pbo['nName']!='')?"(".$pbo['nName'].")":'').'</i></br>';
+            $out .= esc_html($avNt['name']).'<i style="color: #005800;">'.(($pbo['nName']!='')?'('.esc_html($pbo['nName']).')':'').'</i></br>';
           } $out .= '</div>';
         } 
     } return $out;

@@ -23,39 +23,36 @@ if (!class_exists("nxs_snapClassFL")) { class nxs_snapClassFL extends nxs_snapCl
   //#### Show Unit  Settings  
   function checkIfSetupFinished($options) { return !empty($options['appAppUserID']) && !empty($options['accessToken']); }
   public function doAuth() { $ntInfo = $this->ntInfo; global $nxs_snapSetPgURL;
-   if (isset($_GET['acc'])) { $acc = sanitize_text_field($_GET['acc']); $options = $this->nt[$acc];
+   if (isset($_GET['acc'])) { $acc = absint($_GET['acc']); if (!nxs_snap_user_can_access() || !isset($this->nt[$acc])) return; $options = $this->nt[$acc];
       if ( isset($_GET['auth']) && $_GET['auth']==$ntInfo['lcode']){ require_once('apis/scOAuth.php');
            $consumer_key = nxs_gak($options['appKey']); $consumer_secret = nxs_gas($options['appSec']);
-           $callback_url = $nxs_snapSetPgURL."&auth=".$ntInfo['lcode']."a&acc=".$acc;
+           $callback_url = add_query_arg(array('auth'=>$ntInfo['lcode'].'a','acc'=>$acc,'nxs_state'=>nxs_oauth_state_create('fl', $acc)), $nxs_snapSetPgURL);
            $tum_oauth = new wpScoopITOAuth($consumer_key, $consumer_secret);
            $tum_oauth->baseURL = 'https://www.flickr.com/services'; $tum_oauth->request_token_path = '/oauth/request_token'; $tum_oauth->access_token_path = '/oauth/access_token';
            $request_token = $tum_oauth->getReqToken($callback_url); $options['oAuthToken'] = $request_token['oauth_token']; $options['oAuthTokenSecret'] = $request_token['oauth_token_secret'];
            switch ($tum_oauth->http_code) { case 200: $url = 'https://www.flickr.com/services/oauth/authorize?oauth_token='.$options['oAuthToken'];
              nxs_save_glbNtwrks($ntInfo['lcode'],$acc,$options,'*');
-             echo '<br/><br/>All good?! Redirecting ..... <script type="text/javascript">window.location = "'.$url.'"</script>'; break;
+             echo '<br/><br/>All good. Redirecting ..... <script type="text/javascript">window.location = "'.esc_url($url).'"</script>'; break;
              default: echo '<br/><b style="color:red">Could not connect to Flickr. Refresh the page or try again later.</b>'; die();
            } die();
        }
-       if ( isset($_GET['auth']) && $_GET['auth']==$ntInfo['lcode'].'a'){ require_once('apis/scOAuth.php');
+       if ( isset($_GET['auth']) && $_GET['auth']==$ntInfo['lcode'].'a'){ if (empty($_GET['nxs_state']) || !nxs_oauth_state_validate(wp_unslash($_GET['nxs_state']), 'fl', $state_account) || absint($state_account)!==$acc) wp_die(esc_html__('Invalid or expired Flickr authorization state.', 'social-networks-auto-poster-facebook-twitter-g'), '', array('response'=>403)); require_once('apis/scOAuth.php');
            $consumer_key = nxs_gak($options['appKey']); $consumer_secret = nxs_gas($options['appSec']);
            $tum_oauth = new wpScoopITOAuth($consumer_key, $consumer_secret, $options['oAuthToken'], $options['oAuthTokenSecret']); //prr($tum_oauth);
            $tum_oauth->baseURL = 'https://www.flickr.com/services'; $tum_oauth->request_token_path = '/oauth/request_token'; $tum_oauth->access_token_path = '/oauth/access_token';
-           $access_token = $tum_oauth->getAccToken($_GET['oauth_verifier']); prr($access_token);
+           $access_token = $tum_oauth->getAccToken(sanitize_text_field(wp_unslash($_GET['oauth_verifier'])));
            $options['accessToken'] = $access_token['oauth_token'];  $options['accessTokenSec'] = $access_token['oauth_token_secret'];
            nxs_save_glbNtwrks($ntInfo['lcode'],$acc,$options,'*');
            $tum_oauth = new wpScoopITOAuth($consumer_key, $consumer_secret, $options['accessToken'], $options['accessTokenSec']);
-           echo "OK. Let's Get Profile: "; prr($access_token);
-           $params = array ('format' => 'php_serial', 'method'=>'flickr.urls.getUserProfile');
+           echo "OK. Let's Get Profile: "; $params = array('format'=>'json','nojsoncallback'=>'1','method'=>'flickr.urls.getUserProfile');
            $uinfo = $tum_oauth->makeReq('https://api.flickr.com/services/rest/',$params); // prr($uinfo);die();
            if (is_array($uinfo) && isset($uinfo['user'])) { $options['appAppUserName'] = $access_token['username']."(".urldecode($access_token['fullname']).")";
              $options['appAppUserID'] = urldecode($uinfo['user']['nsid']);  $options['userURL'] = urldecode($uinfo['user']['url']);
              nxs_save_glbNtwrks($ntInfo['lcode'],$acc,$options,'*');
            } //die();
            if (!empty($options['appAppUserID'])) {
-             $gGet = $_GET; unset($gGet['auth']); unset($gGet['acc']); unset($gGet['oauth_token']);  unset($gGet['oauth_verifier']); unset($gGet['post_type']);
-             $sturl = explode('?',$nxs_snapSetPgURL); $nxs_snapSetPgURL = $sturl[0].((!empty($gGet))?'?'.http_build_query($gGet):'');
-             echo '<br/><br/>All good?! Redirecting ..... <script type="text/javascript">window.location = "'.$nxs_snapSetPgURL.'"</script>'; die();
-           } else die("<span style='color:red;'>ERROR: Authorization Error: <span style='color:darkred; font-weight: bold;'>".print_r($uinfo, true)."</span></span>");
+              echo '<br/><br/>All good. Redirecting ..... <script type="text/javascript">window.location = "'.esc_url(nxs_get_admin_url('admin.php?page=nxssnap')).'"</script>'; die();
+            } else die(esc_html__('Flickr authorization failed.', 'social-networks-auto-poster-facebook-twitter-g'));
        }
     }  
   }    
