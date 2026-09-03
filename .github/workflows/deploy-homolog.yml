@@ -33,25 +33,11 @@ jobs:
       - name: Build e Push imagem
         env:
           IMAGE_TAG: ${{ github.sha }}
-          # ##################################################################
-          # A UNICA DIFERENCA ENTRE A IMAGEM DE HOMOLOG E A DE PRODUCAO.
-          # ##################################################################
-          # Homolog esta na 7.1 desde 29/08 para dimensionar a migracao;
-          # producao fica na 6.8 (o default do ARG no Dockerfile) ate a divida
-          # de plugins ser paga.
-          #
-          # ISTO E TEMPORARIO. Quando os dois ambientes estiverem na mesma
-          # versao de WordPress e de plugins, APAGUE esta variavel e o
-          # --build-arg abaixo, e alinhe o default do ARG no Dockerfile.
-          # A condicao de saida esta escrita por extenso no topo do Dockerfile.
-          #
-          # A tag e a patch EXATA, nao a flutuante `7.1`: referencia de imagem
-          # que se move sozinha desfaz rollback em silencio, mesmo mecanismo do
-          # `prod-latest` uma camada acima. Ver HANDOVER 21 e 33.
-          WP_VERSION: 7.1.0
         run: |
-          docker build --build-arg WP_VERSION="$WP_VERSION" \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          # Sem --build-arg: homolog e producao constroem a partir da MESMA tag,
+          # o default `ARG WP_VERSION` do Dockerfile. A separacao acabou em
+          # 03/09/2026 -- a condicao de saida esta escrita no topo do Dockerfile.
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:homolog-latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:homolog-latest
