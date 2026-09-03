@@ -1309,3 +1309,53 @@ continuar rodando** — é onde ele tem trabalho útil, e já roda hoje, a cada 
 > 🔗 **Por que os dois são filtro e não escrita no banco** — e por que isso importa: ver a
 > **segunda regra** no topo do `HANDOVER.md`. Um `UPDATE` em `blog_public` viajaria no dump e
 > chegaria a produção sozinho.
+
+---
+
+## 12. O que o merge LEVA de mu-plugins — 6 arquivos, e um deles age em produção
+
+Medido em 03/09/2026, comparando a árvore da `develop` com o pod de produção. Produção tem **58**
+mu-plugins; a develop tem **64**.
+
+```
+bahia-flags.php                  <- define bahia_ambiente()
+bahia-homolog-guardas.php            guarda: 'homolog' !== bahia_ambiente()
+bahia-homolog-noindex.php            guarda: 'homolog' !== bahia_ambiente()
+bahia-image-size-fallback.php    <- SEM GUARDA: AGE EM PRODUÇÃO
+bahia-webp-upload.php                guarda por constante, definida só em homolog
+bahia-yoast-indexacao-fundo.php      guarda: 'homolog' !== bahia_ambiente()
+```
+
+Nenhum arquivo existe em produção e falta na develop — o merge só acrescenta.
+
+### ✅ A ordem de carga funciona, e é por acaso alfabético
+
+**`bahia_ambiente()` HOJE NÃO EXISTE EM PRODUÇÃO** — ela mora em `bahia-flags.php`, que só chega
+com este merge. Os três mu-plugins de homolog dependem dela, e o WordPress carrega mu-plugins em
+**ordem alfabética**: `bahia-f…` vem antes de `bahia-h…` e de `bahia-y…`. **A função estará
+definida quando os três forem lidos.**
+
+E se por algum motivo não estivesse, a guarda é `!function_exists('bahia_ambiente') || …` — **falha
+fechada**, o mu-plugin sai na entrada. As duas camadas estão certas.
+
+> ⚠️ **Não renomear `bahia-flags.php` para algo que ordene depois de `bahia-homolog-*`.** A
+> correção seria silenciosa em homolog (onde o resultado seria o mesmo) e só apareceria em
+> produção — no pior lugar possível.
+
+### 🟡 `bahia-image-size-fallback.php` não tem guarda, e isso é DE PROPÓSITO
+
+É o único dos seis que **muda comportamento em produção**, e deve mesmo: ele conserta o problema
+que existe lá também — o tema pede os dez tamanhos `td_*`, **nenhum dos 153.842 anexos os tem**, e
+o WordPress devolve o **arquivo original** só trocando `width`/`height` no HTML. Pedir uma
+miniatura de 80px baixava 184 KB.
+
+**Isto não é efeito colateral do merge de plugins: é uma entrega, e vai junto.** Quem acompanhar o
+deploy deve esperar **queda no volume de imagem servida**, não estabilidade. Se o volume não cair,
+o mu-plugin não está agindo.
+
+### O WebP fica desligado em produção, e a guarda está no lugar certo
+
+`bahia-webp-upload.php` sai na entrada se `BAHIA_WEBP_UPLOAD_ATIVO` não existir, e quem define a
+constante é o `bahia-flags.php`, sob `if ('homolog' === bahia_ambiente())`. **Em produção a
+constante não nasce.** Continua valendo o que está em `WEBP-UPLOAD-DESENHO.md`: ligar só depois da
+validação e da resposta da redação sobre a ferramenta que exporta em 620x400.
