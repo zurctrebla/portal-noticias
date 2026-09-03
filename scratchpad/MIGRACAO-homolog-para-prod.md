@@ -1462,3 +1462,129 @@ que ela deveria valer.
    dentro do ramo, ou fixar em algo que não esteja marcado `insecure`.
 3. Validar **em produção, depois do deploy**, os que nunca passaram por lote: foogallery (galerias
    nas matérias), taxonomy-terms-order (ordem das editorias), disable-comments.
+
+---
+
+# ✅ BLOQUEIO RESOLVIDO — o WordPress foi alinhado, e o caminho está PROVADO
+
+**03/09/2026.** O bloqueio da seção anterior tinha duas saídas; o Albert escolheu **alinhar
+produção na 7.1**. Feito, e validado em homolog **pelo mesmo caminho que produção vai usar**.
+
+## O que mudou — dois arquivos, exatamente os que o Dockerfile previa
+
+```
+Dockerfile             ARG WP_VERSION=6.8.3  ->  7.1.0
+deploy-homolog.yml     apagado o --build-arg WP_VERSION=
+```
+
+Os dois workflows agora constroem pelo **mesmo comando, sem argumento**. Commit `76919075`.
+
+## A prova, e por que ela vale
+
+Homolog rebuildou **pelo default**, que é por onde produção vai receber. A guarda de build do
+Dockerfile imprimiu:
+
+```
+=== core na imagem: 7.1 (db_version 61833) — pedido: 7.1.0 ===
+```
+
+E o ambiente ficou íntegro: WP 7.1, PHP 8.3.33, tema 12.7.7, 24 plugins ativos, `td_011` com 500
+chaves, home 572.484 (base 572.538), editoria 307.276, matéria 324.505 com `<h1>`, busca 200, zero
+fatal. **Não é inferência: é o mesmo `docker build .` rodando.**
+
+## 🟢 O que a subida de banco custa em produção — medido, não estimado
+
+`db_version 60421` → `61833`. **Duas** rotinas disparam, e as duas são baratas:
+
+| Rotina | O que faz | Custo |
+|---|---|---|
+| `< 60497` | atrás de `is_multisite()` | **não roda** — produção é site único |
+| `upgrade_700()` | `UPDATE wp_usermeta` trocando `admin_color` `fresh`→`modern` | trivial |
+
+E o `dbDelta` encontra **uma única** diferença de esquema entre 6.8 e 7.1, obtida comparando
+`wp_get_db_schema()` dos dois pods:
+
+```sql
+wp_posts   KEY type_status_author (post_type, post_status, post_author)
+```
+
+**Tamanho medido em homolog: 19,6 MB** sobre 435.786 linhas. Produção tem 441.626. É índice
+secundário — MySQL 8 cria com `ALGORITHM=INPLACE, LOCK=NONE`, **online**, com leitura e escrita
+concorrentes. Segundos, não minutos.
+
+> ✅ **O `dbDelta` NÃO remove índices que ele não conhece.** Verificado rodando `wp_upgrade()` em
+> homolog: os 11 índices continuaram lá, incluindo os nossos (`idx_post_type_date`,
+> `idx_post_type`, `idx_post_date`, `idx_post_type_date_status`, `bahia_ft_search`). Ele só
+> acrescenta. Produção tem os mesmos quatro `idx_*` e eles ficam.
+
+## Procedimento da janela
+
+### Antes
+
+1. **Snapshot do RDS de produção** — ou confirmar o PITR (`describe-db-instances`, ver
+   `BackupRetentionPeriod` e `LatestRestorableTime`). É a rede para o caso de o banco ficar num
+   estado que não se queira.
+2. **Anotar a linha de base do que se vai medir depois**, com o site ainda na 6.8:
+   `curl -s https://bahia.ba/ | wc -c` e a contagem de `td_block`. **Sem esse número, o "depois"
+   não prova nada** — ver HANDOVER §16.14.
+3. Conferir que a `develop` está verde e que a redação assinou a validação.
+
+### Durante
+
+4. **Merge `develop` → `main`.** São 101 commits e 9.159 arquivos; o merge é fast-forward.
+5. Acompanhar o build. **A guarda do Dockerfile falha a construção** se a imagem não entregar 7.1
+   — se ela passar, o core está certo antes de qualquer pod subir.
+6. `kubectl rollout status`. Produção tem HPA min2/max5, então o rollout tem surge — **não há a
+   janela de indisponibilidade que homolog tem** (nó único, `maxSurge=0`).
+7. **Rodar a subida de banco DELIBERADAMENTE, num pod só.** Se ninguém fizer isso, ela acontece na
+   primeira visita ao `/wp-admin`, de um pod qualquer, possivelmente de vários ao mesmo tempo:
+
+```bash
+POD=$(kubectl -n bahia-wordpress get pod -l app=wordpress -o jsonpath='{.items[0].metadata.name}')
+kubectl -n bahia-wordpress exec $POD -c wordpress -- php -d max_execution_time=0 -r '
+define("WP_INSTALLING", true);
+require "/var/www/html/wp-load.php";
+require_once ABSPATH."wp-admin/includes/upgrade.php";
+echo "antes: ", get_option("db_version"), "\n";
+$t0 = microtime(true);
+wp_upgrade();
+printf("levou %.2fs\n", microtime(true) - $t0);
+echo "depois: ", get_option("db_version"), "\n";'
+```
+
+Esperado: `antes: 60421` → `depois: 61833`. O comando foi testado em homolog (lá é inócuo, porque
+`wp_upgrade()` retorna de imediato quando a versão já está corrente).
+
+### Depois, no pod de produção
+
+8. **As quatro verificações da seção 11** — elas continuam valendo e são as mais importantes.
+9. **As desta subida:**
+
+| # | Verificação | Esperado |
+|---|---|---|
+| 5 | `$wp_version` em **todos** os pods | **7.1** nos quatro, sem divergência |
+| 6 | `get_option('db_version')` | **61833** |
+| 7 | `SHOW INDEX FROM wp_posts` | os 4 `idx_*` nossos **continuam lá**, mais `type_status_author` |
+| 8 | tamanho do HTML da home | comparável à base do passo 2 |
+| 9 | Yoast | `28.4` ativo, sitemap em 200, meta description com subtítulo |
+| 10 | volume de imagem servida | **deve CAIR** (`bahia-image-size-fallback`, seção 12) |
+
+### Rollback
+
+Voltar a imagem devolve os arquivos 6.8.3; o `db_version` fica em 61833. **Isso é seguro**: o
+código 6.8 vê `61833 > 60421`, nenhuma rotina de upgrade dispara (todas são `< N` com N menor), e
+ele apenas regrava `db_version = 60421`. O índice `type_status_author` fica na tabela, sem uso e
+sem prejuízo.
+
+## O que esta mudança conserta de quebra
+
+- **O desalinhamento de PHP acaba.** Homolog rodava 8.3.33 (tag 7.1.0) e produção 8.3.28 (tag
+  6.8.3). Mesma tag, mesmo patch: os dois em **8.3.33**.
+- **A 6.8.3 `insecure` sai do ar.** A 7.1 é `latest`.
+- **A Tarefa B fica zerada HOJE.** Medido em 03/09, produção servia com **quatro pods em duas
+  versões ao mesmo tempo** — dois em 6.8.8 (auto-atualizados no `emptyDir`) e dois em 6.8.3
+  (recém-criados da imagem). Com a 7.1 não há para onde auto-atualizar.
+
+> ⚠️ **A Tarefa B continua aberta.** O mecanismo que causou a divergência — auto-atualização
+> dentro do pod, em `emptyDir` que morre com ele — **não foi tocado**. Ele volta a divergir assim
+> que sair a 7.1.1. O que muda hoje é que o alvo desapareceu, não a causa.
