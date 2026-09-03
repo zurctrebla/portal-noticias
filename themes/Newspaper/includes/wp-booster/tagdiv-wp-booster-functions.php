@@ -178,13 +178,23 @@ if( !function_exists('load_front_js') ) {
  */
 if( !function_exists('tagdiv_block_editor_styles' ) ) {
 	function tagdiv_block_editor_styles() {
+		// 'enqueue_block_assets' also fires on the front end; these styles only target
+		// editor-only selectors (.editor-styles-wrapper, .gutenberg-editor-page, etc.),
+		// so skip loading them there.
+		if ( ! is_admin() ) {
+			return;
+		}
+
 		if ( TD_DEPLOY_MODE === 'dev' ) {
 			wp_enqueue_style( 'td-gut-editor', TAGDIV_ROOT . '/tagdiv-less-style.css.php?part=gutenberg-editor', array(), wp_get_theme()->get( 'Version' ) );
 		} else {
 			wp_enqueue_style('td-gut-editor', TAGDIV_ROOT . '/gutenberg-editor.css', array(), wp_get_theme()->get( 'Version' ) );
 		}
 	}
-	add_action( 'enqueue_block_editor_assets', 'tagdiv_block_editor_styles' );
+	// 'enqueue_block_editor_assets' only loads styles in the outer admin chrome, not the
+	// block editor's iframed canvas. 'enqueue_block_assets' is the hook Gutenberg mirrors
+	// into that iframe, which is required for editor-only content styles like these.
+	add_action( 'enqueue_block_assets', 'tagdiv_block_editor_styles' );
 }
 
 

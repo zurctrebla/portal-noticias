@@ -3808,7 +3808,7 @@ add_action( 'wp_enqueue_scripts', function () {
     // load the js files meant to be only minified in composer
     if( tdc_state::is_live_editor_ajax() || tdc_state::is_live_editor_iframe() ) {
         if( td_util::get_gm_api_key() == '' ) {
-            wp_enqueue_script( 'tdb_js_google_maps_api', 'https://maps.googleapis.com/maps/api/js?key=' . td_util::get_gm_api_key() . '&libraries=places&callback=Function.prototype', array( 'jquery' ), TD_CLOUD_LIBRARY, true );
+            wp_enqueue_script( 'tdb_js_google_maps_api', 'https://maps.googleapis.com/maps/api/js?key=' . td_util::get_gm_api_key() . '&libraries=places&loading=async&callback=Function.prototype', array( 'jquery' ), TD_CLOUD_LIBRARY, true );
         }
 
         tdb_util::enqueue_js_files_array( tdb_config::$js_files_for_front_minify_only, array( 'jquery' ) );

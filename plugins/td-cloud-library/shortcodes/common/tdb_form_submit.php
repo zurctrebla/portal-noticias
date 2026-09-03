@@ -390,10 +390,11 @@ class tdb_form_submit extends td_block {
         // The post ID from the url
         $save_into_post_id = '';
         if ( isset($_GET['post_id']) && !$in_composer ) {
-            $_get_post = get_post($_GET['post_id']);
+            $requested_post_id = absint( $_GET['post_id'] );
+            $_get_post = get_post( $requested_post_id );
 
             if( $_get_post && ( $_get_post->post_author == $current_user_id || $is_current_user_admin ) ) {
-                $save_into_post_id = $_GET['post_id'];
+                $save_into_post_id = $requested_post_id;
             }
         }
 
