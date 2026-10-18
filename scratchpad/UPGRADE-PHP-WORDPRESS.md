@@ -347,7 +347,42 @@ de ser verdade inteira.** Hoje o caminho é:
 "9 numa decisão comercial e 2 de trabalho nosso". **Não neste ciclo de lotes** — mas merece
 reavaliação assim que os sete fecharem.
 
-## 🔴 Tarefa B — PRIORIDADE IMEDIATA APÓS ESTA JANELA
+## ✅ Tarefa B — RESOLVIDA em 18/10/2026 (era: PRIORIDADE IMEDIATA APÓS ESTA JANELA)
+
+> **Fechamento — 18/10/2026.** A condição que travava a correção caiu na janela do mesmo dia: a
+> imagem passou a entregar o core **7.1.0 fixo** (merge `93d59d66`). Com isso, desligar o
+> auto-update deixou de congelar produção numa versão `insecure`.
+>
+> **Como foi feito:** `mu-plugins/bahia-core-updates.php` (commit na `develop`, em produção com a
+> imagem `prod-26d0d6e0`). Filtro, e não `WP_AUTO_UPDATE_CORE` no `WORDPRESS_CONFIG_EXTRA`:
+> mesmo efeito, mas a trava viaja com a imagem e vale nos dois ambientes sem mexer no
+> configmap do `infra-bahiaba`.
+>
+> - auto-update do core desligado em **todas** as classes (`auto_update_core` e os três
+>   `allow_*_auto_core_updates`), inclusive a minor de segurança;
+> - capacidade `update_core` negada (`map_meta_cap` → `do_not_allow`): some o botão
+>   "Atualizar agora", que recriaria a divergência num pod só;
+> - **`DISALLOW_FILE_MODS` NÃO foi aplicado** — decisão de processo de 18/10. Plugin e tema
+>   continuam instaláveis pelo painel (e o que se instalar ali segue caindo no `emptyDir` de
+>   um pod — o caminho certo continua sendo git).
+> - item 3 da lista abaixo: `auto_update_plugins` lista só `seo-by-rank-math`, que **não está
+>   instalado**; `auto_update_themes` vazio. Nenhum plugin se auto-atualiza hoje.
+>
+> **Verificado nos dois pods de produção**, com controle (mesmo teste com os filtros removidos):
+>
+> | | sem o mu-plugin | com o mu-plugin |
+> |---|---|---|
+> | `Core_Upgrader::should_update_to_version('7.1.1')` | `true` | **`false`** |
+> | admin `update_core` | `true` | **`false`** |
+> | admin `update_plugins` / `install_plugins` | `true` | `true` |
+>
+> ⚠️ Rodando pelo `kubectl exec` (root), `request_filesystem_credentials` dá `false` — o FPM
+> roda como `www-data` e consegue escrever, e foi assim que produção se auto-atualizou em
+> 28/08. **Não usar `WP_Automatic_Updater::should_update()` pelo exec como prova**: ele recusa
+> pelo filesystem antes de chegar ao filtro, e dá `false` com ou sem a trava.
+>
+> **Para atualizar o core daqui em diante:** trocar `ARG WP_VERSION` no Dockerfile, validar em
+> homolog, merge.
 
 > **Elevada em 29/08/2026, à frente do levantamento de EC2 e do resto da fila.**
 
