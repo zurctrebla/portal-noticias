@@ -3,7 +3,7 @@
  * Plugin Name: PublishPress Capabilities
  * Plugin URI: https://publishpress.com/capability-manager/
  * Description: PublishPress Capabilities is the access control plugin for WordPress. You can manage all your WordPress user roles, from Administrators to Subscribers.
- * Version: 2.50.1
+ * Version: 2.53.0
  * Author: PublishPress
  * Author URI: https://publishpress.com/
  * Text Domain: capability-manager-enhanced
@@ -68,7 +68,7 @@ if (
 add_action('plugins_loaded', function () {
 
 	if (!defined('CAPSMAN_VERSION')) {
-		define('CAPSMAN_VERSION', '2.50.1');
+		define('CAPSMAN_VERSION', '2.53.0');
 		define('CAPSMAN_ENH_VERSION', CAPSMAN_VERSION);
 		define('PUBLISHPRESS_CAPS_VERSION', CAPSMAN_VERSION);
 	}
@@ -129,6 +129,12 @@ add_action('plugins_loaded', function () {
 
 	require_once(dirname(__FILE__) . '/includes/functions.php');
 
+	if (defined('WP_CLI') && WP_CLI) {
+		require_once __DIR__ . '/includes/functions-admin.php';
+		require_once __DIR__ . '/includes/recovery.php';
+		require_once __DIR__ . '/includes/cli-recovery.php';
+	}
+
 	// ============================================ START PROCEDURE ==========
 
 
@@ -138,7 +144,7 @@ add_action('plugins_loaded', function () {
 	if (!empty($_REQUEST['page'])) {
 		foreach (['capsman' => 'pp-capabilities', 'capsman-tool' => 'pp-capabilities-backup'] as $find => $replace) {
 			if (isset($_REQUEST['page']) && ($find == $_REQUEST['page']) && !empty($_SERVER['REQUEST_URI'])) {
-				$location = str_replace("page=$find", "page=$replace", esc_url_raw($_SERVER['REQUEST_URI']));
+				$location = str_replace("page=$find", "page=$replace", esc_url_raw(wp_unslash($_SERVER['REQUEST_URI'])));
 				header("Location: $location", true);
 				exit;
 			}

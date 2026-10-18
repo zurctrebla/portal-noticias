@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => '__root__',
-        'pretty_version' => 'v2.50.1',
-        'version' => '2.50.1.0',
-        'reference' => '8c42375fbfb5ea33ebed415a493f60f2eb2184ef',
+        'pretty_version' => 'v2.53.0',
+        'version' => '2.53.0.0',
+        'reference' => '31dd7dcd7f1d6b8db32f5dfd5b936d80b3ca5be0',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         '__root__' => array(
-            'pretty_version' => 'v2.50.1',
-            'version' => '2.50.1.0',
-            'reference' => '8c42375fbfb5ea33ebed415a493f60f2eb2184ef',
+            'pretty_version' => 'v2.53.0',
+            'version' => '2.53.0.0',
+            'reference' => '31dd7dcd7f1d6b8db32f5dfd5b936d80b3ca5be0',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -29,9 +29,9 @@
             'dev_requirement' => false,
         ),
         'publishpress/pimple-pimple' => array(
-            'pretty_version' => '3.5.0.10',
-            'version' => '3.5.0.10',
-            'reference' => 'f2784f4b1ccaf195b373a46a74cf3742e7c9f826',
+            'pretty_version' => '3.5.0.11',
+            'version' => '3.5.0.11',
+            'reference' => 'c5246f8b0b1aaa59088b058d7bee1434ad6dd25c',
             'type' => 'library',
             'install_path' => __DIR__ . '/../publishpress/pimple-pimple',
             'aliases' => array(),
@@ -56,9 +56,9 @@
             'dev_requirement' => false,
         ),
         'publishpress/wordpress-reviews' => array(
-            'pretty_version' => '1.2.1',
-            'version' => '1.2.1.0',
-            'reference' => 'f6cff7c2a773c03bbe074a2e8d4180b04e8b8f0d',
+            'pretty_version' => '1.2.2',
+            'version' => '1.2.2.0',
+            'reference' => '0a8cd140cdc17088c1910f8db6a6ba8ccc17482d',
             'type' => 'library',
             'install_path' => __DIR__ . '/../publishpress/wordpress-reviews',
             'aliases' => array(),

@@ -161,13 +161,27 @@ class Capsman_BackupHandler
                 return;
             }
 
-            if ( ! file_exists( $file['file'] ) ) {
+            if ( ! class_exists( 'WP_Filesystem_Direct' ) ) {
+                require_once( ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php' );
+                require_once( ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php' );
+            }
+
+            // wp_handle_upload() has already placed this file on the local server.
+            // Use direct filesystem access so imports never depend on FTP/SSH credentials.
+            $upload_filesystem = new WP_Filesystem_Direct(null);
+
+            if ( ! $upload_filesystem->exists( $file['file'] ) ) {
                 ak_admin_error(__( 'Error importing settings! Please try again.', 'capability-manager-enhanced'));
                 return;
             }
 
             // Get the upload data.
-            $raw  = file_get_contents( $file['file'] );
+            $raw  = $upload_filesystem->get_contents( $file['file'] );
+            if ( false === $raw ) {
+                wp_delete_file( $file['file'] );
+                ak_admin_error(__( 'Error importing settings! Please try again.', 'capability-manager-enhanced'));
+                return;
+            }
             $data = json_decode($raw, true);
 
             // Remove the uploaded file.
@@ -552,48 +566,15 @@ class Capsman_BackupHandler
 	 */
 	function backupToolReset ()
 	{
-        global $current_user;
-
 		check_admin_referer('capsman-reset-defaults');
-
-		require_once(ABSPATH . 'wp-admin/includes/schema.php');
-
-		if ( ! function_exists('populate_roles') ) {
-			ak_admin_error(__('Needed function to create default roles not found!', 'capability-manager-enhanced'));
+		require_once __DIR__ . '/recovery.php';
+		try {
+			\PublishPress\Capabilities\Recovery::resetRoles();
+		} catch (\RuntimeException $error) {
+			ak_admin_error($error->getMessage());
 			return;
 		}
-
-		$roles = array_keys( ak_get_roles(true) );
-
-		foreach ( $roles as $role) {
-			remove_role($role);
-		}
-
-		populate_roles();
-
-        $pp_capabilities = apply_filters('cme_publishpress_capabilities_capabilities', []);
-        $role = get_role('administrator');
-        foreach ($pp_capabilities as $cap) {
-            $role->add_cap($cap);
-            $current_user->allcaps[$cap] = true;
-        }
-
 		$msg = esc_html__('Roles and Capabilities reset to WordPress defaults', 'capability-manager-enhanced');
-
-		if ( function_exists( 'pp_populate_roles' ) ) {
-			pp_populate_roles();
-		} else {
-			// force PP to repopulate roles
-			$pp_ver = get_option( 'pp_c_version', true );
-			if ( $pp_ver && is_array($pp_ver) ) {
-				$pp_ver['version'] = ( preg_match( "/dev|alpha|beta|rc/i", $pp_ver['version'] ) ) ? '0.1-beta' : 0.1;
-			} else {
-				$pp_ver = array( 'version' => '0.1', 'db_version' => '1.0' );
-			}
-
-			update_option( 'pp_c_version', $pp_ver );
-			delete_option( 'ppperm_added_role_caps_10beta' );
-		}
 
 		ak_admin_notify($msg);
 	}
