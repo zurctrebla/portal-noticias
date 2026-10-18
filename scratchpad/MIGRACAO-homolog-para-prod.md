@@ -1531,7 +1531,19 @@ concorrentes. Segundos, não minutos.
 
 ### Durante
 
-4. **Merge `develop` → `main`.** São 101 commits e 9.159 arquivos; o merge é fast-forward.
+4. **Merge `develop` → `main`.** São 101 commits e 9.159 arquivos. ~~o merge é fast-forward~~ —
+   **não era.** A `main` tinha 4 commits feitos direto em produção depois de 25/08 (`cc8d4409`,
+   `743c87ba`, `804c68f0`, `e090c731`), e o merge deu **dois conflitos**:
+   - `Dockerfile` — `FROM wordpress:6.8-php8.3-fpm` da `main` contra o `ARG WP_VERSION=7.1.0` da
+     `develop`, que já traz o PHP 8.3;
+   - `mu-plugins/bahia-image-size-fallback.php` — apagado na `main` pelo revert `cc8d4409`
+     (`INCIDENTE-CORTE-2.md`), mantido na `develop`.
+
+   Os dois foram resolvidos pela `develop`, e a árvore do merge ficou **idêntica** à da `develop`
+   (os fixes `743c87ba` e `804c68f0` já estavam lá com o mesmo conteúdo). **Executado em
+   18/10/2026, merge `93d59d66`.** Antes de repetir este passo, rodar
+   `git rev-list --left-right --count origin/main...origin/develop`: se o lado esquerdo não for
+   `0`, não é fast-forward, e cada commit só da `main` precisa de decisão.
 5. Acompanhar o build. **A guarda do Dockerfile falha a construção** se a imagem não entregar 7.1
    — se ela passar, o core está certo antes de qualquer pod subir.
 6. `kubectl rollout status`. Produção tem HPA min2/max5, então o rollout tem surge — **não há a
