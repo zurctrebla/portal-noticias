@@ -196,7 +196,15 @@ html{
    `overflow-x:hidden` em `.td-theme-wrap`, que corta a sobra — conferido com a barra
    de rolagem visível: scrollWidth == clientWidth == 1905. É uma dependência real:
    se um dia essa regra do tema sair, aparece rolagem horizontal e a correção é
-   limitar a largura aqui em vez de usar 100vw. */
+   limitar a largura aqui em vez de usar 100vw.
+
+   ENTRE 768 E 1140px (KAN-28) o tema estica esse mesmo fundo por outro caminho:
+   `left:50%` + `transform:translateX(-50%)`. O left acima vence, mas o transform
+   do tema continuava valendo e empurrava o fundo MEIA TELA para a esquerda — a
+   barra azul cobria só a metade esquerda e as editorias do fim da linha viravam
+   texto branco sobre branco ("o menu some"). Daí o `transform:none`.
+   Na linha vermelha, o tema centraliza o filho com `margin:auto`; abaixo de
+   836px isso somava até 18px ao left e abria uma falha branca à esquerda. */
 body.td-boxed-layout{
     background-image:none !important;
     background-color:#ffffff !important;
@@ -208,6 +216,7 @@ body.td-boxed-layout{
     left:calc(50% - 50vw) !important;
     width:100vw !important;
     max-width:none !important;
+    transform:none !important;
 }
 /* a linha vermelha é o border-top do filho do separador */
 .bahia-menu-linha .td_block_separator > *{
@@ -215,6 +224,8 @@ body.td-boxed-layout{
     left:calc(50% - 50vw);
     width:100vw !important;
     max-width:none !important;
+    margin-left:0 !important;
+    margin-right:0 !important;
 }
 
 /* Fundo branco ÚNICO, sem a sombra que separava os ambientes.
