@@ -835,6 +835,23 @@ arriscada. T0 não precisa de espaço e devolve 2 GB. Depois dele, o resto tem f
 
 ## T2 — Action Scheduler ✅ CONCLUÍDO
 
+> ### ⚠️ Sequela em 18/10/2026: as opções de esquema ficaram, e o FooGallery 3.3.8 trouxe a biblioteca de volta
+>
+> O `DROP` levou as 4 tabelas mas deixou `schema-ActionScheduler_StoreSchema` (8.0) e
+> `schema-ActionScheduler_LoggerSchema` (3.0) em `wp_options`. O FooGallery 3.3.8 (lote 11) é o
+> primeiro plugin desde o Rank Math a embarcar o Action Scheduler (4.1.0; a 3.2.6 não tinha). A
+> biblioteca leu as opções, concluiu que as tabelas existiam e **não as recriou**: erro 1146
+> (`wp_actionscheduler_actions doesn't exist`) em toda requisição fora do cache — 33 em 5 min, sem
+> fatal, site em 200.
+>
+> **Homolog não acusou** porque o banco de lá é anterior ao `DROP` e ainda tem as tabelas.
+>
+> **Correção:** apagadas as duas opções `schema-ActionScheduler*` em produção; a biblioteca recriou
+> as 4 tabelas vazias na requisição seguinte (schema `8.0.1792310610`). 0 posts `scheduled-action`,
+> nada a migrar. Erros zerados no minuto seguinte.
+>
+> **Regra:** ao apagar tabelas de uma biblioteca, apagar junto as opções de versão de esquema dela.
+
 > ### EXECUTADO EM 27/08/2026, 14h33 WEST (13h33 UTC)
 >
 > | | |
