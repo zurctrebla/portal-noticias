@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2014-2018 ServMask Inc.
+ * Copyright (C) 2014-2025 ServMask Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
+ * Attribution: This code is part of the All-in-One WP Migration plugin, developed by
+ *
  * ███████╗███████╗██████╗ ██╗   ██╗███╗   ███╗ █████╗ ███████╗██╗  ██╗
  * ██╔════╝██╔════╝██╔══██╗██║   ██║████╗ ████║██╔══██╗██╔════╝██║ ██╔╝
  * ███████╗█████╗  ██████╔╝██║   ██║██╔████╔██║███████║███████╗█████╔╝
@@ -22,55 +24,37 @@
  * ███████║███████╗██║  ██║ ╚████╔╝ ██║ ╚═╝ ██║██║  ██║███████║██║  ██╗
  * ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
  */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	die( 'Kangaroos cannot jump here' );
+}
 ?>
 
-<div id="fb-root"></div>
-<script>
-	(function(d, s, id) {
-		var js, fjs = d.getElementsByTagName(s)[0];
-		if (d.getElementById(id)) return;
-		js = d.createElement(s); js.id = id;
-		js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&appId=597242117012725&version=v2.0";
-		fjs.parentNode.insertBefore(js, fjs);
-	}(document, 'script', 'facebook-jssdk'));
-</script>
-<script>
-	!function (d,s,id) {
-		var js,
-			fjs = d.getElementsByTagName(s)[0],
-			p   = /^http:/.test(d.location) ? 'http' : 'https';
+<div class="ai1wm-social-share-wrapper">
+	<a href="https://twitter.com/intent/tweet?text=Check+this+epic+WordPress+Migration+plugin&url=https://servmask.com&via=servmask"
+		class="ai1wm-social-icon icon-x"
+		target="_blank"
+		rel="noopener"
+		title="<?php esc_attr_e( 'Share on X', 'all-in-one-wp-migration' ); ?>"
+		aria-label="<?php esc_attr_e( 'Share on X', 'all-in-one-wp-migration' ); ?>">
+		<i class="ai1wm-icon-x" aria-hidden="true"></i>
+	</a>
 
-		if (!d.getElementById(id)) {
-			js = d.createElement(s);
-			js.id = id;
-			js.src = p+'://platform.twitter.com/widgets.js';
-			fjs.parentNode.insertBefore(js, fjs);
-		}
-	}(document, 'script', 'twitter-wjs');
-</script>
+	<a href="https://www.facebook.com/sharer/sharer.php?u=https://servmask.com"
+		class="ai1wm-social-icon icon-facebook"
+		target="_blank"
+		rel="noopener"
+		title="<?php esc_attr_e( 'Share on Facebook', 'all-in-one-wp-migration' ); ?>"
+		aria-label="<?php esc_attr_e( 'Share on Facebook', 'all-in-one-wp-migration' ); ?>">
+		<i class="ai1wm-icon-facebook" aria-hidden="true"></i>
+	</a>
 
-<div class="ai1wm-share-button-container">
-	<span>
-		<a
-			href="https://twitter.com/share"
-			class="twitter-share-button"
-			data-url="https://servmask.com"
-			data-text="Check this epic WordPress Migration plugin"
-			data-via="servmask"
-			data-related="servmask"
-			data-hashtags="servmask"
-			>
-			<?php _e( 'Tweet', AI1WM_PLUGIN_NAME ); ?>
-		</a>
-	</span>
-	<span>
-		<div
-			class="fb-like ai1wm-top-negative-four"
-			data-href="https://www.facebook.com/servmaskproduct"
-			data-layout="button_count"
-			data-action="recommend"
-			data-show-faces="true"
-			data-share="false"
-			></div>
-	</span>
+	<a href="https://www.youtube.com/channel/UCWMNPEnX7KyDLknpcmPaSwg?sub_confirmation=1"
+		class="ai1wm-social-icon icon-youtube"
+		target="_blank"
+		rel="noopener"
+		title="<?php esc_attr_e( 'Subscribe on YouTube', 'all-in-one-wp-migration' ); ?>"
+		aria-label="<?php esc_attr_e( 'Subscribe on YouTube', 'all-in-one-wp-migration' ); ?>">
+		<i class="ai1wm-icon-youtube" aria-hidden="true"></i>
+	</a>
 </div>

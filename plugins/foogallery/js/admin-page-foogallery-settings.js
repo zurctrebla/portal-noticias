@@ -58,6 +58,17 @@ jQuery(document).ready(function($) {
         });
     };
 
+    FOOGALLERY.renderSettingsAjaxResponse = function($container, response) {
+        if (!response || !response.data) {
+            return;
+        }
+
+        var html = response.data.html || response.data.message;
+        if (html) {
+            $container.html(html);
+        }
+    };
+
     FOOGALLERY.bindClearCssOptimizationButton = function() {
         $('.foogallery_clear_css_optimizations').on('click', function(e) {
             e.preventDefault();
@@ -76,8 +87,45 @@ jQuery(document).ready(function($) {
                 type: "POST",
                 url: ajaxurl,
                 data: data,
-                success: function(data) {
-                    $container.html(data);
+                dataType: "json",
+                success: function(response) {
+                    FOOGALLERY.renderSettingsAjaxResponse($container, response);
+                },
+                error: function(xhr) {
+                    FOOGALLERY.renderSettingsAjaxResponse($container, xhr.responseJSON);
+                },
+                complete: function() {
+                    $spinner.removeClass('is-active');
+                    $button.prop('disabled', false);
+                }
+            });
+        });
+    };
+
+    FOOGALLERY.bindClearThumbnailCacheButton = function() {
+        $('.foogallery_clear_thumbnail_cache').on('click', function(e) {
+            e.preventDefault();
+
+            var $button = $(this),
+                $container = $('#foogallery_clear_thumbnail_cache_container'),
+                $spinner = $('#foogallery_clear_thumbnail_cache_spinner'),
+                data = 'action=foogallery_clear_thumbnail_cache' +
+                '&_wpnonce=' + $button.data('nonce') +
+                '&_wp_http_referer=' + encodeURIComponent($('input[name="_wp_http_referer"]').val());
+
+            $spinner.addClass('is-active');
+            $button.prop('disabled', true);
+
+            $.ajax({
+                type: "POST",
+                url: ajaxurl,
+                data: data,
+                dataType: "json",
+                success: function(response) {
+                    FOOGALLERY.renderSettingsAjaxResponse($container, response);
+                },
+                error: function(xhr) {
+                    FOOGALLERY.renderSettingsAjaxResponse($container, xhr.responseJSON);
                 },
                 complete: function() {
                     $spinner.removeClass('is-active');
@@ -105,8 +153,12 @@ jQuery(document).ready(function($) {
                 type: "POST",
                 url: ajaxurl,
                 data: data,
-                success: function(data) {
-                    $container.html(data);
+                dataType: "json",
+                success: function(response) {
+                    FOOGALLERY.renderSettingsAjaxResponse($container, response);
+                },
+                error: function(xhr) {
+                    FOOGALLERY.renderSettingsAjaxResponse($container, xhr.responseJSON);
                 },
                 complete: function() {
                     $spinner.removeClass('is-active');
@@ -143,8 +195,12 @@ jQuery(document).ready(function($) {
                 type: "POST",
                 url: ajaxurl,
                 data: data,
-                success: function(data) {
-                    $container.html(data);
+                dataType: "json",
+                success: function(response) {
+                    FOOGALLERY.renderSettingsAjaxResponse($container, response);
+                },
+                error: function(xhr) {
+                    FOOGALLERY.renderSettingsAjaxResponse($container, xhr.responseJSON);
                 },
                 complete: function() {
                     $spinner.removeClass('is-active');
@@ -155,29 +211,39 @@ jQuery(document).ready(function($) {
     };
 
     FOOGALLERY.bindUninstallButton = function() {
-        $('.foogallery_uninstall').on('click', function(e) {
+        $('#foogallery_uninstall_container').on('click', '.foogallery_uninstall, .foogallery_uninstall_confirm', function(e) {
             e.preventDefault();
 
             var $button = $(this),
                 $container = $('#foogallery_uninstall_container'),
                 $spinner = $('#foogallery_uninstall_spinner'),
-                data = 'action=foogallery_uninstall' +
-                    '&_wpnonce=' + $button.data('nonce') +
-                    '&_wp_http_referer=' + encodeURIComponent($('input[name="_wp_http_referer"]').val());
+                data = {
+                    action: 'foogallery_uninstall',
+                    _wpnonce: $button.data('nonce'),
+                    _wp_http_referer: $('input[name="_wp_http_referer"]').val()
+                };
+
+            if ($button.hasClass('foogallery_uninstall_confirm')) {
+                data.confirmation = $('#foogallery_uninstall_confirmation').val();
+            }
 
             $spinner.addClass('is-active');
-            $button.prop('disabled', true);
+            $container.find('.foogallery_uninstall, .foogallery_uninstall_confirm, #foogallery_uninstall_confirmation').prop('disabled', true);
 
             $.ajax({
                 type: "POST",
                 url: ajaxurl,
                 data: data,
-                success: function(data) {
-                    $container.html(data);
+                dataType: "json",
+                success: function(response) {
+                    FOOGALLERY.renderSettingsAjaxResponse($container, response);
+                },
+                error: function(xhr) {
+                    FOOGALLERY.renderSettingsAjaxResponse($container, xhr.responseJSON);
                 },
                 complete: function() {
-                    $spinner.removeClass('is-active');
-                    $button.prop('disabled', false);
+                    $('#foogallery_uninstall_spinner').removeClass('is-active');
+                    $container.find('.foogallery_uninstall, .foogallery_uninstall_confirm, #foogallery_uninstall_confirmation').prop('disabled', false);
                 }
             });
         });
@@ -258,6 +324,7 @@ jQuery(document).ready(function($) {
     $(function() { //wait for ready
         FOOGALLERY.loadImageOptimizationContent();
         FOOGALLERY.bindClearCssOptimizationButton();
+        FOOGALLERY.bindClearThumbnailCacheButton();
         FOOGALLERY.bindTestThumbnailButton();
         FOOGALLERY.bindApplyRetinaDefaults();
         FOOGALLERY.bindUninstallButton();

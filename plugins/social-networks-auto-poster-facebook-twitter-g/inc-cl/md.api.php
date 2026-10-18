@@ -46,17 +46,17 @@ if (!class_exists("nxs_class_SNAP_MD")) { class nxs_class_SNAP_MD {
       $msg = str_replace('&amp;#8212;', '-', $msg); $msg = str_replace('&#8212;', '-', $msg); $msg = str_replace('#8212;', '-', $msg); $msg = str_replace('#8212', "-", $msg);
 
       $argArr = ['ref'=>'https://medium.com',  'aj'=>true, 'extraHeaders'=>['Accept'=> 'application/json, text/javascript, */*; q=0.01','Content-Type'=>'application/json; charset=UTF-8', 'Authorization'=>'Bearer '.$options['accessToken']]];
-      $args = nxs_mkRmReqArgs($argArr);  $rq = new WP_Http;
+      $args = nxs_mkRmReqArgs($argArr);  $rq = new nxsHttp;
       if (empty($options['appAppUserID'])) {
           $ret = $rq->request('https://api.medium.com/v1/me', $args); /* prr($ret, 'CALL RET'); */ if (is_nxs_error($ret)) return print_r($ret, true);
           if (!empty($ret['body'])) { $ui = json_decode($ret['body'], true); $options['appAppUserID'] = $ui['data']['id']; }
       }
 
       $data = json_encode( array( 'title'=>$msgT, 'content'=>$msg, 'contentFormat'=>'html', 'canonicalUrl'=>$message['url'], 'tags'=>$message['tagsA'], 'publishStatus'=>'public') );
-      $pURL = empty($options['publ'])?'https://api.medium.com/v1/users/'.$options['appAppUserID'].'/posts':'https://api.medium.com/v1/publications/'.$options['publ'].'/posts'; prr($pURL);
-      $argArr['flds'] = $data; $args = nxs_mkRmReqArgs($argArr); prr($args);  $ret = $rq->request($pURL, $args); /* prr($ret, 'CALL RET'); */ if (is_nxs_error($ret)) return print_r($ret, true);
+      $pURL = empty($options['publ'])?'https://api.medium.com/v1/users/'.$options['appAppUserID'].'/posts':'https://api.medium.com/v1/publications/'.$options['publ'].'/posts';
+      $argArr['flds'] = $data; $args = nxs_mkRmReqArgs($argArr); $ret = $rq->request($pURL, $args); if (is_nxs_error($ret)) return esc_html($ret->get_error_message());
 
-      $bd = json_decode($ret['body'], true); if (!is_array($bd) || !is_array($bd['data'])) { $badOut['Error'] = 'ERROR: '.print_r($ret, true); return $badOut; } $bd = $bd['data']; //prr($bd);
+      $bd = json_decode($ret['body'], true); if (!is_array($bd) || !is_array($bd['data'])) { $badOut['Error'] = 'Medium returned an invalid response.'; return $badOut; } $bd = $bd['data'];
       return array('postID'=>$bd['id'], 'isPosted'=>1, 'postURL'=>$bd['url'], 'pDate'=>date('Y-m-d H:i:s')); 
     }  
     

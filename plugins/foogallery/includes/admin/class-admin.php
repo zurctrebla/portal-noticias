@@ -1,4 +1,9 @@
 <?php
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /*
  * FooGallery Admin class
  */
@@ -25,16 +30,24 @@ if ( ! class_exists( 'FooGallery_Admin' ) ) {
 			new FooGallery_Admin_Gallery_MetaBoxes();
 			new FooGallery_Admin_Gallery_MetaBox_Items();
 			new FooGallery_Admin_Gallery_MetaBox_Settings();
+			new FooGallery_Admin_Gallery_MetaBox_Template();
 			new FooGallery_Admin_Gallery_MetaBox_Fields();
 			new FooGallery_Admin_Columns();
 			new FooGallery_Admin_Extensions();
 			new FooGallery_Attachment_Fields();
 			new FooGallery_Admin_Notices();
+			if ( apply_filters( 'foogallery_enable_custom_css_update_notice', false ) ) {
+				new FooGallery_Admin_Notice_CustomCSS();
+			}
 			new FooGallery_Admin_Gallery_Attachment_Modal();
 			$foogallery_admin_datasource_instance = new FooGallery_Admin_Gallery_Datasources();
 
 			// include PRO promotion.
 			new FooGallery_Pro_Promotion();
+			new FooGallery_Trial_Mode();
+
+			// Command Palette integration (WP 6.3+).
+			new FooGallery_Command_Palette();
 		}
 
 		function init() {
@@ -62,7 +75,20 @@ if ( ! class_exists( 'FooGallery_Admin' ) ) {
 			foogallery_enqueue_core_gallery_template_style();
 
             $foogallery = FooGallery_Plugin::get_instance();
-            $foogallery->register_and_enqueue_js( 'admin-foogallery-edit.js' );
+            $handle = $foogallery->register_and_enqueue_js( 'admin-foogallery-edit.js' );
+
+			if ( $handle ) {
+				$strings = apply_filters( 'foogallery_admin_il8n', array() );
+
+				if ( ! empty( $strings ) && is_array( $strings ) ) {
+					$inline_script = 'window.FOOGALLERY = window.FOOGALLERY || {};'
+						. 'window.FOOGALLERY.il8n = Object.assign({}, window.FOOGALLERY.il8n || {}, '
+						. wp_json_encode( $strings )
+						. ');';
+
+					wp_add_inline_script( $handle, $inline_script, 'before' );
+				}
+			}
 
 			do_action('foogallery_admin_enqueue_scripts' );
 		}
@@ -101,7 +127,7 @@ if ( ! class_exists( 'FooGallery_Admin' ) ) {
 			if ( foogallery_gallery_shortcode_tag() != FOOGALLERY_CPT_GALLERY ) {
 				?>
 				<script type="text/javascript">
-					window.FOOGALLERY_SHORTCODE = '<?php echo foogallery_gallery_shortcode_tag(); ?>';
+					window.FOOGALLERY_SHORTCODE = '<?php echo esc_js( foogallery_gallery_shortcode_tag() ); ?>';
 				</script>
 			<?php
 			}

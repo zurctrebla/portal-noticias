@@ -2,9 +2,9 @@
 //## NextScripts Facebook Connection Class
 $nxs_snapAvNts[] = array('code'=>'LI', 'lcode'=>'li', 'name'=>'LinkedIn', 'type'=>'Social Networks', 'ptype'=>'B', 'status'=>'A', 'desc'=>'Post text, article, image or share a link to your profile, group, or company page. ');
 
-if (!function_exists("nxs_ntp_time")) { function nxs_ntp_time($host='time.nist.gov') { $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP); socket_connect($sock, $host, 123);   
-  $msg = "\010" . str_repeat("\0", 47); socket_send($sock, $msg, strlen($msg), 0); socket_recv($sock, $recv, 48, MSG_WAITALL); socket_close($sock);
-  $data = unpack('N12', $recv); $timestamp = sprintf('%u', $data[9]); $timestamp -= 2208988800;  return $timestamp;
+if (!function_exists("nxs_ntp_time")) { function nxs_ntp_time($host='time.nist.gov') {
+  // Avoid unauthenticated UDP time lookups; OAuth uses the server clock.
+  return time();
 }}
 
 if (!class_exists("nxs_snapClassLI")) { class nxs_snapClassLI extends nxs_snapClassNT { 
@@ -37,56 +37,55 @@ if (!class_exists("nxs_snapClassLI")) { class nxs_snapClassLI extends nxs_snapCl
   function checkIfSetupFinished($options) { return !empty($options['accessToken']) || !empty($options['uPass']); }
   public function doAuth() { $ntInfo = $this->ntInfo; global $nxs_snapSetPgURL;     
     // V2 Auth Error
-    if ( isset($_GET['page']) && $_GET['page']=='nxssnap' && !empty($_GET['error_description']) && isset($_GET['state']) && substr($_GET['state'], 0, 7) == 'nxs-li-'){
-        $this->showAuthTop();  $ii = sanitize_text_field(str_replace('nxs-li-','',$_GET['state'])); $nt = $this->ntInfo['lcode']; $ntU = $this->ntInfo['code']; $isNew = false;
+    if (isset($_GET['page']) && $_GET['page']=='nxssnap' && !empty($_GET['error_description']) && isset($_GET['state']) && strpos(wp_unslash($_GET['state']), 'nxs-li-') === 0){
+        if (!nxs_snap_user_can_access() || !nxs_oauth_state_validate(wp_unslash($_GET['state']), 'li', $ii) || !isset($this->nt[$ii])) wp_die(esc_html__('Invalid or expired LinkedIn authorization state.', 'social-networks-auto-poster-facebook-twitter-g'), '', array('response'=>403));
+        $this->showAuthTop(); $nt = $this->ntInfo['lcode']; $ntU = $this->ntInfo['code']; $isNew = false;
         $nto = $this->nt[$ii];
         echo '----=={ oAuth 2.0 LinkedIn ERROR }==----<br/><br/><div style="color:red;">'; 
-        prr(urldecode($_GET['error_description']));
+        echo esc_html(urldecode(wp_unslash($_GET['error_description'])));
         
         if (stripos($_GET['error_description'],'rw_organization_admin')!==false) echo '<br/>It looks like Marketing API is not approved for your LinkedIn API V2 Application. Please use "Authorize without Marketing API".<br/>';        
         
-        $gGet = $_GET; unset($gGet['code']); unset($gGet['state']); unset($gGet['error_description']); unset($gGet['post_type']); unset($gGet['activated']); unset($gGet['stylesheet']);  $sturl = explode('?',$nxs_snapSetPgURL); $nxs_snapSetPgURL = $sturl[0].((!empty($gGet))?'?'.http_build_query($gGet):'');       
+        $nxs_snapSetPgURL = nxs_get_admin_url('admin.php?page=nxssnap'); $retry_state = nxs_oauth_state_create('li', $ii);
         
         ?>
-        <a href="#" onclick="var url = 'https://www.linkedin.com/uas/oauth2/authorization?response_type=code&client_id=<?php echo nxs_gak($nto['appKey']);?>&scope=r_liteprofile+r_emailaddress+w_member_social&state=nxs-li-<?php echo esc_attr($ii); ?>&redirect_uri=<?php echo trim(urlencode($nxs_snapSetPgURL));?>'; nxs_svSetAdv('<?php echo esc_attr($nt); ?>', '<?php echo esc_attr($ii); ?>', '<?php echo $isNew?'dom'.$ntU.$ii.'Div':'nxsAllAccntsDiv'; ?>','nxs<?php echo $ntU; ?>MsgDiv<?php echo esc_attr($ii); ?>',url,'1'); return false;">Authorize Your LinkedIn Account (<b>without</b> Marketing API)</a>
+        <a href="#" onclick="var url = 'https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=<?php echo esc_js(rawurlencode(nxs_gak($nto['appKey']))); ?>&scope=r_liteprofile+r_emailaddress+w_member_social&state=<?php echo esc_js(rawurlencode($retry_state)); ?>&redirect_uri=<?php echo esc_js(rawurlencode($nxs_snapSetPgURL)); ?>'; nxs_svSetAdv('<?php echo esc_attr($nt); ?>', '<?php echo esc_attr($ii); ?>', '<?php echo $isNew?'dom'.$ntU.$ii.'Div':'nxsAllAccntsDiv'; ?>','nxs<?php echo $ntU; ?>MsgDiv<?php echo esc_attr($ii); ?>',url,'1'); return false;">Authorize Your LinkedIn Account (<b>without</b> Marketing API)</a>
         <?php
         die('</div></div></div>');
     }
     // V2 Auth
-    if ( isset($_GET['code']) && $_GET['code']!='' && isset($_GET['state']) && substr($_GET['state'], 0, 7) == 'nxs-li-'){
-      $this->showAuthTop(); $at = sanitize_text_field($_GET['code']);  $ii = sanitize_text_field(str_replace('nxs-li-','',$_GET['state']));
+    if (isset($_GET['code']) && $_GET['code']!='' && isset($_GET['state']) && strpos(wp_unslash($_GET['state']), 'nxs-li-') === 0){
+      if (!nxs_snap_user_can_access() || !nxs_oauth_state_validate(wp_unslash($_GET['state']), 'li', $ii) || !isset($this->nt[$ii])) wp_die(esc_html__('Invalid or expired LinkedIn authorization state.', 'social-networks-auto-poster-facebook-twitter-g'), '', array('response'=>403));
+      $this->showAuthTop(); $at = sanitize_text_field(wp_unslash($_GET['code']));
       echo "----=={ oAuth 2.0 Wordflow }==----<br/><br/>"; 
-      $gGet = $_GET; unset($gGet['code']); unset($gGet['state']); unset($gGet['post_type']); unset($gGet['activated']); unset($gGet['stylesheet']);  $sturl = explode('?',$nxs_snapSetPgURL); $nxs_snapSetPgURL = $sturl[0].((!empty($gGet))?'?'.http_build_query($gGet):'');       
-      $nto = $this->nt[$ii]; $wprg = array();  $wprg['sslverify'] = false;
-      if (isset($nto['appKey'])){ echo "-="; prr($nto);// die();
-        $tknURL = 'https://www.linkedin.com/uas/oauth2/accessToken?grant_type=authorization_code&code='.$at.'&redirect_uri='.urlencode($nxs_snapSetPgURL).'&client_id='.nxs_gak($nto['appKey']).'&client_secret='.nxs_gas($nto['appSec']);
-        $response  = nxs_remote_post($tknURL, $wprg); prr($tknURL);      
-        if((is_object($response)&&(isset($response->errors)))){ prr($response); die('</div></div>'); }
-        if (is_array($response)&& stripos($response['body'],'"error":')!==false){ prr($response['body']); prr(json_decode($response['body'],true)); die('</div></div>'); }
-        $resp = json_decode($response['body'], true); prr($resp); if (!is_array($resp) || empty($resp['access_token'])) { prr($resp); die('</div></div>'); }
+      $nxs_snapSetPgURL = nxs_get_admin_url('admin.php?page=nxssnap'); $nto = $this->nt[$ii]; $wprg = array('sslverify'=>true);
+      if (isset($nto['appKey'])){
+        $response = nxs_remote_post('https://www.linkedin.com/oauth/v2/accessToken', array('body'=>array('grant_type'=>'authorization_code','code'=>$at,'redirect_uri'=>$nxs_snapSetPgURL,'client_id'=>nxs_gak($nto['appKey']),'client_secret'=>nxs_gas($nto['appSec']))));
+        if (is_nxs_error($response) || !is_array($response) || empty($response['body'])) die(esc_html__('LinkedIn token exchange failed.', 'social-networks-auto-poster-facebook-twitter-g'));
+        $resp = json_decode($response['body'], true); if (!is_array($resp) || empty($resp['access_token'])) { echo esc_html(isset($resp['error_description'])?$resp['error_description']:__('LinkedIn did not return an access token.', 'social-networks-auto-poster-facebook-twitter-g')); die('</div></div>'); }
         if (function_exists('get_option')) $currTime = time() + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS ); else  $currTime = time();
         $nto['accessToken'] = $resp['access_token']; // $nto['accessTokenSec'] = 'No Need for oAuth V2'; $nto['oAuthVerifier'] = 'No Need for oAuth V2';
         $nto['accessTokenExp'] = $currTime + $resp['expires_in'];    echo "<br/>----=={ Expires: ".date('Y-m-d H:i:s', $nto['accessTokenExp'])." }==---- <br/>";
         $tknURL = 'https://api.linkedin.com/v2/me'; $hddrs=nxs_getNXSHeaders(); $hddrs['Authorization'] = 'Bearer '.$nto['accessToken']; $hddrs['X-RestLi-Protocol-Version']='2.0.0'; $response = nxs_remote_get( $tknURL, nxs_mkRemOptsArr($hddrs) ); 
-         prr($tknURL); prr($response); if (is_nxs_error($response)) die('</div></div>'); $user = json_decode($response['body'], true);       prr($user); 
+         if (is_nxs_error($response)) die('</div></div>'); $user = json_decode($response['body'], true);
         if (!empty($user['id'])) { $nto['liUserID'] = $user['id'];  $nto['liUserInfo'] = $user['firstName']['localized']['en_US'].$user['lastName']['localized']['en_US'].(!empty($user['id'])?" (".$user['id'].")":'');    
-          if (empty($nto['pgID'])) $nto['pgID'] = 'p'; nxs_save_glbNtwrks($ntInfo['lcode'],$ii,$nto,'*'); prr($nto['liUserInfo'], 'Authorized user');                    
+          if (empty($nto['pgID'])) $nto['pgID'] = 'p'; nxs_save_glbNtwrks($ntInfo['lcode'],$ii,$nto,'*'); echo '<p>'.esc_html($nto['liUserInfo']).'</p>';
           
           $gURL = 'https://api.linkedin.com/v2/organizationalEntityAcls?q=roleAssignee';  $hddrs=nxs_getNXSHeaders(); $hddrs['Authorization'] = 'Bearer '.$nto['accessToken']; $hddrs['X-RestLi-Protocol-Version']='2.0.0';          
-          $response = nxs_remote_get( $gURL, nxs_mkRemOptsArr($hddrs) );  $userPages = json_decode($response['body'], true); prr($userPages, 'USER PAGES V2:'); $pgs = '';             
+          $response = nxs_remote_get( $gURL, nxs_mkRemOptsArr($hddrs) ); $userPages = !is_nxs_error($response) ? json_decode($response['body'], true) : array(); $pgs = '';
           if (!empty($userPages)&&!empty($userPages['elements'])) foreach ($userPages['elements'] as $e) { $ee = $e['organizationalTarget']; $ee = explode(':',$ee); $ee = end($ee);
               $gURL = 'https://api.linkedin.com/v2/organizations/'.$ee; $response = nxs_remote_get( $gURL, nxs_mkRemOptsArr($hddrs) );  $userCmp = json_decode($response['body'], true); 
-              $pgs .= '<option '.($ee==$nto['pgID'] ? 'selected="selected"':'').' value="'.$ee.'">'.$userCmp['localizedName'].' ('.$ee.')</option>';
+              $ee = sanitize_text_field($ee); $pgs .= '<option '.($ee==$nto['pgID'] ? 'selected="selected"':'').' value="'.esc_attr($ee).'">'.esc_html(isset($userCmp['localizedName'])?$userCmp['localizedName']:'').' ('.esc_html($ee).')</option>';
           }
           
           if (empty($pgs)) { echo "<br/>Lets Try V1<br/>"; $gURL = 'https://api.linkedin.com/v1/companies?format=json&is-company-admin=true&oauth2_access_token='.$nto['accessToken']; $response = nxs_remote_get( $gURL, nxs_mkRemOptsArr(nxs_getNXSHeaders()) );  
-            prr($response);  $userPages = json_decode($response['body'], true); prr($userPages, 'USER PAGES V1:'); 
-            if (!empty($userPages['values'])) foreach ($userPages['values'] as $up) $pgs .= '<option '.($up['id']==$nto['pgID'] ? 'selected="selected"':'').' value="'.$up['id'].'">'.$up['name'].' ('.$up['id'].')</option>';
+            $userPages = !is_nxs_error($response) ? json_decode($response['body'], true) : array();
+            if (!empty($userPages['values'])) foreach ($userPages['values'] as $up) $pgs .= '<option '.($up['id']==$nto['pgID'] ? 'selected="selected"':'').' value="'.esc_attr($up['id']).'">'.esc_html($up['name']).' ('.esc_html($up['id']).')</option>';
           }  //die('</div></div>');
           
           
           $opVal = array(); $opNm = 'nxs_snap_li_'.sha1('nxs_snap_li'.$nto['liUserID'].nxs_gak($nto['appKey'])); $opVal['pgList'] = $pgs; nxs_saveOption($opNm, $opVal); 
-          echo '<div style="text-align:center;color:green; font-weight: bold; font-size:20px;"> ALL OK. You have been authorized.</div><script type="text/javascript">setTimeout(function(){ window.location = "'.$nxs_snapSetPgURL.'"; }, 1000);</script>';
+          echo '<div style="text-align:center;color:green; font-weight: bold; font-size:20px;"> ALL OK. You have been authorized.</div><script type="text/javascript">setTimeout(function(){ window.location = "'.esc_url($nxs_snapSetPgURL).'"; }, 1000);</script>';
         }        
       } die('</div></div>');
     }    
@@ -140,7 +139,7 @@ if (!class_exists("nxs_snapClassLI")) { class nxs_snapClassLI extends nxs_snapCl
      $opVal['grpList'] = $pgs; nxs_saveOption($opNm, $opVal); return $opVal;
   }
   
-  function accTab($ii, $options, $isNew=false){ global $nxs_snapSetPgURL; $ntInfo = $this->ntInfo; $nt = $ntInfo['lcode'];  $ntU = $ntInfo['code']; /* prr($options); */?>
+  function accTab($ii, $options, $isNew=false){ global $nxs_snapSetPgURL; $ntInfo = $this->ntInfo; $nt = $ntInfo['lcode'];  $ntU = $ntInfo['code']; $oauth_state = nxs_oauth_state_create('li', $ii); /* prr($options); */?>
     
     <div style="display: <?php echo (empty($options['apiToUse']))?"block":"none"; ?>;">    
       <div style="width:100%; text-align: center; color:#005800; font-weight: bold; font-size: 14px;">You can choose what API you would like to use. </div>                
@@ -160,9 +159,9 @@ if (!class_exists("nxs_snapClassLI")) { class nxs_snapClassLI extends nxs_snapCl
       <?php if(!empty($options['accessToken'])) { 
         _e('Your '.$ntInfo['name'].' Account has been authorized.', 'social-networks-auto-poster-facebook-twitter-g'); ?> <br/>User: <?php _e(apply_filters('format_to_edit', htmlentities($options['liUserInfo'], ENT_COMPAT, "UTF-8")), 'social-networks-auto-poster-facebook-twitter-g'); ?>.
         <?php  } ?>            <br/>
-        <a href="#" onclick="var url = 'https://www.linkedin.com/uas/oauth2/authorization?response_type=code&client_id='+jQuery('#liappKey2<?php echo esc_attr($ii); ?>').val()+'&scope=r_liteprofile+r_emailaddress+w_member_social+w_organization_social+rw_organization_admin&state=nxs-li-<?php echo esc_attr($ii); ?>&redirect_uri=<?php echo trim(urlencode($nxs_snapSetPgURL));?>'; nxs_svSetAdv('<?php echo esc_attr($nt); ?>', '<?php echo esc_attr($ii); ?>', '<?php echo $isNew?'dom'.$ntU.$ii.'Div':'nxsAllAccntsDiv'; ?>','nxs<?php echo $ntU; ?>MsgDiv<?php echo esc_attr($ii); ?>',url,'1'); return false;">Authorize Your LinkedIn Account (<b>with</b> Marketing API)</a>        
+        <a href="#" onclick="var url = 'https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id='+encodeURIComponent(jQuery('#liappKey2<?php echo esc_attr($ii); ?>').val())+'&scope=r_liteprofile+r_emailaddress+w_member_social+w_organization_social+rw_organization_admin&state=<?php echo esc_js(rawurlencode($oauth_state)); ?>&redirect_uri=<?php echo esc_js(rawurlencode($nxs_snapSetPgURL)); ?>'; nxs_svSetAdv('<?php echo esc_attr($nt); ?>', '<?php echo esc_attr($ii); ?>', '<?php echo $isNew?'dom'.$ntU.$ii.'Div':'nxsAllAccntsDiv'; ?>','nxs<?php echo $ntU; ?>MsgDiv<?php echo esc_attr($ii); ?>',url,'1'); return false;">Authorize Your LinkedIn Account (<b>with</b> Marketing API)</a>        
         <br/>
-        <a href="#" onclick="var url = 'https://www.linkedin.com/uas/oauth2/authorization?response_type=code&client_id='+jQuery('#liappKey2<?php echo esc_attr($ii); ?>').val()+'&scope=r_liteprofile+r_emailaddress+w_member_social&state=nxs-li-<?php echo esc_attr($ii); ?>&redirect_uri=<?php echo trim(urlencode($nxs_snapSetPgURL));?>'; nxs_svSetAdv('<?php echo esc_attr($nt); ?>', '<?php echo esc_attr($ii); ?>', '<?php echo $isNew?'dom'.$ntU.$ii.'Div':'nxsAllAccntsDiv'; ?>','nxs<?php echo $ntU; ?>MsgDiv<?php echo esc_attr($ii); ?>',url,'1'); return false;">Authorize Your LinkedIn Account (<b>without</b> Marketing API)</a>        
+        <a href="#" onclick="var url = 'https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id='+encodeURIComponent(jQuery('#liappKey2<?php echo esc_attr($ii); ?>').val())+'&scope=r_liteprofile+r_emailaddress+w_member_social&state=<?php echo esc_js(rawurlencode($oauth_state)); ?>&redirect_uri=<?php echo esc_js(rawurlencode($nxs_snapSetPgURL)); ?>'; nxs_svSetAdv('<?php echo esc_attr($nt); ?>', '<?php echo esc_attr($ii); ?>', '<?php echo $isNew?'dom'.$ntU.$ii.'Div':'nxsAllAccntsDiv'; ?>','nxs<?php echo $ntU; ?>MsgDiv<?php echo esc_attr($ii); ?>',url,'1'); return false;">Authorize Your LinkedIn Account (<b>without</b> Marketing API)</a>        
         <?php if (empty($options['accessToken'])) { ?> <div class="blnkg">&lt;=== <?php _e('Authorize your account', 'social-networks-auto-poster-facebook-twitter-g'); ?> ===</div> <?php } ?><br/><br/>
       </div>
       
@@ -180,7 +179,7 @@ if (!class_exists("nxs_snapClassLI")) { class nxs_snapClassLI extends nxs_snapCl
               if (!empty($options['pgID'])) { $pgi = str_ireplace('selected="selected" ','',$pgi); $pgi = str_ireplace('value="'.$options['pgID'].'"','selected="selected" value="'.$options['pgID'].'"',$pgi); }               
               echo '<option '.($options['pgID']=='p'?'selected="selected" ':'').'value="p">'.__('Profile').'</option>'; echo $pgi;
             ?><option value="a"><?php _e('.... Enter the Page ID'); ?></option>
-          </select><div id="nxsLIInfoDivBlock<?php echo esc_attr($ii); ?>" style="display: inline-block;"> <input type="text" style="display: none;" id="liInpCst<?php echo esc_attr($ii); ?>" value="<?php echo $options['pgID']; ?>" onchange="nxs_InpToDDChange(jQuery(this));" data-tid="lipgID<?php echo esc_attr($ii); ?>" />         
+      </select><div id="nxsLIInfoDivBlock<?php echo esc_attr($ii); ?>" style="display: inline-block;"> <input type="text" style="display: none;" id="liInpCst<?php echo esc_attr($ii); ?>" value="<?php echo esc_attr($options['pgID']); ?>" onchange="nxs_InpToDDChange(jQuery(this));" data-tid="lipgID<?php echo esc_attr($ii); ?>" />
           <div style="display: inline-block;"><a onclick="nxs_liGetPages(<?php echo esc_attr($ii);?>, 1); jQuery(this).blur(); return false;" href="#"><img id="<?php echo esc_attr($nt.$ii);?>rfrshImg" style="vertical-align: middle;" src='<?php echo NXS_PLURL; ?>img/refresh16.png' /></a></div></div> <img id="<?php echo esc_attr($nt.$ii);?>ldImg" style="display: none;vertical-align: middle;" src='<?php echo NXS_PLURL; ?>img/ajax-loader-sm.gif' />
           </div>          
           </div> <div id="nxsLIMsgDiv<?php echo esc_attr($ii); ?>"><?php if (!empty($options['uMsg'])) echo $options['uMsg']; ?><?php if ($isNew) { ?><?php _e('Please authorize your account', 'nxs_snap'); ?><?php } ?></div>                                                                                                    
@@ -229,7 +228,7 @@ if (!class_exists("nxs_snapClassLI")) { class nxs_snapClassLI extends nxs_snapCl
             ?><option value="a"><?php _e('.... Enter the Company Page ID'); ?></option>
           </select>
           <div id="nxsLI2InfoDivBlock<?php echo esc_attr($ii); ?>" style="display: inline-block;">
-          <input type="text" style="display: none;" id="li2InpCst<?php echo esc_attr($ii); ?>" value="<?php echo $options['pgcID']; ?>" onblur="nxs_InpToDDBlur(jQuery(this));"  onchange="nxs_InpToDDChange(jQuery(this));" data-tid="li2pgID<?php echo esc_attr($ii); ?>" />         
+      <input type="text" style="display: none;" id="li2InpCst<?php echo esc_attr($ii); ?>" value="<?php echo esc_attr($options['pgcID']); ?>" onblur="nxs_InpToDDBlur(jQuery(this));"  onchange="nxs_InpToDDChange(jQuery(this));" data-tid="li2pgID<?php echo esc_attr($ii); ?>" />
           <div style="display: inline-block;"><a onclick="nxs_li2GetPages(<?php echo esc_attr($ii);?>, 1); jQuery(this).blur(); return false;" href="#"><img id="<?php echo esc_attr($nt.$ii);?>2rfrshImg" style="vertical-align: middle;" src='<?php echo NXS_PLURL; ?>img/refresh16.png' /></a></div></div> <img id="<?php echo esc_attr($nt.$ii);?>2ldImg" style="display: none;vertical-align: middle;" src='<?php echo NXS_PLURL; ?>img/ajax-loader-sm.gif' />
           </div>          
           </div> <div id="nxsLI2MsgDiv<?php echo esc_attr($ii); ?>"><?php if (!empty($options['uMsg'])) echo $options['uMsg']; ?><?php if ($isNew) { ?><i style="color: #800080"><?php _e('Please Enter your username and password to select your page', 'nxs_snap'); ?><?php } ?></i></div>                                                                          
@@ -249,7 +248,7 @@ if (!class_exists("nxs_snapClassLI")) { class nxs_snapClassLI extends nxs_snapCl
             ?><option value="a"><?php _e('.... Enter the Group ID'); ?></option>
           </select>
           <div id="nxsLI2GInfoDivBlock<?php echo esc_attr($ii); ?>" style="display: inline-block;">
-          <input type="text" style="display: none;" id="li2GInpCst<?php echo esc_attr($ii); ?>" value="<?php echo $options['pgcID']; ?>" onblur="nxs_InpToDDBlur(jQuery(this));"  onchange="nxs_InpToDDChange(jQuery(this));" data-tid="li2GpgID<?php echo esc_attr($ii); ?>" />         
+      <input type="text" style="display: none;" id="li2GInpCst<?php echo esc_attr($ii); ?>" value="<?php echo esc_attr($options['pgcID']); ?>" onblur="nxs_InpToDDBlur(jQuery(this));"  onchange="nxs_InpToDDChange(jQuery(this));" data-tid="li2GpgID<?php echo esc_attr($ii); ?>" />
           </div> <img id="<?php echo esc_attr($nt.$ii);?>3ldImg" style="display: none;vertical-align: middle;" src='<?php echo NXS_PLURL; ?>img/ajax-loader-sm.gif' />
           </div>          
           </div>  

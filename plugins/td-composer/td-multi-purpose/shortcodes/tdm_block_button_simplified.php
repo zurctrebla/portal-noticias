@@ -617,7 +617,7 @@ class tdm_block_button_simplified extends td_block {
 
         // Url.
         $url = td_util::get_cloud_tpl_var_value_from_string(td_util::get_custom_field_value_from_string($this->get_att('url')));
-        $url = !empty($url) ? $url : '#';
+        $url = !empty($url) ? esc_url($url) : '#';
 
         $url_rel = $this->get_att('url_rel');
         $url_rel_attr = !empty($url_rel) ? ' rel="' . $url_rel . '"' : '';

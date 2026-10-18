@@ -751,50 +751,6 @@
 		// Directory smush.
 		.wp-smush-progress-dialog {
 
-			// When limit is exceeded.
-			&.wp-smush-exceed-limit {
-
-				.smush-limit-reached-notice {
-					display: block;
-				}
-
-				.wp-smush-resume-scan {
-					display: inline;
-				}
-
-				.sui-progress {
-					.sui-progress-icon {
-						.sui-icon-loader {
-							@include icon( before, info );
-							&:before {
-								color: #FECF2F;
-								animation: none;
-							}
-						}
-					}
-				}
-
-				.sui-progress-bar span {
-					background: #888888;
-				}
-
-				.sui-box-footer .sui-actions-right:not(.sui-hidden) {
-					margin-left: 10px;
-					margin-right: auto;
-					float: left;
-
-					.sui-button {
-						padding: 5px 16px 7px;
-						border: 2px solid #ddd;
-						background: transparent;
-						color: #888;
-					}
-				}
-				.sui-box-footer {
-					justify-content: space-between;
-				}
-			}
-
 			// When the request fails.
 			&.wp-smush-scan-error {
 
@@ -807,7 +763,7 @@
 				}
 			}
 
-			.smush-limit-reached-notice, .wp-smush-resume-scan, #smush-scan-error-notice {
+			.wp-smush-resume-scan, #smush-scan-error-notice {
 				display: none;
 			}
 		}
@@ -1748,6 +1704,36 @@
 			.sui-box-settings-col-1 {
 				max-width: 225px;
 				flex: 0 1 225px;
+			}
+		}
+	}
+
+	.smush-disconnect-notice {
+		.sui-notice-content {
+			padding: 8px 20px 3px;
+			border-radius: 5px;
+			background-color: #FFFBF0;
+			border: 1px solid #F9C101;
+			box-shadow: 0px 0px 0px 1px rgba(230, 230, 230, 1) inset;
+			font-size: 13px;
+			h4 {
+				font-size: 13px;
+				margin: 0 0 7px;
+			}
+
+			ul {
+				margin: 0;
+				padding: 0;
+				line-height: 22px;
+				letter-spacing: -0.25px;
+				li {
+					margin-bottom: 8px;
+					span{
+						margin-right: 8px;
+						position: relative;
+						top: 1px;
+					}
+				}
 			}
 		}
 	}

@@ -1,13 +1,47 @@
 #!/bin/bash
-# Teste de carga em homolog: URLs FRIAS, 30 simultaneas, medindo Threads_running DURANTE.
-# uso: carga.sh <rotulo>
+# Teste de carga: URLs FRIAS, 30 simultaneas, medindo Threads_running DURANTE.
+#
+# uso:  carga.sh <rotulo>
+#
+# Alvo: por padrao homolog. Para medir outro ambiente (a instancia de teste 8.4,
+# o verde do Blue/Green), sobrescrever por variavel de ambiente:
+#   CARGA_CTX="arn:...:cluster/..."  CARGA_BASE="https://..."  ./carga.sh depois-84
+#
+# Saida: por padrao ./carga-saida/, ao lado deste script. CARGA_OUT sobrescreve.
+#
+# PORTAO DE CONTAGEM (HANDOVER secao 0 e 16): este script confere que o numero de
+# respostas GRAVADAS bate com o numero de URLs disparadas, e sai com codigo 1 se nao
+# bater. Ate 27/08/2026 ele nao fazia isso e a variavel de saida apontava para um
+# diretorio de sessao que ja nao existia: a carga rodava e nada era gravado. Ver
+# HANDOVER secao 16.3.
+
+set -uo pipefail
+
 ROT="${1:-teste}"
-S=/private/tmp/claude-501/-Users-albertcruz-Projects-BAHIABA-wp-content/076a2b37-27dc-4ecf-b4d4-8764bd6b55c8/scratchpad
-CTX="arn:aws:eks:us-east-1:774710032593:cluster/bahia-eks-homolog"
-NS=bahia-wordpress
-POD=$(kubectl --context "$CTX" -n $NS get pods -l app=wordpress -o jsonpath='{.items[0].metadata.name}')
-B=https://hml.bahia.ba
+CTX="${CARGA_CTX:-arn:aws:eks:us-east-1:774710032593:cluster/bahia-eks-homolog}"
+NS="${CARGA_NS:-bahia-wordpress}"
+B="${CARGA_BASE:-https://hml.bahia.ba}"
+S="${CARGA_OUT:-$(cd "$(dirname "$0")" && pwd)/carga-saida}"
+
+# ---------------------------------------------------------------------------
+# PORTAO 1 — o diretorio de saida existe e ACEITA ESCRITA, conferido ANTES da carga.
+# Falhar aqui custa nada; falhar depois custa a carga inteira e nao deixa numero.
+# ---------------------------------------------------------------------------
+mkdir -p "$S" || { echo "ERRO: nao consegui criar $S"; exit 1; }
+if ! : > "$S/.carga-teste-escrita" 2>/dev/null; then
+  echo "ERRO: $S existe mas nao aceita escrita. Nada foi medido."; exit 1
+fi
+rm -f "$S/.carga-teste-escrita"
+
+POD=$(kubectl --context "$CTX" -n "$NS" get pods -l app=wordpress \
+        -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+if [ -z "$POD" ]; then
+  echo "ERRO: nenhum pod app=wordpress em $NS no contexto $CTX. Nada foi medido."; exit 1
+fi
+
 STAMP=$RANDOM$RANDOM
+HTTP="$S/carga-$ROT-http.txt"
+DB="$S/carga-$ROT-db.txt"
 
 # 30 URLs frias: home, archives de editoria e busca, cada uma com cache-buster proprio
 URLS=()
@@ -16,34 +50,79 @@ for e in politica salvador esporte entretenimento economia municipios justica mu
   URLS+=("$B/$e/?cb=$STAMP-a"); done
 for t in bahia salvador carnaval eleicao praia lula chuva festa saude escola; do
   URLS+=("$B/?s=$t&cb=$STAMP-s"); done
+ESPERADO=${#URLS[@]}
 
-echo "=== CARGA [$ROT] — ${#URLS[@]} requisicoes simultaneas, URLs frias ==="
-rm -f $S/carga-$ROT-*.txt
+echo "=== CARGA [$ROT] — $ESPERADO requisicoes simultaneas, URLs frias ==="
+echo "    alvo:  $B"
+echo "    pod:   $POD"
+echo "    saida: $S"
+rm -f "$HTTP" "$DB"
 
-# monitor do banco DURANTE
-( for i in $(seq 1 24); do
-    kubectl --context "$CTX" -n $NS exec $POD -c wordpress -- php -r '
-      require_once "/var/www/html/wp-load.php"; global $wpdb;
-      $r=$wpdb->get_row("SHOW GLOBAL STATUS LIKE \"Threads_running\"");
-      $pl=$wpdb->get_results("SHOW FULL PROCESSLIST");
-      $calc=0; foreach($pl as $p) if (stripos((string)$p->Info,"SQL_CALC_FOUND_ROWS")!==false) $calc++;
-      printf("%s|%s\n", $r->Value, $calc);' 2>/dev/null
-    sleep 2
-  done ) > $S/carga-$ROT-db.txt 2>&1 &
+# monitor do banco DURANTE.
+#
+# UM unico `kubectl exec` com um laco PHP dentro, amostrando a cada 0,5 s. Antes eram 24
+# execs separados com `require wp-load.php` em cada um: o bootstrap do WordPress custava
+# ~5 s por amostra e a carga terminava com 3 amostras colhidas — um "pico" de
+# Threads_running tirado de 3 pontos, que e o mesmo erro de amostra pequena da secao 16
+# do HANDOVER. Com conexao mysqli direta e laco interno saem ~120 amostras no mesmo tempo.
+( kubectl --context "$CTX" -n "$NS" exec "$POD" -c wordpress -- php -r '
+    $h=getenv("WORDPRESS_DB_HOST"); $u=getenv("WORDPRESS_DB_USER");
+    $p=getenv("WORDPRESS_DB_PASSWORD"); $d=getenv("WORDPRESS_DB_NAME");
+    mysqli_report(MYSQLI_REPORT_OFF);
+    $c=@new mysqli($h,$u,$p,$d,3306);
+    if ($c->connect_errno) { fwrite(STDERR,"monitor: sem conexao\n"); exit(1); }
+    $fim = microtime(true) + 120;
+    while (microtime(true) < $fim) {
+      $r=$c->query("SHOW GLOBAL STATUS LIKE \"Threads_running\"");
+      $tr=$r ? $r->fetch_assoc()["Value"] : "?";
+      $calc=0;
+      if ($pl=$c->query("SHOW FULL PROCESSLIST")) {
+        while ($row=$pl->fetch_assoc()) {
+          if (stripos((string)$row["Info"],"SQL_CALC_FOUND_ROWS")!==false) $calc++;
+        }
+      }
+      printf("%s|%s\n", $tr, $calc);
+      usleep(500000);
+    }' 2>/dev/null ) > "$DB" 2>&1 &
 MONPID=$!
 
-# a carga
+# a carga — PIDs coletados um a um, sem depender de `jobs -p`
+PIDS=()
 for u in "${URLS[@]}"; do
-  ( code=$(curl -s -o /dev/null -w "%{http_code} %{time_total}" --max-time 70 "$u"); echo "$code $u" ) >> $S/carga-$ROT-http.txt &
+  ( code=$(curl -s -o /dev/null -w "%{http_code} %{time_total}" --max-time 70 "$u"); \
+    echo "$code $u" >> "$HTTP" ) &
+  PIDS+=($!)
 done
-wait $(jobs -p | grep -v $MONPID) 2>/dev/null
+for p in "${PIDS[@]}"; do wait "$p" 2>/dev/null; done
 sleep 3
 kill $MONPID 2>/dev/null; wait $MONPID 2>/dev/null
 
+# ---------------------------------------------------------------------------
+# PORTAO 2 — quantas entraram, quantas sairam. Sem isto o instrumento vira o resultado.
+# ---------------------------------------------------------------------------
+MEDIDOS=0; [ -f "$HTTP" ] && MEDIDOS=$(grep -c . "$HTTP")
+AMOSTRAS=0; [ -f "$DB" ] && AMOSTRAS=$(grep -c '|' "$DB")
+echo "--- PORTAO DE CONTAGEM ---"
+echo "  URLs disparadas: $ESPERADO   respostas gravadas: $MEDIDOS   amostras do banco: $AMOSTRAS"
+FALHOU=0
+if [ "$MEDIDOS" -ne "$ESPERADO" ]; then
+  echo "  *** FALHOU: $((ESPERADO - MEDIDOS)) resposta(s) nao chegaram ao arquivo."
+  echo "  *** Os numeros abaixo estao INCOMPLETOS. Nao usar para comparacao."
+  FALHOU=1
+fi
+if [ "$AMOSTRAS" -lt 10 ]; then
+  echo "  *** FALHOU: so $AMOSTRAS amostra(s) de Threads_running (minimo 10)."
+  echo "  *** Um pico tirado de poucas amostras nao mede pico. Ver HANDOVER secao 16.3."
+  FALHOU=1
+fi
+
 echo "--- HTTP ---"
-python3 - "$S/carga-$ROT-http.txt" <<'PY'
-import sys,collections
-ls=[l.split() for l in open(sys.argv[1]) if l.strip()]
+python3 - "$HTTP" <<'PY'
+import sys,collections,os
+p=sys.argv[1]
+if not os.path.exists(p):
+    print("  (arquivo de saida nao existe — nada foi gravado)"); raise SystemExit
+ls=[l.split() for l in open(p) if l.strip()]
 codes=collections.Counter(l[0] for l in ls)
 ts=sorted(float(l[1]) for l in ls)
 print("  respostas:", dict(codes))
@@ -52,10 +131,13 @@ if ts:
     print(f"  acima de 5s: {sum(1 for t in ts if t>5)} de {len(ts)}")
 PY
 echo "--- BANCO (durante) ---"
-python3 - "$S/carga-$ROT-db.txt" <<'PY'
-import sys
+python3 - "$DB" <<'PY'
+import sys,os
+p=sys.argv[1]
+if not os.path.exists(p):
+    print("  (arquivo de saida nao existe — nada foi gravado)"); raise SystemExit
 tr=[];calc=[]
-for l in open(sys.argv[1]):
+for l in open(p):
     l=l.strip()
     if '|' in l:
         a,b=l.split('|');
@@ -67,3 +149,6 @@ if tr:
 else:
     print("  (sem amostras)")
 PY
+echo "--- arquivos ---"
+ls -l "$HTTP" "$DB" 2>/dev/null | awk '{print "  "$5" bytes  "$9}'
+exit $FALHOU

@@ -10,6 +10,15 @@ custo, contrato com terceiros ou escolha editorial.
 
 Cada item segue a mesma estrutura: o que é, por que importa, e o que precisa ser decidido.
 
+> ### Acrescentado em 27/08/2026 — **em boa parte já resolvido no mesmo dia**
+>
+> Dois pontos de segurança foram levantados e **o gestor fechou os dois no mesmo dia.** O item 12
+> está **resolvido**. O item 11 ficou **reduzido**: o banco de produção ainda tem endereço na
+> internet, mas **não há mais nenhuma regra de firewall permitindo entrada por ele**.
+>
+> O que continua em aberto é uma decisão de desenho, não um risco em curso. Detalhe nos
+> **itens 11 e 12**.
+
 ---
 
 ## 1. Conteúdo mais largo que a tela em celulares estreitos
@@ -71,46 +80,70 @@ assim que existir a peça no tamanho certo. **A decisão é comercial.**
 
 ---
 
-## 3. Contagem de visualizações dos anúncios está desligada
+## 3. Contagem de visualizações dos anúncios — **CORRIGIDO em 27/08/2026**
 
-### O que é
+> ### ⚠️ A versão anterior deste item estava errada, e a correção muda a decisão
+>
+> Até 27/08/2026 este item afirmava que a contagem de anúncios estava **desligada** e que o
+> último registro era de **28 de junho de 2026**. **Não é verdade em produção.**
+>
+> Aquele levantamento foi feito no **ambiente de homologação**, em 11/08. Homologação é uma cópia
+> de teste do site, e o estado dela **não vale como retrato do site no ar**. A conferência foi
+> feita no lugar errado e a conclusão viajou para este documento como se valesse para produção.
+>
+> **Se alguém do comercial deixou de cobrar relatório, ou negociou renovação sem número, com base
+> na versão anterior deste item, a informação que tinha estava errada.**
 
-O sistema de anúncios do site (AdRotate) tem um contador de exibições e cliques. Esse contador
-está **desligado nos anúncios que estão no ar**, nos dois ambientes.
+### O que está acontecendo de verdade, medido no site no ar
 
-Números levantados em 11/08/2026, no ambiente de homologação:
+A contagem **está ligada e funcionando**. Medido em 27/08/2026, no meio da tarde:
 
-- **151 anúncios** cadastrados no total
-- **3 anúncios ativos** no momento — e **nenhum dos três** tem a contagem ligada
-- **104 anúncios expirados** (campanhas encerradas)
-- **O último registro de estatística é de 28 de junho de 2026** — de lá para cá, nada foi
-  contabilizado
+| | |
+|---|---|
+| Configuração geral do sistema | **ligada** |
+| Exibições registradas **só no dia 27/08** | **20.825** |
+| Ritmo medido ao vivo | **cerca de 70 registros por minuto**, ou ~4.200 por hora |
+| Cliques registrados nas últimas 24 horas | 8 |
 
-### Por que importa
+### Quais anúncios estão sendo contados
 
-Sem esse dado, não há como comprovar entrega ao anunciante nem embasar preço de renovação. Se
-algum contrato prevê relatório de exibições, esse relatório hoje não pode ser emitido a partir
-do sistema.
+Dos **3 anúncios ativos**, **2 têm a contagem ligada** e 1 não tem:
 
-### O que é preciso decidir e saber
+| Anúncio | Exibições em 27/08 | Cliques |
+|---|---|---|
+| AGOSTO — FILME — MUITO PRAZER (peça 1) | **13.583** | 4 |
+| AGOSTO — FILME — MUITO PRAZER (peça 2) | **7.951** | 4 |
+| O terceiro anúncio ativo | **não é contado** | — |
 
-Três pontos, e o terceiro é o mais importante:
+No cadastro completo há 160 anúncios: 3 ativos, 4 programados, 2 expirados, 150 arquivados.
 
-1. **Como se liga:** é uma caixa de seleção na tela de edição de cada anúncio. Não é uma
-   configuração geral do site — é **um a um**.
-2. **Não é retroativo.** Ligar hoje começa a contar de hoje. O período de 28/06 até a data em
-   que for ligado **não é recuperável** por essa via.
-3. **O volume de trabalho:** para passar a medir tudo, seriam os anúncios ativos (hoje 3, e os
-   que entrarem daqui em diante). Se a intenção for também deixar os 104 expirados prontos para
-   futuras reativações, é ajuste individual em cada um.
+### ⚠️ O limite que importa para contrato: **os dados duram cerca de um dia**
 
-**Recomendação prática:** ligar a contagem nos 3 ativos agora (leva poucos minutos) e adotar
-como regra que todo anúncio novo já entre com a opção marcada. Os expirados só quando forem
-reaproveitados.
+Este é o ponto que não estava em nenhuma versão anterior deste documento.
 
-> Nota: existem 3 anúncios ativos no ambiente de homologação que foram reativados **apenas
-> como material de teste**, para validar o layout. Eles não devem ir para o site de produção,
-> e a equipe técnica já registrou como desfazer isso.
+O próprio sistema de anúncios roda uma **limpeza automática diária** que apaga os registros
+antigos. Conferido: neste momento a base guarda de **26/08 às 10h48** até **27/08 às 11h30** — ou
+seja, **pouco mais de 24 horas**. A próxima limpeza está agendada para hoje às 18h05 (horário de
+Brasília).
+
+**Consequência prática, em uma frase: dá para emitir relatório do dia; não dá para emitir
+relatório do mês nem da campanha inteira.** O número de ontem já não existe mais no sistema.
+
+### O que precisa ser decidido
+
+1. **O terceiro anúncio ativo deve passar a ser contado?** É uma caixa de seleção na tela de
+   edição daquele anúncio. Enquanto estiver desmarcada, aquela campanha não tem número nenhum.
+2. **O histórico precisa ser guardado?** Se algum contrato prevê relatório mensal ou de campanha,
+   **alguém precisa anotar o número todo dia antes da limpeza automática** — ou o site precisa
+   passar a guardar esse total em outro lugar. Hoje, o dado nasce e some em 24 horas.
+3. **A partir de quando vale.** A contagem que existe hoje começou a valer quando foi ligada em
+   cada anúncio; não é retroativa. Não sabemos dizer a data exata de cada peça sem abrir uma a
+   uma — se isso for necessário para uma renovação, avisem e levantamos.
+
+### O que foi feito, e o que não foi
+
+**Nada foi alterado.** Nenhuma configuração de anúncio foi ligada, desligada ou mexida. Este item
+apenas corrige a informação.
 
 ---
 
@@ -292,11 +325,14 @@ campo ficar vazio. Está aqui para não se perder.
 |---|-----------|-----------------|----------|
 | 1 | Conteúdo largo em celular estreito | Abrir frente de trabalho (problema **pré-existente**) | Baixa |
 | 2 | Publicidade no topo em celular | **Comercial** — criar peça 320x100 ou não vender | Média (receita) |
-| 3 | Contagem de exibição de anúncios | **Operacional** — ligar nos ativos, virar rotina | **Alta** (comprovação ao anunciante) |
+| 3 | Contagem de exibição de anúncios — **item corrigido em 27/08** | **Operacional** — a contagem **já está ligada** em 2 dos 3 ativos; o que falta é o 3º anúncio e **guardar o histórico, que hoje some em 24h** | **Alta** (comprovação ao anunciante) |
 | 4 | Logotipo branco vetorial | Solicitar arquivo ao designer | Baixa (acabamento) |
 | 5 | Limite de 70/160 caracteres | Nenhuma — só conferir após atualizar o tema | Informativa |
 | 6 | Anúncio novo demora 3h para aparecer | **Operacional** — deixar a data de início em branco | Média (perda de exibição paga) |
 | 7 | 13 descrições cortadas no meio | **Operacional, na PRODUÇÃO** — apagar o campo de descrição do Yoast nas 13 | Baixa |
+| 13 | **AdRotate fechado em duas frentes: o editor e a subida do PHP** | **Comercial/estratégica** — recuperar a licença, trocar de plugin, ou aceitar publicidade fora do editor | Média — **sem data, mas agora com dois prazos convergindo** (02/09) |
+| 14 | **Carregamento de imagem depende do Smush, e ninguém sabia** | **Nenhuma agora** — é aviso a ler antes de remover ou trocar plugin de imagem | Baixa — mas **alta se alguém mexer sem ler** (02/09) |
+| 15 | **Licença do ACF: fica mais cara quanto mais tarde** | **Comercial** — a conta não é a anuidade, é o retrabalho de revalidar 12 plugins | Média — **cresce sozinha** (02/09) |
 
 ---
 
@@ -428,3 +464,395 @@ não ser assunto da janela de migração do tema.
 
 **Fica para depois da virada**, com o site novo já estabilizado, para que qualquer efeito
 seja atribuível a uma coisa só.
+
+---
+
+## 10. Segurança: a tela de entrada do painel está aberta e visível
+
+**Levantado em 27/08/2026, durante a limpeza do banco. Observação, sem ação tomada.**
+
+### O que é
+
+A tela onde os jornalistas entram para publicar — o painel do WordPress — fica no endereço
+padrão, `https://bahia.ba/wp-login.php`, e responde normalmente a qualquer pessoa da internet.
+Não há nada escondendo esse endereço.
+
+Isso não é uma invasão nem um problema em curso. É a configuração padrão do WordPress, e é assim
+que a maioria dos sites funciona. Registramos porque **alguém já tentou mudar isso e a mudança
+foi desfeita pela metade.**
+
+### O que encontramos
+
+Existe instalado no site um programa chamado **WPS Hide Login**, cuja função é exatamente
+esconder esse endereço — trocá-lo por outro, conhecido só pela equipe. Ele está **desligado**.
+Mas a configuração que ele deixou continua gravada no banco: o endereço secreto seria
+`/acesso/`.
+
+O efeito visível hoje: quem digita `bahia.ba/acesso/` **não** chega a lugar nenhum útil. O
+WordPress não encontra a página, e o próprio WordPress "adivinha" o endereço mais parecido,
+levando o visitante para uma **matéria de política** cujo endereço começa com a mesma palavra.
+
+Ou seja: alguém instalou a proteção um dia, removeu depois, e não limpou a configuração. Ficou
+uma instrução órfã no banco e um endereço que leva a lugar errado.
+
+### Por que contamos isso
+
+Não é decisão nossa e não é urgente. Mas quem cuidar de segurança do portal precisa saber de
+duas coisas:
+
+1. **A porta de entrada do painel está no endereço que todo robô da internet testa primeiro.**
+   Quem quiser proteger melhor tem caminhos: reativar o WPS Hide Login, exigir segundo fator de
+   autenticação, ou restringir por endereço de rede.
+2. **Se alguém religar o WPS Hide Login sem revisar a configuração**, o painel passa a atender em
+   `/acesso/` e o endereço antigo `/wp-admin/` passa a devolver "página não encontrada" — está
+   assim gravado. Uma reativação distraída deixaria a redação sem saber por onde entrar.
+
+### O que precisa ser decidido
+
+Se vale investir em proteger a entrada do painel, e por qual caminho. **Nada foi alterado.**
+
+---
+
+# ⚠️ SEGURANÇA — dois pontos levantados em 27/08/2026
+
+Os dois apareceram por acaso, ao desenhar o isolamento de uma instância de teste do banco.
+**Nada foi alterado em nenhum dos dois.** O primeiro é o mais sério que este trabalho encontrou
+até hoje.
+
+---
+
+## 11. O banco de produção ainda tem endereço na internet — **risco fechado, desenho em aberto**
+
+> ### ✅ Resolvido em 27/08/2026, no mesmo dia do levantamento
+>
+> **A regra que permitia conexão de fora foi removida.** Hoje o banco tem endereço na internet,
+> mas **nenhuma regra de firewall autoriza entrada por ele** — não há como conectar.
+
+### O que era
+
+O banco de dados de produção estava publicado na internet, e o que impedia o mundo de conectar
+eram duas coisas: uma regra de firewall liberando **um único endereço de IP** e a senha do
+usuário administrador.
+
+### O que foi apurado sobre aquele endereço
+
+| Pergunta | Resposta |
+|---|---|
+| Nome reverso | `36.124.196.131.jectix.net.br` — nome automático de operadora |
+| Dono do bloco | **JECTIX TELECOM**, provedor de internet brasileiro |
+| Constava na documentação? | **Não**, em nenhum dos três repositórios do projeto |
+| Alguém no time reconheceu? | **Não.** Estava lá havia cerca de um ano |
+
+### Por que fechar foi a decisão certa
+
+Sendo linha de assinante de provedor, **o endereço pode ter mudado de dono** — a linha pode ter
+sido cancelada e reatribuída a outra pessoa, que passaria a ter a mesma permissão de rede sem que
+ninguém tivesse mexido em nada.
+
+E, como registrou o gestor: **reabrir leva dois minutos se alguém reclamar — e aí se descobre
+quem era.** Fechar primeiro e esperar a reclamação é mais barato que manter aberto um acesso que
+ninguém reivindica.
+
+### O que continua em aberto — e é decisão, não urgência
+
+O banco **continua tendo endereço na internet**, mesmo sem regra que permita entrada. É como uma
+porta na fachada, trancada e sem maçaneta: hoje não abre, mas ela está lá.
+
+**O desenho definitivo é tirar o endereço público**, deixando o banco responder só de dentro da
+rede privada da empresa na nuvem. E, para quando alguém precisar acessar direto, usar um caminho
+controlado — servidor de passagem (*bastion*) ou o serviço de acesso da própria AWS
+(*Session Manager*), que **registra quem entrou, quando e de onde**, não depende de o endereço da
+pessoa continuar o mesmo, e some quando a pessoa sai da empresa.
+
+**O que precisa ser decidido:** se vale fazer essa mudança agora, junto com a atualização do banco
+que já está planejada, ou se fica para depois. Não é urgente — o risco em curso foi fechado.
+
+---
+
+## 12. ✅ RESOLVIDO — o grupo "AcessoRestrito" não tem mais nenhuma regra
+
+### O que era
+
+Um grupo de regras de firewall chamado **"AcessoRestrito"** que, apesar do nome, tinha quatro
+regras de entrada — duas delas abertas para **a internet inteira**.
+
+### O que foi feito em 27/08/2026
+
+**As quatro regras foram removidas.** Conferido depois: o grupo tem **zero regras de entrada**.
+
+| Regra removida | O que era |
+|---|---|
+| porta 22, aberta ao mundo | acesso remoto a servidor (SSH) |
+| porta 9000, aberta ao mundo | Portainer, painel de administração de contêineres |
+| porta 7080, para um IP | OpenLiteSpeed, painel do servidor web |
+| porta 3306, para um IP | o acesso ao banco do item 11 |
+
+### O achado que apareceu ao remover
+
+**Três das quatro regras eram da máquina antiga**, a VPS desligada no dia anterior: SSH, Portainer
+e OpenLiteSpeed são serviços daquele servidor, que já não existe. As regras sobreviveram ao
+desligamento e continuavam apontando para portas de uma máquina terminada.
+
+E havia **um segundo endereço de assinante de provedor** — `179.105.128.46`, na regra do
+OpenLiteSpeed — que não tinha sido notado no levantamento original. Também removido.
+
+**É o padrão que se repete neste projeto: o que é desligado deixa configuração para trás, e a
+configuração órfã não avisa que ficou órfã.**
+
+### O que sobra
+
+O grupo continua existindo, sem regra nenhuma, porque ainda está associado ao banco de dados.
+Quando o banco ganhar um grupo próprio, este pode ser apagado. Está anotado no levantamento
+técnico de limpeza da AWS.
+
+**Nenhuma ação pendente da gestão neste item.**
+
+---
+
+## 13. O AdRotate está fechado em duas frentes — o editor e a subida do PHP — e não há de onde receber a correção
+
+> **Acrescentado em 01/09/2026.** Este item **substitui** o registro anterior, que dizia apenas
+> *"plugin pago sem licença, risco de segurança"*. **A natureza do problema mudou quando o
+> mecanismo apareceu medido: não é um risco difuso, é um prazo.**
+
+### O que é
+
+O WordPress está fechando um caminho de compatibilidade, e **dois blocos do AdRotate dependem
+dele para funcionar**.
+
+Quando alguém edita uma matéria, o editor do WordPress precisa desenhar os blocos numa área
+isolada do resto da tela. Blocos escritos no padrão antigo não sabem funcionar nessa área
+isolada — então o WordPress, por enquanto, **desliga o isolamento** para não quebrá-los.
+
+Medido no ambiente de homologação em 01/09/2026, o próprio WordPress avisa, no console do
+navegador, três vezes por carregamento da tela de edição:
+
+```
+O bloco "adrotate/advert"       está registrado com a API versão 1
+O bloco "adrotate/group"        está registrado com a API versão 1
+O bloco "fooplugins/foogallery" está registrado com a API versão 1
+
+"Isto significa que o editor pode funcionar sem o isolamento. Como TODOS os
+ editores passarao a funcionar isolados no futuro, ajuste o campo apiVersion
+ para 3 e teste o bloco dentro do editor isolado."
+```
+
+**A frase que importa é "todos os editores passarão a funcionar isolados no futuro".** É um aviso
+de remoção, publicado pelo próprio WordPress. **Não há data anunciada — mas há direção anunciada.**
+
+### Por que este item é diferente de "atualizar um plugin"
+
+**O AdRotate Professional é pago, e a licença não está configurada.** Verificado no ambiente:
+não há licença registrada, e o plugin **não oferece nenhuma atualização**. Ou seja: mesmo que o
+fabricante já tenha corrigido isso, **a correção não tem por onde chegar até nós.**
+
+O mesmo vale, por outro motivo, para o tema **Newspaper e os três plugins tagDiv**: eles também
+enfileiram recursos de forma incompatível com a área isolada.
+
+> ✅ **Corrigido em 03/09/2026 — os três plugins tagDiv TÊM canal.** Era o que se acreditava até
+> aqui, e estava errado. O canal existe: ele mora **dentro do próprio tema**, e não na loja de
+> plugins do WordPress. É por isso que a tela de "Atualizações" nunca os mostrou.
+>
+> Isso muda o que se pede: **para o tagDiv não é preciso comprar nada nem esperar o fabricante**
+> — a atualização já está ao nosso alcance. A restrição de licença continua valendo **só para o
+> AdRotate**, que é o assunto do resto deste item.
+
+### Por que importa
+
+O AdRotate **é a publicidade do site inteiro** — os grupos, os agendamentos e a contagem de
+entrega que sustenta a comprovação ao anunciante. Quando o WordPress remover o caminho antigo:
+
+- os dois blocos do AdRotate **param de funcionar dentro do editor**
+- quem escreve deixa de conseguir inserir ou ajustar publicidade **pela tela de edição**
+- o que já está publicado continua aparecendo no site: **o problema é de operação, não de exibição**
+
+**Hoje nada está quebrado.** O que existe é um aviso com direção definida, e um caminho de
+correção que está fechado do nosso lado.
+
+### O que é preciso decidir
+
+**A pergunta deixou de ser "vale a pena renovar a licença?".** Ela agora é:
+
+> ### O que fazemos quando o AdRotate parar de funcionar dentro do editor?
+
+São três saídas, e todas custam alguma coisa:
+
+| | Saída | O que custa | O que resolve |
+|---|---|---|---|
+| **A** | **Recuperar a licença do AdRotate** | mensalidade/anuidade do fabricante | Reabre o canal de atualização. **Não garante** que o fabricante vá corrigir — mas é a única saída em que a correção pode simplesmente chegar |
+| **B** | **Trocar de plugin de publicidade** | projeto de migração: recadastrar peças, grupos e agendamentos, e **reconstruir o histórico de entrega** | Sai da dependência de um fornecedor sem canal. É a saída mais cara e a mais definitiva |
+| **C** | **Aceitar publicidade fora do editor** | mudança de rotina da redação: inserir anúncio por outro caminho, não pela tela de edição | Custo zero de dinheiro. Passa o custo para a operação diária, todos os dias |
+
+**Nenhuma das três é urgente esta semana.** As três ficam mais caras quanto mais tarde forem
+escolhidas — a **B** porque o histórico de entrega cresce, e a **C** porque a rotina se consolida.
+
+### ✅ Um dos três já saiu — restam só os do AdRotate
+
+O **FooGallery**, o terceiro bloco da lista, era gratuito e tinha canal de atualização.
+**Atualizado em 01/09/2026, de 2.4.32 para 3.2.6**, e medido no editor logo depois:
+
+```
+antes : 3 blocos legados — adrotate/advert, adrotate/group, fooplugins/foogallery
+depois: 2 blocos legados — adrotate/advert, adrotate/group
+        fooplugins/foogallery agora registra apiVersion 3, o que o WordPress pedia
+```
+
+De **126 blocos** registrados no editor, **restam exatamente dois em padrão antigo, e os dois são
+do AdRotate.** Foi resolvido sem nenhuma decisão de vocês, porque havia por onde a correção chegar.
+
+> **É o contraste que define este item.** O FooGallery custou uma atualização de rotina. Os dois
+> do AdRotate não têm por onde ser corrigidos enquanto a licença não existir — e é por isso que
+> eles viraram decisão de vocês, e o FooGallery não.
+
+### 🔴 E agora são DOIS prazos, no mesmo plugin, pelo mesmo motivo
+
+**Acrescentado em 02/09/2026.** Apareceu um segundo prazo sobre o AdRotate, por um caminho
+completamente diferente do editor — e ele **converge** com o primeiro.
+
+O portal roda hoje em **PHP 8.3**. A próxima versão da linguagem, a **8.4**, deixa de aceitar uma
+forma antiga de escrever código. Isso não quebra nada de imediato: **cada uso escreve uma linha de
+aviso no log**, a cada execução.
+
+Quando isso foi medido pela primeira vez, em 29/08, havia **280 usos** espalhados por vários
+plugins, e a conclusão foi *"não dá para subir para o 8.4: quase tudo está em código de terceiro,
+e depende de eles lançarem correção"*. **Um deles lançou.** Em 02/09 o WP Offload Media — a peça
+que sozinha respondia por 87% do problema — foi atualizado, e o número dele caiu de **248 para 1**.
+
+```
+antes do lote 3 : 286 usos no total
+depois          :  39
+```
+
+**O que sobrou muda a natureza do item:**
+
+| Onde | Usos | Situação |
+|---|---|---|
+| **`adrotate-pro`** | **9** | ❌ **pago e sem licença — sem canal, como no editor** |
+| Bibliotecas de outros plugins com canal aberto | 28 | 🟡 chegam quando os fabricantes lançarem |
+| **Código do nosso repositório** | **2** | ✅ **é trabalho nosso, e podemos fazer** |
+
+> **É o mesmo plugin, o mesmo problema de canal, e agora com dois relógios andando juntos:** o
+> AdRotate é o que trava o editor isolado **e** um dos que travam a subida do PHP. As três saídas
+> acima (**A** licença, **B** trocar de plugin, **C** aceitar fora do editor) **não mudam** — mas
+> o que se ganha escolhendo a **A** ou a **B** ficou maior, porque resolve dois problemas de uma
+> vez, e o que se perde ficando na **C** também.
+
+**Nenhum dos dois prazos é desta semana**, e nenhum quebra o site hoje. O que mudou é que o
+AdRotate deixou de ser "um plugin com um problema" e passou a ser **o único ponto do portal que
+está fechado em duas frentes ao mesmo tempo.**
+
+---
+
+## 14. O carregamento de imagem do site depende de um plugin que ninguém escolheu para isso
+
+> **Acrescentado em 02/09/2026.** Não pede decisão hoje. É um **aviso amarrado a uma decisão
+> futura** — e sem ele, essa decisão seria tomada sem saber o que custa.
+
+### O que foi descoberto
+
+Ao atualizar o plugin **Smush** (rotina de manutenção), medimos o HTML que o site entrega. Todas
+as imagens de todas as páginas testadas carregam **sob demanda**, conforme o leitor rola — e
+**100% disso vem do Smush**. O mecanismo equivalente do próprio WordPress está **desligado**, em
+todas as páginas, sem exceção.
+
+| Página | imagens | carregam sob demanda pelo Smush | pelo WordPress |
+|---|---|---|---|
+| Home | 17 | **17** | **0** |
+| Uma editoria | 18 | **17** | **0** |
+| Uma matéria | 10 | **10** | **0** |
+
+É o comportamento correto do plugin: quando ele assume a tarefa, desliga a do WordPress para não
+haver dois mecanismos brigando. **O efeito é que não há rede embaixo.**
+
+### Por que isso importa
+
+**Se o Smush for removido ou trocado, o site passa a baixar todas as imagens de uma vez.** Na
+home são 17 imagens antes da primeira rolagem, num site em que a maior parte do acesso é por
+celular, muitas vezes em rede móvel.
+
+E há uma ironia no meio: **o Smush está instalado por causa da compressão de imagem — que não está
+ligada.** Só **5.844 dos 155.675** arquivos têm dado de otimização. **O plugin foi mantido por um
+motivo e hoje é indispensável por outro**, e isso não estava escrito em lugar nenhum.
+
+### O que se pede
+
+Nada agora. O que se pede é que **este item seja lido antes** de qualquer decisão de remover,
+trocar ou "limpar" plugins de imagem:
+
+- Se o Smush sair, **o substituto precisa assumir o carregamento sob demanda no mesmo dia** — não
+  depois
+- Numa comparação entre plugins, esse recurso **é requisito**, não item desejável
+
+---
+
+## 15. A licença do ACF: quanto mais tarde ela chegar, mais cara fica
+
+> **Acrescentado em 02/09/2026**, no fechamento dos 7 lotes de plugins.
+
+### O que aconteceu
+
+Doze plugins do site foram atualizados em dois dias, cada um validado por inteiro: mídia, autoria,
+SEO, permissões, tela de edição, logs. **Um décimo terceiro ficou de fora — o ACF PRO**, porque a
+licença não está ativa e o fabricante **não entrega o arquivo** sem ela.
+
+### Por que isso não é só "um plugin desatualizado"
+
+O ACF é o que guarda **o subtítulo e a imagem de cada matéria**, e mais cinco grupos de campos. É
+a peça de que todo o resto depende.
+
+**Os doze foram validados com o ACF na versão antiga.** Quando ele finalmente subir, ele muda por
+baixo de todos os doze — e **a validação inteira precisa ser refeita**.
+
+| | |
+|---|---|
+| O que parece custar | atualizar um plugin |
+| O que custa de verdade | **refazer o ciclo dos doze** |
+| Quanto esse ciclo levou | **dois dias** de trabalho técnico |
+
+### O que se pede
+
+**Nada de imediato — o site funciona.** O que se pede é que a decisão sobre a licença **leve em
+conta o retrabalho**, e não só o preço da anuidade:
+
+- **quanto mais cedo a licença aparecer, menos coisa haverá para revalidar**
+- cada atualização nova feita antes dela **acrescenta um item** à lista de revalidação
+- é a única pendência desta lista que **fica mais cara sozinha**, sem ninguém fazer nada
+
+---
+
+## 16. As notificações por push do site não estão funcionando — e não é falta de atualização
+
+### O que foi descoberto
+
+Em 03/09/2026, ao medir o console do navegador antes e depois de atualizar o plugin **OneSignal**,
+a mesma mensagem apareceu nas duas leituras:
+
+> *A opção "Meu site não é totalmente HTTPS" deixou de ser suportada a partir da versão 16 do
+> OneSignal.*
+
+O site **é** inteiramente HTTPS. Mas a conta do OneSignal está configurada como se **não** fosse,
+e o programa do OneSignal se recusa a iniciar por causa disso.
+
+### O que isso significa na prática
+
+**O sino de notificação não carrega, e ninguém é inscrito nem recebe aviso de matéria nova.**
+Não há erro visível para quem escreve nem para quem lê — a caixa simplesmente não aparece.
+
+### Por que não se resolve atualizando
+
+Foi exatamente o que se testou. A atualização do plugin (3.9.2 → 3.9.3) foi aplicada e **a
+mensagem continuou igual**. O ajuste não é no site: é **no painel da conta do OneSignal**, numa
+opção de configuração que ficou marcada de um tempo em que o site ainda não era todo HTTPS.
+
+### O que se pede
+
+**Acesso ao painel do OneSignal** — ou que alguém que já o tenha desmarque a opção "My site is not
+fully HTTPS" nas configurações da plataforma web. É uma caixa de seleção.
+
+Vale saber **desde quando** está assim, porque isso diz quantos leitores deixaram de ser
+alcançados. Não temos essa data: o plugin não registra a falha em lugar nenhum — ela só existe no
+console do navegador de quem visita.
+
+> **Nota de método.** Esta falha só apareceu porque o console foi medido **antes** e **depois** da
+> atualização. Se tivesse sido medido só depois, a leitura óbvia seria "a atualização quebrou o
+> push" — e o tempo teria ido para reverter um plugin que não tinha culpa nenhuma.

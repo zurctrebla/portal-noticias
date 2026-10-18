@@ -10,24 +10,24 @@ if (!class_exists("nxs_snapClassWB")) { class nxs_snapClassWB extends nxs_snapCl
   function showNewNTSettings($ii){ $defO = array('nName'=>'', 'do'=>'1', 'appKey'=>'', 'appSec'=>'', 'inclTags'=>'1', 'cat'=>0, 'gal'=>'', 'attchImg'=>1, 'msgFormat'=>"%EXCERPT%\r\n\r\n%URL%", 'imgSize'=>'original'); $this->showGNewNTSettings($ii, $defO); }
   //#### Show Unit  Settings  
   function checkIfSetupFinished($options) { return !empty($options['appAppUserID']) && !empty($options['accessToken']); }
-  public function doAuth() { $ntInfo = $this->ntInfo; global $nxs_snapSetPgURL; if (isset($_GET['acc'])) $options = $this->nt[sanitize_text_field($_GET['acc'])];
-    if ( isset($_GET['auth']) && $_GET['auth']==$ntInfo['lcode']){
+  public function doAuth() { $ntInfo = $this->ntInfo; global $nxs_snapSetPgURL; if (isset($_GET['acc'])) { $acc = absint($_GET['acc']); if (isset($this->nt[$acc])) $options = $this->nt[$acc]; }
+    if (isset($_GET['auth']) && $_GET['auth']==$ntInfo['lcode']){ if (!nxs_snap_user_can_access() || !isset($options)) return;
         /*
       $consumer_key = $options['appKey']; $consumer_secret = $options['appSec']; $callback_url = $nxs_snapSetPgURL."&auth=".$ntInfo['lcode']."a&acc=".$_GET['acc'];
       $tum_oauth = new nxs_OAuthBaseCl($consumer_key, $consumer_secret); $tum_oauth->baseURL = 'https://api.weibo.com'; $tum_oauth->request_token_path = '/v1/oauth/request_token';
       $request_token = $tum_oauth->getReqToken($callback_url); $options['oAuthToken'] = $request_token['oauth_token']; $options['oAuthTokenSecret'] = $request_token['oauth_token_secret']; 
       prr($tum_oauth); prr($options);               
       */
-      global $nxs_snapSetPgURL; $state = $ntInfo['lcode'].'a-'.sanitize_text_field($_GET['acc']);
+      global $nxs_snapSetPgURL; $state = nxs_oauth_state_create('wb', $acc);
       $url = 'https://api.weibo.com/oauth2/authorize?client_id='.nxs_gak($options['appKey']).'&redirect_uri='.urlencode($nxs_snapSetPgURL).'&scope=all&response_type=code&state='.$state;
-      echo '<br/><br/>All good?! Redirecting ..... <script type="text/javascript">window.location = "'.$url.'"</script>'; 
+      echo '<br/><br/>All good. Redirecting ..... <script type="text/javascript">window.location = "'.esc_url($url).'"</script>'; 
       die();
     }
-    if ( isset($_GET['code']) && isset($_GET['state']) && stripos($_GET['state'],$ntInfo['lcode'].'a-')!==false){ $ii = explode('-',sanitize_text_field($_GET['state'])); $ii = $ii[1]; $options = $this->nt[$ii];
-      $appkey = nxs_gak($options['appKey']); $appSecret = nxs_gas($options['appSec']); $url = 'https://api.weibo.com/oauth2/access_token?client_id='.$appkey.'&client_secret='.$appSecret.'&grant_type=authorization_code&redirect_uri='.urlencode($nxs_snapSetPgURL).'&code='.sanitize_text_field($_GET['code']);
-      $rep = nxs_remote_post($url); $cont = json_decode($rep['body'], true); if (empty($cont) || empty($cont['access_token'])) {prr($cont); prr($rep); die();}      
+    if (isset($_GET['code']) && isset($_GET['state']) && strpos(wp_unslash($_GET['state']), 'nxs-wb-') === 0){ if (!nxs_snap_user_can_access() || !nxs_oauth_state_validate(wp_unslash($_GET['state']), 'wb', $ii) || !isset($this->nt[$ii])) wp_die(esc_html__('Invalid or expired Weibo authorization state.', 'social-networks-auto-poster-facebook-twitter-g'), '', array('response'=>403)); $options = $this->nt[$ii];
+      $appkey = nxs_gak($options['appKey']); $appSecret = nxs_gas($options['appSec']); $fields = array('client_id'=>$appkey,'client_secret'=>$appSecret,'grant_type'=>'authorization_code','redirect_uri'=>$nxs_snapSetPgURL,'code'=>sanitize_text_field(wp_unslash($_GET['code'])));
+      $rep = nxs_remote_post('https://api.weibo.com/oauth2/access_token', array('body'=>$fields)); $cont = !is_nxs_error($rep) ? json_decode($rep['body'], true) : array(); if (empty($cont) || empty($cont['access_token'])) die(esc_html__('Weibo token exchange failed.', 'social-networks-auto-poster-facebook-twitter-g'));
       $options['accessToken'] = $cont['access_token']; $options['appAppUserID'] = $cont['uid']; $options['appAppUserName'] = $cont['uid'];  nxs_save_glbNtwrks($ntInfo['lcode'],$ii,$options,'*');  //prr($options); die();
-      if (!empty($options['appAppUserID'])) {  echo '<br/><br/>All good?! Redirecting ..... <script type="text/javascript">window.location = "'.$nxs_snapSetPgURL.'"</script>';  die();}
+      if (!empty($options['appAppUserID'])) { echo '<br/><br/>All good. Redirecting ..... <script type="text/javascript">window.location = "'.esc_url($nxs_snapSetPgURL).'"</script>'; die();}
         else die("<span style='color:red;'>ERROR: Authorization Error: <span style='color:darkred; font-weight: bold;'>".print_r($uinfo, true)."</span></span>");              
     }
   }  

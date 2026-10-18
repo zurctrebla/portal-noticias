@@ -9,13 +9,13 @@
                 {
                     $options = TTO_functions::get_settings();
                     
-                    if ( isset($_POST['to_form_submit']) &&  isset ( $_POST['to_form_nonce'] )  &&  wp_verify_nonce( wp_unslash ( $_POST['to_form_nonce'] ),'to_form_submit') )
+                    if ( isset($_POST['to_form_submit']) &&  isset ( $_POST['to_form_nonce'] )  &&  wp_verify_nonce( sanitize_text_field ( wp_unslash ( $_POST['to_form_nonce'] ) ),'to_form_submit') )
                         {
-                            $options['show_reorder_interfaces']         =   isset ( $_POST['show_reorder_interfaces'] ) ?   preg_replace( '/[^a-z]/', '', $_POST['show_reorder_interfaces'] )   :   "";
-                            $options['capability']                      =   isset ( $_POST['capability'] )              ?   preg_replace( '/[^a-zA-Z0-9_\-]/', '', $_POST['capability'] )       :   "";
+                            $options['show_reorder_interfaces']         =   isset ( $_POST['show_reorder_interfaces'] ) ?   preg_replace( '/[^a-z]/', '', array_map( 'sanitize_text_field', wp_unslash ( $_POST['show_reorder_interfaces'] ) ) )   :   "";
+                            $options['capability']                      =   isset ( $_POST['capability'] )              ?   preg_replace( '/[^a-zA-Z0-9_\-]/', '', sanitize_text_field ( wp_unslash ( $_POST['capability'] ) ) )       :   "";
                             
-                            $options['autosort']                        =   isset($_POST['autosort'])     ? intval($_POST['autosort'])    : '';
-                            $options['adminsort']                       =   isset($_POST['adminsort'])    ? intval($_POST['adminsort'])   : '';
+                            $options['autosort']                        =   isset($_POST['autosort'])                   ?   preg_replace( '/[^a-zA-Z0-9]/', '', $_POST['autosort'] )    : '';
+                            $options['adminsort']                       =   isset($_POST['adminsort'])                  ?   preg_replace( '/[^a-zA-Z0-9]/', '', $_POST['adminsort'] )   : '';
                                 
                             ?><div class="updated fade"><p><?php esc_html_e('Settings Saved', 'taxonomy-terms-order') ?></p></div><?php
 

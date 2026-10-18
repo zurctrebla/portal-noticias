@@ -1150,3 +1150,441 @@ a virada seja atômica, e confirme depois que **404 responde em ~2 s** e que
 da infraestrutura, os manifestos agora vivem em `kubernetes/prod/**` (seção 8.1) e a chave do
 cache distingue dispositivo: confira `X-Bahia-Device` em 20 acessos de desktop seguidos antes
 de dar a virada por encerrada (seção 8.5).
+
+---
+
+## 10. ✅ PORTÃO DO YOAST 28.4 EM PRODUÇÃO — respondido em 02/09/2026, e está LIBERADO
+
+**Substitui a versão anterior desta seção, que pedia medição.** As medições foram feitas, **em
+produção, somente leitura**, e as quatro perguntas têm resposta.
+
+### A pergunta que estava por trás: o Yoast 28.4 cria trabalho de fundo em produção?
+
+**Não. Nenhum.** E a prova é mais forte do que "medimos e deu pouco":
+
+```
+wordpress-seo/src/values/indexables/indexable-builder-versions.php
+
+  27.7  ->  'post' => 2      'term' => 2      'user' => 2 ...
+  28.4  ->  'post' => 2      'term' => 2      'user' => 2 ...     IDENTICO
+```
+
+O Yoast marca cada indexável com a **versão do construtor** que o gerou, e reconstrói o que
+estiver abaixo da versão atual. **A 28.4 não muda nenhuma dessas versões** — então nenhum
+indexável existente vira "desatualizado" pela atualização. **Não há reindexação a disparar.**
+
+### 1. Quantos posts sem linha de indexável existem em produção hoje?
+
+**Zero.** Medido com a lista de tipos do próprio Yoast (`get_indexable_post_types()`, 31 tipos,
+sem `attachment`):
+
+```
+anti-join do Yoast, LIMIT 15 : 1.777 / 1.673 / 1.583 ms   ->  0 linhas
+contagem completa            : 0 posts, em 1.558 ms
+indexaveis de post           : 265.645, TODOS em version='2'
+posts publicaveis            : 275.109
+```
+
+> ⚠️ **Uma medição minha errada, corrigida antes de virar número.** A primeira tentativa usou
+> `get_post_types(['public'=>true])` e devolveu **157.800**. O erro era incluir `attachment` —
+> são 155 mil anexos que o Yoast **não** indexa. A lista do plugin é a única que vale.
+
+**Homolog é o oposto**, e por isso quebrou: 23.654 posts sem indexável **mais 114.873 indexáveis
+em `version='0'`** — cerca de **138 mil** candidatos. São linhas antigas, do retrato de produção
+de 28/07, que nunca foram reconstruídas porque **ninguém navega em homolog**. Produção convergiu
+sozinha, com tráfego real; homolog ficou parada.
+
+### 2. O pool de 11 GB absorve o custo ou só o esconde?
+
+**Absorve, e dá para ver a diferença de ordem de grandeza:**
+
+| | homolog | **produção** |
+|---|---|---|
+| `innodb_buffer_pool_size` | **128 MB** (não 256, como os registros supunham) | **11.264 MB** |
+| `wp_posts` | 1,1 GB | 1,1 GB |
+| O mesmo anti-join, `LIMIT 15` | **13 a 28 minutos** | **~1,6 s** |
+| Candidatos a indexar | ~138.000 | **0** |
+
+Em produção a tabela cabe no pool e a varredura é em memória. **E, com zero candidatos, ela varre,
+não acha nada e para.**
+
+### 3. O `wpseo_indexable_index_batch` já roda em produção HOJE, na 27.7?
+
+**Roda, e essa é a resposta mais importante desta seção.**
+
+```
+wp_next_scheduled('wpseo_indexable_index_batch') : agendado
+intervalo                                        : fifteen_minutes
+has_action(...)                                  : true
+```
+
+**De 15 em 15 minutos, hoje, na 27.7, antes de qualquer atualização.** Ou seja: o mecanismo que
+derrubou homolog **não é novidade da 28.4** — ele já está em produção há tempo, custando ~1,6 s a
+cada 15 minutos e não achando nada.
+
+> **Isto desarma a hipótese de que o lote 6 traria um risco novo.** O risco que homolog sofreu é
+> de **backlog + banco pequeno**, e produção não tem nem um nem outro.
+
+### 4. Desagendar em produção é aceitável? Tem efeito colateral no sitemap e nas meta tags?
+
+**Não é necessário, e por isso a pergunta muda de tom.** Com zero candidatos, desagendar
+economizaria 1,6 s a cada 15 minutos e **não mudaria nada mais**.
+
+Sobre os efeitos colaterais, caso um dia seja preciso:
+
+| | efeito de desagendar |
+|---|---|
+| `title`, `meta description`, canonical, Open Graph | **nenhum** — o indexável é construído **sob demanda**, quando a página é pedida |
+| Sub-sitemaps (`post-sitemap.xml`, `page-sitemap.xml`) | **nenhum** — leem os indexáveis existentes |
+| Páginas nunca visitadas | perdem o preenchimento **antecipado**; a primeira visita paga o custo, uma vez |
+
+**O trabalho de fundo só ADIANTA o que aconteceria de qualquer jeito.** Desligá-lo troca custo de
+fundo por custo sob demanda; não desliga funcionalidade. Conferido em homolog, com o cron
+desligado: as 5 telas amostradas mantiveram `title` e `description` idênticos.
+
+### ✅ Conclusão do portão
+
+**O Yoast 28.4 pode subir para produção.** Não há reindexação a disparar, o cron que existiria já
+existe, e o custo dele hoje é de 1,6 s a cada 15 minutos sobre zero candidatos.
+
+**O que continua valendo acompanhar na primeira hora** — não por causa da 28.4, mas porque agora
+sabemos que o mecanismo existe:
+
+1. `wpseo_cleanup_cron` (esse **é** novo na 28.x): de hora em hora, teto de 1.000 linhas por
+   consulta, filtrável por `wpseo_cron_query_limit_size`
+2. Se a contagem de candidatos deixar de ser zero — o que aconteceria se uma importação em massa
+   criasse posts sem indexável — **o anti-join volta a ter o que procurar**, e aí o custo cresce
+3. A válvula, se um dia for preciso: o mu-plugin `bahia-yoast-indexacao-fundo.php`, hoje ativo
+   **só em homolog**, com a condição de ambiente na primeira linha do corpo
+
+---
+
+## 11. 🔴 AS QUATRO VERIFICAÇÕES OBRIGATÓRIAS — no pod, depois do deploy
+
+**O merge `develop → main` leva dois mu-plugins que NÃO devem agir em produção.** Os dois têm
+guarda de ambiente na primeira linha do corpo; **isto aqui é conferir que a guarda funcionou.**
+
+| Arquivo | O que faria se a guarda falhasse |
+|---|---|
+| `bahia-homolog-noindex.php` | **tiraria o `bahia.ba` do Google**, em silêncio |
+| `bahia-yoast-indexacao-fundo.php` | pararia a indexação antecipada do Yoast |
+
+> **Não presumir do código. Rodar no pod, sobre o HTML e os cabeçalhos que produção está
+> servindo.** Se **qualquer uma** falhar: **rollback imediato.** O site sair do índice é dano que
+> leva **semanas** para desfazer, e não aparece em log nenhum enquanto acontece.
+
+| # | Verificação | Esperado |
+|---|---|---|
+| **1** | `get_option('blog_public')` | **1** |
+| **2** | `<meta name="robots">` em **home, um archive e uma matéria** | **`index, follow`** — nenhum `noindex` |
+| **3** | cabeçalho `x-robots-tag` em `/`, `/sitemap_index.xml` e `/feed/` | **ausente nas três** |
+| **4** | `wp_next_scheduled('wpseo_indexable_index_batch')` | **≠ `false`** — ele DEVE seguir agendado |
+
+```bash
+POD=$(kubectl -n bahia-wordpress get pods -l app=wordpress -o jsonpath='{.items[0].metadata.name}')
+
+# 1 e 4 — estado interno
+kubectl -n bahia-wordpress exec $POD -c wordpress -- php -r '
+define("WP_USE_THEMES",false); require_once "/var/www/html/wp-load.php";
+echo "ambiente   : ".bahia_ambiente()."\n";
+echo "blog_public: ".var_export(get_option("blog_public"),true)."\n";
+echo "cron Yoast : ".var_export(wp_next_scheduled("wpseo_indexable_index_batch"),true)."\n";'
+
+# 2 — o HTML servido
+for u in "/" "/economia/" "/<uma-materia>/"; do
+  curl -s "https://bahia.ba$u?cb=$RANDOM" | grep -o '<meta name=.robots. content=.[^"]*'
+done
+
+# 3 — os cabecalhos, inclusive o que nao e HTML
+for u in "/" "/sitemap_index.xml" "/feed/"; do
+  echo "== $u"; curl -sI "https://bahia.ba$u" | grep -i x-robots-tag
+done
+```
+
+**A quarta é a que se esquece.** As três primeiras protegem contra o `noindex` vazar; a quarta
+protege contra o **outro** mu-plugin vazar. Em produção o `wpseo_indexable_index_batch` **deve
+continuar rodando** — é onde ele tem trabalho útil, e já roda hoje, a cada 15 minutos, na 27.7.
+**Se aparecer desagendado, a guarda do `bahia-yoast-indexacao-fundo.php` falhou.**
+
+> 🔗 **Por que os dois são filtro e não escrita no banco** — e por que isso importa: ver a
+> **segunda regra** no topo do `HANDOVER.md`. Um `UPDATE` em `blog_public` viajaria no dump e
+> chegaria a produção sozinho.
+
+---
+
+## 12. O que o merge LEVA de mu-plugins — 6 arquivos, e um deles age em produção
+
+Medido em 03/09/2026, comparando a árvore da `develop` com o pod de produção. Produção tem **58**
+mu-plugins; a develop tem **64**.
+
+```
+bahia-flags.php                  <- define bahia_ambiente()
+bahia-homolog-guardas.php            guarda: 'homolog' !== bahia_ambiente()
+bahia-homolog-noindex.php            guarda: 'homolog' !== bahia_ambiente()
+bahia-image-size-fallback.php    <- SEM GUARDA: AGE EM PRODUÇÃO
+bahia-webp-upload.php                guarda por constante, definida só em homolog
+bahia-yoast-indexacao-fundo.php      guarda: 'homolog' !== bahia_ambiente()
+```
+
+Nenhum arquivo existe em produção e falta na develop — o merge só acrescenta.
+
+### ✅ A ordem de carga funciona, e é por acaso alfabético
+
+**`bahia_ambiente()` HOJE NÃO EXISTE EM PRODUÇÃO** — ela mora em `bahia-flags.php`, que só chega
+com este merge. Os três mu-plugins de homolog dependem dela, e o WordPress carrega mu-plugins em
+**ordem alfabética**: `bahia-f…` vem antes de `bahia-h…` e de `bahia-y…`. **A função estará
+definida quando os três forem lidos.**
+
+E se por algum motivo não estivesse, a guarda é `!function_exists('bahia_ambiente') || …` — **falha
+fechada**, o mu-plugin sai na entrada. As duas camadas estão certas.
+
+> ⚠️ **Não renomear `bahia-flags.php` para algo que ordene depois de `bahia-homolog-*`.** A
+> correção seria silenciosa em homolog (onde o resultado seria o mesmo) e só apareceria em
+> produção — no pior lugar possível.
+
+### 🟡 `bahia-image-size-fallback.php` não tem guarda, e isso é DE PROPÓSITO
+
+É o único dos seis que **muda comportamento em produção**, e deve mesmo: ele conserta o problema
+que existe lá também — o tema pede os dez tamanhos `td_*`, **nenhum dos 153.842 anexos os tem**, e
+o WordPress devolve o **arquivo original** só trocando `width`/`height` no HTML. Pedir uma
+miniatura de 80px baixava 184 KB.
+
+**Isto não é efeito colateral do merge de plugins: é uma entrega, e vai junto.** Quem acompanhar o
+deploy deve esperar **queda no volume de imagem servida**, não estabilidade. Se o volume não cair,
+o mu-plugin não está agindo.
+
+### O WebP fica desligado em produção, e a guarda está no lugar certo
+
+`bahia-webp-upload.php` sai na entrada se `BAHIA_WEBP_UPLOAD_ATIVO` não existir, e quem define a
+constante é o `bahia-flags.php`, sob `if ('homolog' === bahia_ambiente())`. **Em produção a
+constante não nasce.** Continua valendo o que está em `WEBP-UPLOAD-DESENHO.md`: ligar só depois da
+validação e da resposta da redação sobre a ferramenta que exporta em 620x400.
+
+---
+
+# 🔴 BLOQUEIO DE MERGE — o Yoast 28.4 exige WordPress 6.9, e produção está na 6.8.3
+
+**Descoberto em 03/09/2026, ao revisar o merge.** Este item **contradiz e substitui** a liberação
+do portão do Yoast registrada na seção 10.
+
+## O que eu errei na seção 10
+
+Aquela análise respondeu **exaustivamente ao eixo errado**. Perguntei se a migração de banco era
+segura em produção — se os indexáveis reindexariam, se o buffer pool aguentava, se o cron já
+rodava — e a resposta continua correta: **é DDL instantâneo, produção tem zero pendentes, o cron já
+roda lá.**
+
+**Nunca perguntei se o plugin suporta a versão de WordPress que produção roda.**
+
+```
+Yoast 27.7 (produção hoje)  ->  Requires at least: 6.8   ✅
+Yoast 28.4 (a subir)        ->  Requires at least: 6.9   ❌   produção está na 6.8.3
+```
+
+Três sinais concordantes sobre o banco não dizem nada sobre compatibilidade de núcleo. É o §16.12
+outra vez, num eixo novo: **a pergunta que não se faz não aparece como lacuna — aparece como
+liberação.**
+
+## O que acontece se subir assim
+
+**O Yoast NÃO se autodesativa por versão de WordPress.** Conferido no código: `yoast_wpseo_self_deactivate()`
+só é chamada por **SPL ausente** (`yoast_wpseo_missing_spl`) e **autoload ausente**
+(`yoast_wpseo_missing_autoload`). Não há checagem de `$wp_version` no caminho de carga.
+
+**Ou seja: ele sobe e roda.** O modo de falha não é uma tela de aviso — é **chamar uma função que
+só existe da 6.9 em diante e produzir fatal**, possivelmente no front de um portal ao vivo, e
+possivelmente só em algum caminho menos visitado (sitemap, feed, uma taxonomia). **Sem aviso e sem
+desativação.**
+
+## E há um segundo problema, que o merge PIORA
+
+A própria API do WordPress classifica a versão de produção:
+
+```
+produção roda 6.8.3  ->  "insecure"
+último do ramo 6.8   ->  6.8.8 ("outdated")
+último de todos      ->  7.1 ("latest")     <- o que homolog roda
+```
+
+| | `main` hoje | `develop` (o que o merge traz) |
+|---|---|---|
+| linha do Dockerfile | `FROM wordpress:6.8-php8.3-fpm` | `FROM wordpress:${WP_VERSION}` |
+| natureza | **tag flutuante** | **fixa**, `ARG WP_VERSION=6.8.3` |
+| efeito do próximo build | pegaria o topo do ramo 6.8 | **congela na 6.8.3** |
+
+O `deploy-prod.yml` faz `docker build` **sem** `--build-arg`, então produção usa o default. **O
+merge não leva a 7.1 para produção** — isso está certo e foi conferido. Mas ele **fixa produção
+numa versão marcada como insegura, e remove o mecanismo que a tiraria de lá no próximo build.**
+
+## 🔴 O problema de fundo: homolog não valida o que produção vai receber
+
+Os repórteres estão validando **WordPress 7.1 + os plugins novos**. Produção vai receber **os
+plugins novos + WordPress 6.8.3**. Essa combinação **não existe em lugar nenhum e nunca foi
+testada** — nem por nós, nem pelos repórteres.
+
+E o delta é maior do que os lotes: **25 componentes mudam de versão, 15 deles ATIVOS.** Produção
+nunca recebeu nenhum dos 7 lotes. Vários **não estavam em lote nenhum meu** e chegam sem validação
+desta série:
+
+| Componente | Produção | Vai receber | Observação |
+|---|---|---|---|
+| **foogallery** | 2.4.32 | **3.2.6** | salto de MAJOR, ativo, fora dos lotes |
+| **taxonomy-terms-order** | 1.9.1 | **2.0** | salto de major, ativo, fora dos lotes |
+| **disable-comments** | **2.5.3** | 2.9.0 | validei de 2.8.0; o trecho 2.5.3→2.8.0 não |
+| **onesignal** | **3.5.0** | 3.9.3 | validei de 3.9.2; o trecho 3.5.0→3.9.2 não |
+| google-site-kit | 1.180.0 | 1.186.0 | ativo, fora dos lotes |
+| twitter-auto-publish | 1.7.6 | 1.7.7 | ativo, fora dos lotes |
+| post-type-switcher | 4.0.0 | 4.0.1 | ativo, fora dos lotes |
+
+São **101 commits e 9.159 arquivos** — a `main` está muito atrás.
+
+## Os dois caminhos coerentes
+
+**(a) Alinhar o WordPress na mesma janela.** Trocar o default para `ARG WP_VERSION=7.1.0` e apagar
+o `--build-arg` do `deploy-homolog.yml`. É **exatamente a condição de saída escrita no topo do
+Dockerfile**, e o único caminho em que *o que os repórteres validaram* é *o que produção recebe*.
+Resolve o Yoast, resolve o `insecure`, e encerra a divergência de ambientes. **Custo:** é upgrade
+de núcleo em produção, não atualização de plugin — pede plano próprio, e existe um
+(`ROLLBACK-WP71-HOMOLOG.md`).
+
+**(b) Segurar o Yoast na 27.7 para produção** e subir o resto. Mantém a janela pequena, mas deixa
+produção numa combinação que ninguém testou, mantém a 6.8.3 insegura, e **acrescenta o Yoast à
+dívida de revalidação** que o item 15 dos gestores já descreve para o ACF.
+
+**Recomendação: (a).** O trabalho todo foi validado sobre a 7.1 durante semanas, por nós e pela
+redação. Subir os plugins sobre um núcleo diferente joga fora essa validação no exato momento em
+que ela deveria valer.
+
+## Se ainda assim for (b), o mínimo
+
+1. Reverter `plugins/wordpress-seo/` para a 27.7 no merge.
+2. **Não** fixar a versão: manter `FROM wordpress:6.8-php8.3-fpm` para produção continuar subindo
+   dentro do ramo, ou fixar em algo que não esteja marcado `insecure`.
+3. Validar **em produção, depois do deploy**, os que nunca passaram por lote: foogallery (galerias
+   nas matérias), taxonomy-terms-order (ordem das editorias), disable-comments.
+
+---
+
+# ✅ BLOQUEIO RESOLVIDO — o WordPress foi alinhado, e o caminho está PROVADO
+
+**03/09/2026.** O bloqueio da seção anterior tinha duas saídas; o Albert escolheu **alinhar
+produção na 7.1**. Feito, e validado em homolog **pelo mesmo caminho que produção vai usar**.
+
+## O que mudou — dois arquivos, exatamente os que o Dockerfile previa
+
+```
+Dockerfile             ARG WP_VERSION=6.8.3  ->  7.1.0
+deploy-homolog.yml     apagado o --build-arg WP_VERSION=
+```
+
+Os dois workflows agora constroem pelo **mesmo comando, sem argumento**. Commit `76919075`.
+
+## A prova, e por que ela vale
+
+Homolog rebuildou **pelo default**, que é por onde produção vai receber. A guarda de build do
+Dockerfile imprimiu:
+
+```
+=== core na imagem: 7.1 (db_version 61833) — pedido: 7.1.0 ===
+```
+
+E o ambiente ficou íntegro: WP 7.1, PHP 8.3.33, tema 12.7.7, 24 plugins ativos, `td_011` com 500
+chaves, home 572.484 (base 572.538), editoria 307.276, matéria 324.505 com `<h1>`, busca 200, zero
+fatal. **Não é inferência: é o mesmo `docker build .` rodando.**
+
+## 🟢 O que a subida de banco custa em produção — medido, não estimado
+
+`db_version 60421` → `61833`. **Duas** rotinas disparam, e as duas são baratas:
+
+| Rotina | O que faz | Custo |
+|---|---|---|
+| `< 60497` | atrás de `is_multisite()` | **não roda** — produção é site único |
+| `upgrade_700()` | `UPDATE wp_usermeta` trocando `admin_color` `fresh`→`modern` | trivial |
+
+E o `dbDelta` encontra **uma única** diferença de esquema entre 6.8 e 7.1, obtida comparando
+`wp_get_db_schema()` dos dois pods:
+
+```sql
+wp_posts   KEY type_status_author (post_type, post_status, post_author)
+```
+
+**Tamanho medido em homolog: 19,6 MB** sobre 435.786 linhas. Produção tem 441.626. É índice
+secundário — MySQL 8 cria com `ALGORITHM=INPLACE, LOCK=NONE`, **online**, com leitura e escrita
+concorrentes. Segundos, não minutos.
+
+> ✅ **O `dbDelta` NÃO remove índices que ele não conhece.** Verificado rodando `wp_upgrade()` em
+> homolog: os 11 índices continuaram lá, incluindo os nossos (`idx_post_type_date`,
+> `idx_post_type`, `idx_post_date`, `idx_post_type_date_status`, `bahia_ft_search`). Ele só
+> acrescenta. Produção tem os mesmos quatro `idx_*` e eles ficam.
+
+## Procedimento da janela
+
+### Antes
+
+1. **Snapshot do RDS de produção** — ou confirmar o PITR (`describe-db-instances`, ver
+   `BackupRetentionPeriod` e `LatestRestorableTime`). É a rede para o caso de o banco ficar num
+   estado que não se queira.
+2. **Anotar a linha de base do que se vai medir depois**, com o site ainda na 6.8:
+   `curl -s https://bahia.ba/ | wc -c` e a contagem de `td_block`. **Sem esse número, o "depois"
+   não prova nada** — ver HANDOVER §16.14.
+3. Conferir que a `develop` está verde e que a redação assinou a validação.
+
+### Durante
+
+4. **Merge `develop` → `main`.** São 101 commits e 9.159 arquivos; o merge é fast-forward.
+5. Acompanhar o build. **A guarda do Dockerfile falha a construção** se a imagem não entregar 7.1
+   — se ela passar, o core está certo antes de qualquer pod subir.
+6. `kubectl rollout status`. Produção tem HPA min2/max5, então o rollout tem surge — **não há a
+   janela de indisponibilidade que homolog tem** (nó único, `maxSurge=0`).
+7. **Rodar a subida de banco DELIBERADAMENTE, num pod só.** Se ninguém fizer isso, ela acontece na
+   primeira visita ao `/wp-admin`, de um pod qualquer, possivelmente de vários ao mesmo tempo:
+
+```bash
+POD=$(kubectl -n bahia-wordpress get pod -l app=wordpress -o jsonpath='{.items[0].metadata.name}')
+kubectl -n bahia-wordpress exec $POD -c wordpress -- php -d max_execution_time=0 -r '
+define("WP_INSTALLING", true);
+require "/var/www/html/wp-load.php";
+require_once ABSPATH."wp-admin/includes/upgrade.php";
+echo "antes: ", get_option("db_version"), "\n";
+$t0 = microtime(true);
+wp_upgrade();
+printf("levou %.2fs\n", microtime(true) - $t0);
+echo "depois: ", get_option("db_version"), "\n";'
+```
+
+Esperado: `antes: 60421` → `depois: 61833`. O comando foi testado em homolog (lá é inócuo, porque
+`wp_upgrade()` retorna de imediato quando a versão já está corrente).
+
+### Depois, no pod de produção
+
+8. **As quatro verificações da seção 11** — elas continuam valendo e são as mais importantes.
+9. **As desta subida:**
+
+| # | Verificação | Esperado |
+|---|---|---|
+| 5 | `$wp_version` em **todos** os pods | **7.1** nos quatro, sem divergência |
+| 6 | `get_option('db_version')` | **61833** |
+| 7 | `SHOW INDEX FROM wp_posts` | os 4 `idx_*` nossos **continuam lá**, mais `type_status_author` |
+| 8 | tamanho do HTML da home | comparável à base do passo 2 |
+| 9 | Yoast | `28.4` ativo, sitemap em 200, meta description com subtítulo |
+| 10 | volume de imagem servida | **deve CAIR** (`bahia-image-size-fallback`, seção 12) |
+
+### Rollback
+
+Voltar a imagem devolve os arquivos 6.8.3; o `db_version` fica em 61833. **Isso é seguro**: o
+código 6.8 vê `61833 > 60421`, nenhuma rotina de upgrade dispara (todas são `< N` com N menor), e
+ele apenas regrava `db_version = 60421`. O índice `type_status_author` fica na tabela, sem uso e
+sem prejuízo.
+
+## O que esta mudança conserta de quebra
+
+- **O desalinhamento de PHP acaba.** Homolog rodava 8.3.33 (tag 7.1.0) e produção 8.3.28 (tag
+  6.8.3). Mesma tag, mesmo patch: os dois em **8.3.33**.
+- **A 6.8.3 `insecure` sai do ar.** A 7.1 é `latest`.
+- **A Tarefa B fica zerada HOJE.** Medido em 03/09, produção servia com **quatro pods em duas
+  versões ao mesmo tempo** — dois em 6.8.8 (auto-atualizados no `emptyDir`) e dois em 6.8.3
+  (recém-criados da imagem). Com a 7.1 não há para onde auto-atualizar.
+
+> ⚠️ **A Tarefa B continua aberta.** O mecanismo que causou a divergência — auto-atualização
+> dentro do pod, em `emptyDir` que morre com ele — **não foi tocado**. Ele volta a divergir assim
+> que sair a 7.1.1. O que muda hoje é que o alvo desapareceu, não a causa.

@@ -12,7 +12,13 @@
  * 2. td_guten_blocks_editor.css - Backend.
  * 3. js_files_for_guten_blocks_editor.js - Backend.
  */
-function td_guten_blocks_assets() {
+// 'enqueue_block_editor_assets' only loads styles in the outer admin chrome, not the
+// block editor's iframed canvas. 'enqueue_block_assets' is the hook Gutenberg mirrors
+// into that iframe, which these editor-only content styles need.
+function td_guten_blocks_editor_styles() {
+	if ( ! is_admin() ) {
+		return;
+	}
 
 	// Enqueue block styles for both frontend + backend.
 	// Not used
@@ -39,6 +45,9 @@ function td_guten_blocks_assets() {
 			TD_COMPOSER
 		);
 	}
+}
+
+function td_guten_blocks_assets() {
 
 	// Enqueue blocks editor script for backend.
 	if ( TDC_DEPLOY_MODE == 'dev' ) {
@@ -84,6 +93,7 @@ function td_guten_blocks_assets() {
 }
 
 // Hook: Blocks Editor Assets.
+add_action( 'enqueue_block_assets', 'td_guten_blocks_editor_styles' );
 add_action( 'enqueue_block_editor_assets', 'td_guten_blocks_assets' );
 remove_filter( 'admin_head', 'wp_check_widget_editor_deps' );
 

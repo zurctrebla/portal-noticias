@@ -1,4 +1,9 @@
 <?php
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 	/**
 	 * FooGallery Lightbox class
 	 *
@@ -52,6 +57,11 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 		 */
 		public function add_caption_attributes( $attr, $args, $foogallery_attachment ) {
 			global $current_foogallery;
+
+			// Attribute helpers can be used outside a gallery render context by integrations and tests.
+			if ( ! is_object( $current_foogallery ) ) {
+				return $attr;
+			}
 
 			if ( ! property_exists( $current_foogallery, 'lightbox' ) ) {
 				// TODO : rather use foogallery_current_gallery_check_template_has_supported_feature.
@@ -147,7 +157,7 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
                             'title' => __('Your Lightbox Will Not Work!', 'foogallery'),
                             'desc' => __('No lightbox will be shown, because under the General tab, you have set the Thumbnail Link to "Not linked".', 'foogallery'),
                             'section' => __( 'Lightbox', 'foogallery' ),
-                            'subsection' => array('lightbox-general' => __('General', 'foogallery')),
+                            'subsection' => array( 'lightbox-general' => __( 'General', 'foogallery' ) ),
                             'type' => 'help',
                             'row_data' => array(
                                 'data-foogallery-hidden' => true,
@@ -185,7 +195,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'       => __( 'The overall appearance including background and button color. By default it will inherit from Appearance -> Theme', 'foogallery' ),
 				'section'    => $section,
 				'subsection' => array( 'lightbox-general' => __( 'General', 'foogallery' ) ),
-				'spacer'     => '<span class="spacer"></span>',
 				'type'       => 'radio',
 				'default'    => '',
 				'choices'    => apply_filters(
@@ -223,20 +232,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 						'data-foogallery-show-when-field-value'    => 'foogallery',
 					),
 				);
-
-                $field[] = array(
-                    'id'      => 'lightbox_help_controls_2',
-                    'desc'    => __( 'The Lightbox Controls settings are only available when your lightbox is set to "FooGallery Lightbox"', 'foogallery' ),
-                    'section' => $section,
-                    'subsection' => array( 'lightbox-controls' => __( 'Controls', 'foogallery' ) ),
-                    'type'    => 'help',
-                    'row_data'   => array(
-                        'data-foogallery-hidden'                   => true,
-                        'data-foogallery-show-when-field'          => 'lightbox',
-                        'data-foogallery-show-when-field-operator' => '!==',
-                        'data-foogallery-show-when-field-value'    => 'foogallery',
-                    ),
-                );
 			}
 
 			$field[] = array(
@@ -245,7 +240,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'    => __( 'You can override the button controls color. By default it will inherit from the theme.', 'foogallery' ),
 				'section' => $section,
 				'subsection' => array( 'lightbox-controls' => __( 'Controls', 'foogallery' ) ),
-				'spacer'  => '<span class="spacer"></span>',
 				'type'    => 'radio',
 				'default' => '',
 				'choices' => apply_filters( 'foogallery_gallery_template_lightbox_button_theme_choices', array(
@@ -298,7 +292,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'    => __( 'You can override the button controls hover color. By default it will inherit from the theme.', 'foogallery' ),
 				'section' => $section,
 				'subsection' => array( 'lightbox-controls' => __( 'Controls', 'foogallery' ) ),
-				'spacer'  => '<span class="spacer"></span>',
 				'type'    => 'radio',
 				'default' => '',
 				'choices' => apply_filters( 'foogallery_gallery_template_lightbox_button_highlight_choices', array(
@@ -366,20 +359,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 						'data-foogallery-show-when-field-value'    => 'foogallery',
 					),
 				);
-
-                $field[] = array(
-                    'id'      => 'lightbox_help_thumbnails_2',
-                    'desc'    => __( 'The Lightbox Thumbnails settings are only available when your lightbox is set to "FooGallery Lightbox"', 'foogallery' ),
-                    'section' => $section,
-                    'subsection' => array( 'lightbox-thumbnails' => __( 'Thumbnails', 'foogallery' ) ),
-                    'type'    => 'help',
-                    'row_data'   => array(
-                        'data-foogallery-hidden'                   => true,
-                        'data-foogallery-show-when-field'          => 'lightbox',
-                        'data-foogallery-show-when-field-operator' => '!==',
-                        'data-foogallery-show-when-field-value'    => 'foogallery',
-                    ),
-                );
 			}
 
 			$field[] = array(
@@ -388,7 +367,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'     => __( 'You can change the position of the thumbnails, or hide them completely.', 'foogallery' ),
 				'section'  => $section,
 				'subsection' => array( 'lightbox-thumbnails' => __( 'Thumbnails', 'foogallery' ) ),
-				'spacer'   => '<span class="spacer"></span>',
 				'type'     => 'radio',
 				'default'  => $hide_thumbs_by_default ? 'none' : 'bottom',
 				'choices'  => apply_filters( 'foogallery_gallery_template_lightbox_thumbs_choices', array(
@@ -415,7 +393,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'    => __( 'Whether or not the thumbnail strip should contain captions.', 'foogallery' ),
 				'section' => $section,
 				'subsection' => array( 'lightbox-thumbnails' => __( 'Thumbnails', 'foogallery' ) ),
-				'spacer'  => '<span class="spacer"></span>',
 				'type'    => 'radio',
 				'default' => 'no',
 				'choices' => apply_filters( 'foogallery_gallery_template_lightbox_thumbs_captions_choices', array(
@@ -438,10 +415,9 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'title'    => __( 'Thumbnail Caption Alignment', 'foogallery' ),
 				'section' => $section,
 				'subsection' => array( 'lightbox-thumbnails' => __( 'Thumbnails', 'foogallery' ) ),
-				'type'     => 'radio',
-				'spacer'   => '<span class="spacer"></span>',
-				'default'  => 'default',
-				'choices'  => array(
+				'type'    => 'radio',
+				'default' => 'default',
+				'choices' => array(
 					'default' => __( 'Default', 'foogallery' ),
 					'left'    => __( 'Left', 'foogallery' ),
 					'center'  => __( 'Center', 'foogallery' ),
@@ -464,7 +440,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'    => __( 'Adjust the size of the displayed thumbnails so that they fill the entire space within the strip.', 'foogallery' ),
 				'section' => $section,
 				'subsection' => array( 'lightbox-thumbnails' => __( 'Thumbnails', 'foogallery' ) ),
-				'spacer'  => '<span class="spacer"></span>',
 				'type'    => 'radio',
 				'default' => '',
 				'choices' => apply_filters( 'foogallery_gallery_template_lightbox_thumbs_bestfit_choices', array(
@@ -488,7 +463,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'    => __( 'Adjust the size of the thumbnail image to display as either small (square) or large (landscape).', 'foogallery' ),
 				'section' => $section,
 				'subsection' => array( 'lightbox-thumbnails' => __( 'Thumbnails', 'foogallery' ) ),
-				'spacer'  => '<span class="spacer"></span>',
 				'type'    => 'radio',
 				'default' => '',
 				'choices' => apply_filters( 'foogallery_gallery_template_lightbox_thumbs_size_choices', array(
@@ -512,7 +486,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'    => __( 'The transition to apply to the main content area when switching between items.', 'foogallery' ),
 				'section' => $section,
 				'subsection' => array( 'lightbox-general' => __( 'General', 'foogallery' ) ),
-				'spacer'  => '<span class="spacer"></span>',
 				'type'    => 'radio',
 				'default' => 'fade',
 				'choices' => apply_filters( 'foogallery_gallery_template_lightbox_button_highlight_choices', array(
@@ -540,9 +513,9 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'type'    => 'radio',
 				'default' => '',
 				'choices' => apply_filters( 'foogallery_gallery_template_lightbox_info_enabled_choices', array(
+					'disabled'   => __( 'Disabled', 'foogallery' ),
 					'' => __( 'Enabled', 'foogallery' ),
 					'hidden'    => __( 'Enabled (but hidden initially)', 'foogallery' ),
-					'disabled'   => __( 'Disabled', 'foogallery' ),
 				) ),
 				'row_data'=> array(
 					'data-foogallery-change-selector' => 'input:radio',
@@ -561,7 +534,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'    => __( 'The position of the captions within the lightbox.', 'foogallery' ),
 				'section' => $section,
 				'subsection' => array( 'lightbox-captions' => __( 'Captions', 'foogallery' ) ),
-				'spacer'  => '<span class="spacer"></span>',
 				'type'    => 'radio',
 				'default' => 'bottom',
 				'choices' => apply_filters( 'foogallery_gallery_template_lightbox_info_position_choices', array(
@@ -589,7 +561,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'section' => $section,
 				'subsection' => array( 'lightbox-captions' => __( 'Captions', 'foogallery' ) ),
 				'type'     => 'radio',
-				'spacer'   => '<span class="spacer"></span>',
 				'default'  => 'default',
 				'choices'  => array(
 					'default' => __( 'Default', 'foogallery' ),
@@ -614,13 +585,35 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'    => __( 'Whether or not the caption is overlaid on top of the content, or is inline (outside of the content).', 'foogallery' ),
 				'section' => $section,
 				'subsection' => array( 'lightbox-captions' => __( 'Captions', 'foogallery' ) ),
-				'spacer'  => '<span class="spacer"></span>',
 				'type'    => 'radio',
 				'default' => 'yes',
 				'choices' => apply_filters( 'foogallery_gallery_template_lightbox_info_choices', array(
-					'yes' => __( 'Overlaid', 'foogallery' ),
+					'yes' => __( 'Overlay', 'foogallery' ),
 					'no'  => __( 'Inline', 'foogallery' ),
 				) ),
+				'row_data'=> array(
+					'data-foogallery-change-selector'          => 'input:radio',
+					'data-foogallery-preview'                  => 'shortcode',
+					'data-foogallery-value-selector'           => 'input:checked',
+					'data-foogallery-hidden'                   => true,
+					'data-foogallery-show-when-field'          => 'lightbox_info_enabled',
+					'data-foogallery-show-when-field-operator' => '!==',
+					'data-foogallery-show-when-field-value'    => 'disabled',
+				)
+			);
+
+			$field[] = array(
+				'id'      => 'lightbox_info_autohide_mobile',
+				'title'   => __( 'Auto-hide on Mobile', 'foogallery' ),
+				'desc'    => __( 'Whether captions should automatically hide on mobile devices. When disabled, captions will remain visible on mobile.', 'foogallery' ),
+				'section' => $section,
+				'subsection' => array( 'lightbox-captions' => __( 'Captions', 'foogallery' ) ),
+				'type'    => 'radio',
+				'default' => 'yes',
+				'choices' => array(
+					'yes' => __( 'Auto-hide (default)', 'foogallery' ),
+					'no'  => __( 'Always visible', 'foogallery' ),
+				),
 				'row_data'=> array(
 					'data-foogallery-change-selector'          => 'input:radio',
 					'data-foogallery-preview'                  => 'shortcode',
@@ -716,7 +709,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'    => __( 'Auto progress to the next item after a specified time.', 'foogallery' ),
 				'section' => $section,
 				'subsection' => array( 'lightbox-general' => __( 'General', 'foogallery' ) ),
-				'spacer'  => '<span class="spacer"></span>',
 				'type'    => 'radio',
 				'default' => 'no',
 				'choices' => apply_filters( 'foogallery_gallery_template_lightbox_auto_progress_choices', array(
@@ -760,10 +752,32 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'section' => $section,
 				'subsection' => array( 'lightbox-general' => __( 'General', 'foogallery' ) ),
 				'type'    => 'radio',
-				'spacer'  => '<span class="spacer"></span>',
 				'choices' => array(
 					'yes' => __( 'Yes', 'foogallery' ),
 					'no'  => __( 'No', 'foogallery' ),
+				),
+				'default' => 'yes',
+				'row_data'=> array(
+					'data-foogallery-hidden'                   => true,
+					'data-foogallery-show-when-field'          => 'lightbox_auto_progress',
+					'data-foogallery-show-when-field-operator' => '===',
+					'data-foogallery-show-when-field-value'    => 'yes',
+					'data-foogallery-change-selector'          => 'input:radio',
+					'data-foogallery-preview'                  => 'shortcode',
+					'data-foogallery-value-selector'           => 'input:checked',
+				)
+			);
+
+			$field[] = array(
+				'id'      => 'lightbox_auto_progress_button',
+				'title'   => __( 'Auto Progress Button', 'foogallery' ),
+				'desc'    => __( 'Show or hide the auto progress control button. Hiding the button does not stop auto progress.', 'foogallery' ),
+				'section' => $section,
+				'subsection' => array( 'lightbox-general' => __( 'General', 'foogallery' ) ),
+				'type'    => 'radio',
+				'choices' => array(
+					'yes' => __( 'Shown', 'foogallery' ),
+					'no'  => __( 'Hidden', 'foogallery' ),
 				),
 				'default' => 'yes',
 				'row_data'=> array(
@@ -783,7 +797,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'    => __( 'Whether or not to force images to fill the content area. Aspect ratios are maintained, the image is simply scaled so it covers the entire available area.', 'foogallery' ),
 				'section' => $section,
 				'subsection' => array( 'lightbox-general' => __( 'General', 'foogallery' ) ),
-				'spacer'  => '<span class="spacer"></span>',
 				'type'    => 'radio',
 				'default' => 'no',
 				'choices' => apply_filters( 'foogallery_gallery_template_lightbox_fit_media_choices', array(
@@ -807,7 +820,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'    => __( 'Whether or not to hide the page scrollbars when maximizing.', 'foogallery' ),
 				'section' => $section,
 				'subsection' => array( 'lightbox-general' => __( 'General', 'foogallery' ) ),
-				'spacer'  => '<span class="spacer"></span>',
 				'type'    => 'radio',
 				'default' => 'no',
 				'choices' => apply_filters( 'foogallery_gallery_template_lightbox_no_scrollbars_choices', array(
@@ -832,6 +844,7 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'section' => $section,
 				'subsection' => array( 'lightbox-general' => __( 'General', 'foogallery' ) ),
 				'type'    => 'radio',
+				'class'   => 'foogallery-radios-stacked',
 				'default' => '',
 				'choices' => array(
 					'' => __( 'Mobile Optimized Layout', 'foogallery' ),
@@ -854,11 +867,10 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'    => __( 'Whether or not the control buttons are overlaid on top of the content, or are inline (outside of the content).', 'foogallery' ),
 				'section' => $section,
 				'subsection' => array( 'lightbox-controls' => __( 'Controls', 'foogallery' ) ),
-				'spacer'  => '<span class="spacer"></span>',
 				'type'    => 'radio',
 				'default' => 'no',
 				'choices' => apply_filters( 'foogallery_gallery_template_lightbox_buttons_display', array(
-					'yes' => __( 'Overlaid', 'foogallery' ),
+					'yes' => __( 'Overlay', 'foogallery' ),
 					'no'  => __( 'Inline', 'foogallery' ),
 				) ),
 				'row_data'=> array(
@@ -878,7 +890,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'    => __( 'Only show the control buttons when you hover the mouse over.', 'foogallery' ),
 				'section' => $section,
 				'subsection' => array( 'lightbox-controls' => __( 'Controls', 'foogallery' ) ),
-				'spacer'  => '<span class="spacer"></span>',
 				'type'    => 'radio',
 				'default' => 'no',
 				'choices' => apply_filters( 'foogallery_gallery_template_lightbox_hover_buttons_choices', array(
@@ -903,7 +914,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'     => __( 'Whether of not to show the Fullscreen button', 'foogallery' ),
 				'section'  => $section,
 				'subsection' => array( 'lightbox-controls' => __( 'Controls', 'foogallery' ) ),
-				'spacer'   => '<span class="spacer"></span>',
 				'type'     => 'radio',
 				'default'  => $use_lightbox ? 'yes' : 'no',
 				'choices'  => array(
@@ -929,7 +939,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 					'desc'     => __( 'Whether of not to show the Maximise button', 'foogallery' ),
 					'section'  => $section,
 					'subsection' => array( 'lightbox-controls' => __( 'Controls', 'foogallery' ) ),
-					'spacer'   => '<span class="spacer"></span>',
 					'type'     => 'radio',
 					'default'  => 'yes',
 					'choices'  => array(
@@ -954,7 +963,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'     => __( 'Whether of not to show the Caption button', 'foogallery' ),
 				'section'  => $section,
 				'subsection' => array( 'lightbox-controls' => __( 'Controls', 'foogallery' ) ),
-				'spacer'   => '<span class="spacer"></span>',
 				'type'     => 'radio',
 				'default'  => 'yes',
 				'choices'  => array(
@@ -978,7 +986,29 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'     => __( 'Whether of not to show the thumbnail strip control button', 'foogallery' ),
 				'section'  => $section,
 				'subsection' => array( 'lightbox-controls' => __( 'Controls', 'foogallery' ) ),
-				'spacer'   => '<span class="spacer"></span>',
+				'type'     => 'radio',
+				'default'  => 'no',
+				'choices'  => array(
+					'yes' => __( 'Shown', 'foogallery' ),
+					'no'  => __( 'Hidden', 'foogallery' ),
+				),
+				'row_data' => array(
+					'data-foogallery-change-selector' => 'input:radio',
+					'data-foogallery-preview'         => 'shortcode',
+					'data-foogallery-value-selector'  => 'input:checked',
+					'data-foogallery-hidden' 				   => true,
+					'data-foogallery-show-when-field'          => 'lightbox',
+                    'data-foogallery-show-when-field-operator' => '===',
+					'data-foogallery-show-when-field-value'    => 'foogallery',
+				)
+			);
+
+			$field[] = array(
+				'id'       => 'lightbox_show_download_button',
+				'title'    => __( 'Download Button', 'foogallery' ),
+				'desc'     => __( 'Whether of not to show the download button', 'foogallery' ),
+				'section'  => $section,
+				'subsection' => array( 'lightbox-controls' => __( 'Controls', 'foogallery' ) ),
 				'type'     => 'radio',
 				'default'  => 'no',
 				'choices'  => array(
@@ -1002,7 +1032,6 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 				'desc'     => __( 'Whether of not to show the navigation (prev/next) buttons', 'foogallery' ),
 				'section'  => $section,
 				'subsection' => array( 'lightbox-controls' => __( 'Controls', 'foogallery' ) ),
-				'spacer'   => '<span class="spacer"></span>',
 				'type'     => 'radio',
 				'default'  => 'yes',
 				'choices'  => array(
@@ -1046,6 +1075,11 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 
 			}
 
+			$show_download_button = foogallery_gallery_template_setting( 'lightbox_show_download_button', false );
+			if ( false !== $show_download_button ) {
+				$options['panel']['buttons']['download'] = ( 'yes' === $show_download_button );
+			}
+
 			return $options;
 		}
 
@@ -1071,7 +1105,7 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 		 * @return mixed
 		 */
 		function add_lightbox($lightboxes) {
-			$lightboxes['foogallery'] = __( 'FooGallery Lightbox', 'foogallery' );
+            $lightboxes['foogallery'] = foogallery_lightbox_name();
 			return $lightboxes;
 		}
 
@@ -1104,8 +1138,10 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 			//only add the lightbox data attribute for the templates where a panel is used and not a lightbox
 			if ( $template && !array_key_exists( 'panel_support', $template ) ) {
 
+				$thumbnail_link = foogallery_gallery_template_setting( 'thumbnail_link', '' );
+
 				//check if lightbox set to foogallery
-				if ( 'foogallery' === foogallery_gallery_template_setting( 'lightbox', '' ) ) {
+				if ( 'foogallery' === foogallery_gallery_template_setting_lightbox() && 'none' !== $thumbnail_link ) {
 
 					$encoded_options = foogallery_json_encode( $this->get_options_from_settings() );
 
@@ -1170,12 +1206,20 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 			}
 
 			$options['infoAlign'] = foogallery_gallery_template_setting( 'lightbox_info_alignment', 'default' );
+			
+			// Handle mobile caption auto-hide setting
+			$mobile_autohide = foogallery_gallery_template_setting( 'lightbox_info_autohide_mobile', 'yes' );
+			if ( 'no' === $mobile_autohide ) {
+				$options['infoAutoHide'] = false;
+			}
+			
 			$options['transition'] = foogallery_gallery_template_setting( 'lightbox_transition', 'fade' );
 
 			$auto_progress = foogallery_gallery_template_setting( 'lightbox_auto_progress', 'no' ) === 'yes';
 			if ( $auto_progress ) {
 				$options['autoProgress'] = intval( foogallery_gallery_template_setting( 'lightbox_auto_progress_seconds', '10' ) );
 				$options['autoProgressStart'] = foogallery_gallery_template_setting( 'lightbox_auto_progress_start', 'yes' ) === 'yes';
+				$options['autoProgressVisible'] = foogallery_gallery_template_setting( 'lightbox_auto_progress_button', 'yes' ) === 'yes';
 			}
 
 			$options['hoverButtons'] = foogallery_gallery_template_setting( 'lightbox_hover_buttons', 'no' ) === 'yes';
@@ -1206,6 +1250,11 @@ if ( ! class_exists( 'FooGallery_Lightbox' ) ) {
 			$show_thumbstrip_button = foogallery_gallery_template_setting( 'lightbox_show_thumbstrip_button', false );
 			if ( $show_thumbstrip_button !== false ) {
 				$options['buttons']['thumbs'] = ($show_thumbstrip_button === 'yes');
+			}
+
+			$show_download_button = foogallery_gallery_template_setting( 'lightbox_show_download_button', false );
+			if ( $show_download_button !== false ) {
+				$options['buttons']['download'] = ( $show_download_button === 'yes' );
 			}
 
 			$show_nav_buttons = foogallery_gallery_template_setting( 'lightbox_show_nav_buttons', 'yes' );

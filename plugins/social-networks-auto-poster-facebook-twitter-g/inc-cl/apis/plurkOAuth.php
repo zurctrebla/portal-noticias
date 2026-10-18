@@ -148,7 +148,6 @@ class wpPlurkOAuth{
       $args['oauth_signature'] = $this->sign_method->sign2($req, $this->consumer_secret, $token);      
       $cbu = nxspk_SigMethod_HMAC_SHA1::urlencode_rfc3986($cbu);  
       $url = $this->baseURL.PLURK_REQUEST_TOKEN_PATH.'?oauth_nonce='.$args['oauth_nonce'].'&oauth_timestamp='.$args['oauth_timestamp'].'&oauth_consumer_key='.$this->consumer_key.'&oauth_signature_method='.$args['oauth_signature_method'].'&oauth_version='.$args['oauth_version'].'&oauth_callback='.$cbu.'&oauth_signature='.$args['oauth_signature'];      
-      echo "<br/>REQ Token URL: ".esc_url($url)."<br/>";
       $hdrsArr = $this->makeHTTPHeaders($url); $ckArr = $nxs_vbCkArray;   
       $response = nxs_remote_get($url, array( 'method' => 'GET', 'timeout' => 45, 'redirection' => 0,  'headers' => $hdrsArr, 'cookies' => $ckArr));  
       if (is_nxs_error($response)){ $badOut = print_r($response, true)." - Connection ERROR"; return $badOut; }
@@ -158,7 +157,6 @@ class wpPlurkOAuth{
     function getAccToken($verifier){
       $args = array (
         'oauth_token' => $this->access_token,
-        'oauth_token_secret' => $this->access_secret,
         'oauth_timestamp' => time(),
         'oauth_nonce' => $this->genRndString(),
         'oauth_version' => $this->version,
@@ -169,8 +167,7 @@ class wpPlurkOAuth{
       $req = array();  $req['method'] = 'GET';  $req['normalized_url'] = $this->baseURL.PLURK_ACCESS_TOKEN_PATH;
       $req['normalized_parameters'] = $this->get_normalized_parameters($args);
       $args['oauth_signature'] = $this->sign_method->sign2($req, $this->consumer_secret, $this->access_secret); 
-      $url = $this->baseURL.PLURK_ACCESS_TOKEN_PATH.'?oauth_nonce='.$args['oauth_nonce'].'&oauth_timestamp='.$args['oauth_timestamp'].'&oauth_token_secret='.$this->access_secret.'&oauth_signature_method='.$args['oauth_signature_method'].'&oauth_consumer_key='.$this->consumer_key.'&oauth_verifier='.$verifier.'&oauth_version='.$args['oauth_version'].'&oauth_token='.$this->access_token.'&oauth_signature='.$args['oauth_signature'];
-      echo "<br/>REQ Token URL: ".esc_url($url)."<br/>";
+      $url = $this->baseURL.PLURK_ACCESS_TOKEN_PATH.'?oauth_nonce='.$args['oauth_nonce'].'&oauth_timestamp='.$args['oauth_timestamp'].'&oauth_signature_method='.$args['oauth_signature_method'].'&oauth_consumer_key='.$this->consumer_key.'&oauth_verifier='.rawurlencode($verifier).'&oauth_version='.$args['oauth_version'].'&oauth_token='.rawurlencode($this->access_token).'&oauth_signature='.rawurlencode($args['oauth_signature']);
       $hdrsArr = $this->makeHTTPHeaders($url); $ckArr = array();   
       $response = nxs_remote_get($url, array( 'method' => 'GET', 'timeout' => 45, 'redirection' => 0,  'headers' => $hdrsArr, 'cookies' => $ckArr));  
       if ( is_nxs_error($response) ) return $response;

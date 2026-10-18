@@ -325,6 +325,7 @@ textarea {
   font-size: 11px;
   text-align: center;
   z-index: 1;
+  padding: 0 5px !important;
 }
 .tdc-property-tdc_css .tdc-box-margin {
   border: 1px solid #ddd;

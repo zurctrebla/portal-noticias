@@ -1,5 +1,9 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * FooGallery Album Custom Post Types
  *
@@ -65,17 +69,63 @@ if ( ! class_exists( 'FooGallery_Albums_PostTypes' ) ) {
 					'not_found_in_trash' => __( 'No Albums found in Trash', 'foogallery' ),
 					'all_items'          => __( 'Albums', 'foogallery' ),
 				),
-				'hierarchical' => false,
-				'public'       => false,
-				'rewrite'      => false,
-				'show_ui'      => true,
-				'supports'     => array( 'title' ),
-                'show_in_menu' => foogallery_admin_menu_parent_slug(),
-                'capabilities' => FooGallery_Albums_PostTypes::ALBUM_CAPABILITIES
+				'hierarchical'  => false,
+				'public'        => false,
+				'rewrite'       => false,
+				'show_ui'       => true,
+				'show_in_rest'  => true,
+				'rest_base'     => 'foogallery-album',
+				'supports'      => array( 'title' ),
+				'map_meta_cap'  => true,
+                'show_in_menu'  => foogallery_admin_menu_parent_slug(),
+                'capabilities'  => FooGallery_Albums_PostTypes::ALBUM_CAPABILITIES
 			);
 
 			$args = apply_filters( 'foogallery_album_posttype_register_args', $args );
 			register_post_type( FOOGALLERY_CPT_ALBUM, $args );
+		}
+
+		/**
+		 * Returns the resolved album creator role.
+		 *
+		 * @return string
+		 */
+		private function get_album_creator_role() {
+			$album_creator_role = foogallery_get_setting( 'album_creator_role', 'inherit' );
+
+			if ( 'inherit' === $album_creator_role ) {
+				$album_creator_role = foogallery_setting_gallery_creator_role();
+			}
+
+			return $album_creator_role;
+		}
+
+		/**
+		 * Determine if capability syncing can be skipped for administrator-only mode.
+		 *
+		 * @param string $album_creator_role    The resolved album creator role.
+		 * @param mixed  $previous_capabilities The previously stored capability sync marker.
+		 *
+		 * @return bool
+		 */
+		private function should_skip_admin_only_capability_sync( $album_creator_role, $previous_capabilities ) {
+			if ( 'administrator' !== $album_creator_role || 'administrator' !== $previous_capabilities ) {
+				return false;
+			}
+
+			$role = get_role( 'administrator' );
+
+			if ( is_null( $role ) ) {
+				return false;
+			}
+
+			foreach ( self::ALBUM_CAPABILITIES as $cap ) {
+				if ( ! $role->has_cap( $cap ) ) {
+					return false;
+				}
+			}
+
+			return true;
 		}
 
         /**
@@ -84,21 +134,22 @@ if ( ! class_exists( 'FooGallery_Albums_PostTypes' ) ) {
          * @return void
          */
         function add_capabilities( $force = false ) {
-            global $foogallery_adding_capabilities;
+            global $foogallery_albums_adding_capabilities;
 
-            $album_creator_role   = foogallery_get_setting( 'album_creator_role', 'inherit' );
-            if ( 'inherit' === $album_creator_role ) {
-                $album_creator_role = foogallery_setting_gallery_creator_role();
+            $album_creator_role   = $this->get_album_creator_role();
+            $previous_capabilities = get_option( 'foogallery_albums_capabilities_set' );
+
+            if ( ! $force && $this->should_skip_admin_only_capability_sync( $album_creator_role, $previous_capabilities ) ) {
+                return;
             }
 
-            if ( $force || $album_creator_role !== foogallery_get_setting( 'album_capabilities_set' ) ) {
+            $roles = foogallery_get_roles_and_higher( $album_creator_role );
+
+            if ( $force || $album_creator_role !== $previous_capabilities || $this->roles_missing_capabilities( $roles ) ) {
 
                 $foogallery_albums_adding_capabilities = true;
                 update_option( 'foogallery_albums_capabilities_set', $album_creator_role );
                 $foogallery_albums_adding_capabilities = false;
-
-                // Get the roles
-                $roles = foogallery_get_roles_and_higher( $album_creator_role );
 
                 foreach ( $roles as $the_role ) {
                     $role = get_role( $the_role );
@@ -110,7 +161,34 @@ if ( ! class_exists( 'FooGallery_Albums_PostTypes' ) ) {
                         }
                     }
                 }
+
+                wp_get_current_user()->get_role_caps();
             }
+        }
+
+        /**
+         * Determine if any allowed album roles are missing required album capabilities.
+         *
+         * @param string[] $roles Allowed album roles.
+         *
+         * @return bool
+         */
+        private function roles_missing_capabilities( $roles ) {
+            foreach ( $roles as $the_role ) {
+                $role = get_role( $the_role );
+
+                if ( is_null( $role ) ) {
+                    continue;
+                }
+
+                foreach ( FooGallery_Albums_PostTypes::ALBUM_CAPABILITIES as $cap ) {
+                    if ( ! $role->has_cap( $cap ) ) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         /**
@@ -131,12 +209,12 @@ if ( ! class_exists( 'FooGallery_Albums_PostTypes' ) ) {
                 return;
             }
 
-            $album_creator_role   = foogallery_get_setting( 'album_creator_role', 'inherit' );
-            if ( 'inherit' === $album_creator_role ) {
-                $album_creator_role = foogallery_setting_gallery_creator_role();
-            }
-
+            $album_creator_role    = $this->get_album_creator_role();
             $previous_capabilities = get_option('foogallery_albums_capabilities_set' );
+
+            if ( $this->should_skip_admin_only_capability_sync( $album_creator_role, $previous_capabilities ) ) {
+                return;
+            }
 
             if ( $album_creator_role !== $previous_capabilities ) {
                 // Get all roles
@@ -178,10 +256,12 @@ if ( ! class_exists( 'FooGallery_Albums_PostTypes' ) ) {
 					2  => __( 'Album custom field updated.', 'foogallery' ),
 					3  => __( 'Album custom field deleted.', 'foogallery' ),
 					4  => __( 'Album updated.', 'foogallery' ),
+					/* translators: %s: Revision date. */
 					5  => isset( $_GET['revision'] ) ? sprintf( __( 'Album restored to revision from %s.', 'foogallery' ), wp_post_revision_title( (int) $_GET['revision'], false ) ) : false,
 					6  => __( 'Album published.', 'foogallery' ),
 					7  => __( 'Album saved.', 'foogallery' ),
 					8  => __( 'Album submitted.', 'foogallery' ),
+					/* translators: %1$s: Scheduled publication date. */
 					9  => sprintf( __( 'Album scheduled for: <strong>%1$s</strong>.', 'foogallery' ), date_i18n( __( 'M j, Y @ G:i' ), strtotime( $post->post_date ) ) ),
 					10 => __( 'Album draft updated.', 'foogallery' ),
 				)
@@ -204,10 +284,15 @@ if ( ! class_exists( 'FooGallery_Albums_PostTypes' ) ) {
 			$bulk_messages[ FOOGALLERY_CPT_ALBUM ] = apply_filters(
 				'foogallery_album_posttype_bulk_update_messages',
 				array(
+					/* translators: %s: Number of albums. */
 					'updated'   => _n( '%s Album updated.', '%s Albums updated.', $bulk_counts['updated'], 'foogallery' ),
+					/* translators: %s: Number of albums. */
 					'locked'    => _n( '%s Album not updated, somebody is editing it.', '%s Albums not updated, somebody is editing them.', $bulk_counts['locked'], 'foogallery' ),
+					/* translators: %s: Number of albums. */
 					'deleted'   => _n( '%s Album permanently deleted.', '%s Albums permanently deleted.', $bulk_counts['deleted'], 'foogallery' ),
+					/* translators: %s: Number of albums. */
 					'trashed'   => _n( '%s Album moved to the Trash.', '%s Albums moved to the Trash.', $bulk_counts['trashed'], 'foogallery' ),
+					/* translators: %s: Number of albums. */
 					'untrashed' => _n( '%s Album restored from the Trash.', '%s Albums restored from the Trash.', $bulk_counts['untrashed'], 'foogallery' ),
 				)
 			);

@@ -31,13 +31,13 @@ if (!class_exists("nxs_class_SNAP_MC")) { class nxs_class_SNAP_MC {
 	  $flds = array('recipients' => array('list_id' => $options['listID']), 'settings' => $msgArr, 'type' => 'regular'); if (!empty($options['segment'])) $flds['recipients']['segment_opts'] =  array('saved_segment_id'=>(int)$options['segment']); $flds = json_encode($flds); 
 	  
 	  $hdrsArr = $this->nxs_getHeaders('https://'.$options['dc'].'.api.mailchimp.com', true); $hdrsArr['Authorization'] = 'Basic '.base64_encode('apikey:'.$options['apikey']); //prr($hdrsArr); 
-	  $advSet = nxs_mkRemOptsArr($hdrsArr, '', $flds); $ret = wp_remote_post( $url, $advSet); if (is_nxs_error($ret)) {  $badOut = print_r($ret, true)." - ERROR"; return $badOut; }       
+	  $advSet = nxs_mkRemOptsArr($hdrsArr, '', $flds); $ret = wp_safe_remote_post($url, $advSet); if (is_nxs_error($ret)) { $badOut = esc_html($ret->get_error_message())." - ERROR"; return $badOut; }
 	  $contents = $ret['body']; $resp = json_decode($contents, true);//     prr($resp);
 	  if (is_array($resp) && !empty($resp['id'] )){ $url = 'https://'.$options['dc'].'.api.mailchimp.com/3.0/campaigns/'.$resp['id'].'/content'; $flds = array('html' => $msg); $flds = json_encode($flds);
-		$advSet = nxs_mkRemOptsArr($hdrsArr, '', $flds); $advSet['method']='PUT'; $ret = wp_remote_request( $url, $advSet);  if (is_nxs_error($ret)) {  $badOut = print_r($ret, true)." - ERROR"; return $badOut; }       
+		$advSet = nxs_mkRemOptsArr($hdrsArr, '', $flds); $advSet['method']='PUT'; $ret = wp_safe_remote_request($url, $advSet); if (is_nxs_error($ret)) { $badOut = esc_html($ret->get_error_message())." - ERROR"; return $badOut; }
 		$contents = $ret['body']; $respX = json_decode($contents, true); //prr($respX);  
 		if (is_array($respX) && !empty($respX['plain_text'] )){ $url = 'https://'.$options['dc'].'.api.mailchimp.com/3.0/campaigns/'.$resp['id'].'/actions/send'; 
-		  $advSet = nxs_mkRemOptsArr($hdrsArr, '', $flds); $ret = wp_remote_post( $url, $advSet);
+		  $advSet = nxs_mkRemOptsArr($hdrsArr, '', $flds); $ret = wp_safe_remote_post($url, $advSet);
 		  if ($ret['response']['code']=='204') return array('postID'=>$resp['id'], 'isPosted'=>1, 'postURL'=>$resp['archive_url'], 'pDate'=>date('Y-m-d H:i:s')); else $badOut['Error'] .= 'Something went wrong - '.print_r($ret, true);
 		}
 	  } else $badOut['Error'] .= 'Something went wrong - '.print_r($ret, true); 

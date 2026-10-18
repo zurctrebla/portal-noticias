@@ -44,11 +44,11 @@ if (!function_exists("doGetBoardsFromWaNeLo")) {function doGetBoardsFromWaNeLo()
   return $nxs_gWLBoards;
 }}
 //## Post to WaNeLo
-if (!function_exists("doPostToWaNeLo")) {function doPostToWaNeLo($msg, $imgURL, $lnk, $boardID, $title = '', $price='', $via=''){  global $nxs_gTkn, $nxs_gCookiesArr;  $lnk = urlencode($lnk); $msg = substr($msg, 0, 480); $tgs = '';
+if (!function_exists("doPostToWaNeLo")) {function doPostToWaNeLo($msg, $imgURL, $lnk, $boardID, $title = '', $price='', $via=''){  global $nxs_gTkn, $nxs_gCookiesArr; return 'WaNeLo legacy publishing is disabled because no secure HTTPS API is available.'; $lnk = urlencode($lnk); $msg = substr($msg, 0, 480); $tgs = '';
 
 $contents = getCurlPageX('http://wanelo.com/following','http://wanelo.com/', true, '', false, $advSettings); 
 
-$nxs_gWLUName = CutFromTo($contents, "'alerts-page-subhead-notification'", "/following")."/"; $nxs_gWLUName = CutFromTo($nxs_gWLUName, "/", "/"); echo "}}}}"; prr($nxs_gWLUName);
+$nxs_gWLUName = CutFromTo($contents, "'alerts-page-subhead-notification'", "/following")."/"; $nxs_gWLUName = CutFromTo($nxs_gWLUName, "/", "/");
 
 
 $nxs_gTkn = CutFromTo($contents, '"authenticity_token" type="hidden" value="', '"');
@@ -122,7 +122,7 @@ $advSettings = array('headers'=>$headers); //prr($advSettings); die();
 
 $ref = 'http://wanelo.com/p/post?bookmarklet=&images%5B%5D=http%3A%2F%2Fstatic.bhphoto.com%2Fimages%2Fimages200x200%2F680103.jpg&url=http%3A%2F%2Fwww.bhphotovideo.com%2Fc%2Fproduct%2F680103-USA%2FCanon_2751B002_EF_70_200mm_f_2_8L_IS.html&title=Canon%20EF%2070-200mm%20f%2F2.8L%20IS%20II%20USM%20Telephoto%20Zoom%20Lens&price=%240.00&shop=&source=toolbar&ref=http%3A%2F%2Fwww.bhphotovideo.com%2Fc%2Fproduct%2F680103-USA%2FCanon_2751B002_EF_70_200mm_f_2_8L_IS.html';
 
-$contents = getCurlPageX('http://wanelo.com/p', $ref, false, $postData, true, $advSettings); $contents['content'] = ''; prr($contents); prr($postData); die();
+return 'WaNeLo legacy publishing is disabled because no secure HTTPS API is available.';
 
  // if (stripos($imgURL, 'youtube.com')!==false || stripos($imgURL, 'youtu.be')!==false) { $tgs = 'http://img.youtube.com/vi/'.str_ireplace('http://youtu.be/','',$imgURL).'/0.jpg'; }
   $fldsTxt = 'caption='.urlencode($msg).'&board='.$boardID.'&tags='.$tgs.'&replies=&buyable='.urldecode($price).'&title='.urldecode($title).'&media_url='.urlencode($imgURL).'&url='.$lnk.'&via='.urldecode($via).'&csrfmiddlewaretoken='.$nxs_gTkn.'&form_url=';  
@@ -152,14 +152,14 @@ if (!function_exists("nxs_getWLHeaders")) {  function nxs_getWLHeaders($ref, $po
 
 if (!function_exists("nxs_urlencCookies")) { function nxs_urlencCookies($value, $name) { return urlencode($value); }}
 
-if (!function_exists("doCheckWaNeLo2")) {function doCheckWaNeLo2(){ global $nxs_gCookiesArr, $nxs_gWLUName, $nxs_gTkn, $nxs_gWLBoards; $nxs_gWLUName = ''; 
+if (!function_exists("doCheckWaNeLo2")) {function doCheckWaNeLo2(){ global $nxs_gCookiesArr, $nxs_gWLUName, $nxs_gTkn, $nxs_gWLBoards; return 'WaNeLo is disabled because no secure HTTPS API is available.'; $nxs_gWLUName = ''; 
   $hdrsArr = nxs_getWLHeaders('http://wanelo.com/', false, $nxs_gTkn); $reqArr = array('headers' => $hdrsArr, 'cookies' => $nxs_gCookiesArr); 
   $response = nxs_remote_get('http://wanelo.com/users/me?requesting_controller=home&requesting_action=trending&params=null&exclude_params%5B%5D=collections', $reqArr); 
   $contents = $response['body']; $jsn = json_decode($contents, true); if (!is_array($jsn)) return "No Login /J";  
   $user = $jsn['user']; if ($user=='null' || !is_array($user)) return "No Login /U"; 
   if (trim($user['username'])!='') return false; else { echo "WTF? NO LOGIN?"; return "No Login /X"; }
 }}
-if (!function_exists("doConnectToWaNeLo2")) {function doConnectToWaNeLo2($email, $pass){ global $nxs_gCookiesArr, $nxs_gTkn, $nxs_gWLUName, $nxs_gWLBoards; $nxs_gCookiesArr = array(); $advSettings = array();// echo "UUU";
+if (!function_exists("doConnectToWaNeLo2")) {function doConnectToWaNeLo2($email, $pass){ global $nxs_gCookiesArr, $nxs_gTkn, $nxs_gWLUName, $nxs_gWLBoards; return 'WaNeLo is disabled because no secure HTTPS API is available.'; $nxs_gCookiesArr = array(); $advSettings = array();// echo "UUU";
   
   $err = nxsCheckSSLCurl('https://wanelo.com/users/sign_in'); if ($err!==false && $err['errNo']=='60') $advSettings['noSSLSec'] = true;  
   if ($err!==false && stripos($err['errMsg'], 'Protocol https not supported')!==false) return 'Protocol https not supported or disabled in libcurl. Please install or enable OpenSSL. ';    
@@ -185,7 +185,7 @@ if (!function_exists("doConnectToWaNeLo2")) {function doConnectToWaNeLo2($email,
   $nxs_gWLUName = $user['username']; $nxs_gCookiesArr = $ckArr;
   if (trim($nxs_gWLUName)!='') return false; else return "Something wrong";   
 }}
-if (!function_exists("doPostToWaNeLo2")) {function doPostToWaNeLo2($msg, $imgURL, $lnk, $boardID, $title = '', $price='', $via=''){  global $nxs_gTkn, $nxs_gCookiesArr;  $uLnk = urlencode($lnk); $msg = substr($msg, 0, 480); $tgs = '';
+if (!function_exists("doPostToWaNeLo2")) {function doPostToWaNeLo2($msg, $imgURL, $lnk, $boardID, $title = '', $price='', $via=''){  global $nxs_gTkn, $nxs_gCookiesArr; return 'WaNeLo is disabled because no secure HTTPS API is available.'; $uLnk = urlencode($lnk); $msg = substr($msg, 0, 480); $tgs = '';
 $boardID = '16321420';
   foreach ($nxs_gCookiesArr as $ck) if ($ck->name=='csrf-token') $nxs_gTkn = $ck->value; // prr($nxs_gTkn);  
   add_filter('wp_http_cookie_value','nxs_urlencCookies', 10, 2 );
@@ -239,7 +239,7 @@ if ( $response['response']['code']=='200' ) { echo "############################
     
   $hdrsArr = nxs_getWLHeaders('http://wanelo.com/', false, $nxs_gTkn); $reqArr = array('headers' => $hdrsArr, 'cookies' => $nxs_gCookiesArr); 
   $response = nxs_remote_get('http://wanelo.com/users/me?requesting_controller=products&requesting_action=post&params=null&exclude_params%5B%5D=collections', $reqArr);     
-  $contents = $response['body']; $jsn = json_decode($contents, true); prr($jsn);     
+  $contents = $response['body']; $jsn = json_decode($contents, true);
   $nxs_gCookiesArr = nxs_MergeCookieArr($nxs_gCookiesArr, $response['cookies']);    
   
   
@@ -256,8 +256,7 @@ if ( $response['response']['code']=='200' ) { echo "############################
   $reqArr = array('method' => 'POST', 'httpversion' => '1.1', 'ar' => '1.1', 'timeout' => 45, 'redirection' => 0,  'headers' => $hdrsArr, 'body' => $pstFlds, 'cookies' => $nxs_gCookiesArr); 
   $response = nxs_remote_post('http://wanelo.com/p', $reqArr);   
   
-     prr($reqArr);
-  prr($response); die();
+  return 'WaNeLo legacy publishing is disabled because no secure HTTPS API is available.';
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n";
 $boundary  = uniqid('----WebKitFormBoundary');    
@@ -274,14 +273,13 @@ $headers = array("Content-Type" => "multipart/form-data; boundary=$boundary", "O
   
   remove_filter('wp_http_cookie_value','nxs_urlencCookies', 10, 2 );
   
-  prr($reqArr);
-  prr($response); die();
+  return 'WaNeLo legacy publishing is disabled because no secure HTTPS API is available.';
   
 }
 
 $ref = 'http://wanelo.com/p/post?bookmarklet=&images%5B%5D=http%3A%2F%2Fstatic.bhphoto.com%2Fimages%2Fimages200x200%2F680103.jpg&url=http%3A%2F%2Fwww.bhphotovideo.com%2Fc%2Fproduct%2F680103-USA%2FCanon_2751B002_EF_70_200mm_f_2_8L_IS.html&title=Canon%20EF%2070-200mm%20f%2F2.8L%20IS%20II%20USM%20Telephoto%20Zoom%20Lens&price=%240.00&shop=&source=toolbar&ref=http%3A%2F%2Fwww.bhphotovideo.com%2Fc%2Fproduct%2F680103-USA%2FCanon_2751B002_EF_70_200mm_f_2_8L_IS.html';
 
-$contents = getCurlPageX('http://wanelo.com/p', $ref, false, $postData, true, $advSettings); $contents['content'] = ''; prr($contents); prr($postData); die();
+return 'WaNeLo legacy publishing is disabled because no secure HTTPS API is available.';
 
  // if (stripos($imgURL, 'youtube.com')!==false || stripos($imgURL, 'youtu.be')!==false) { $tgs = 'http://img.youtube.com/vi/'.str_ireplace('http://youtu.be/','',$imgURL).'/0.jpg'; }
   $fldsTxt = 'caption='.urlencode($msg).'&board='.$boardID.'&tags='.$tgs.'&replies=&buyable='.urldecode($price).'&title='.urldecode($title).'&media_url='.urlencode($imgURL).'&url='.$lnk.'&via='.urldecode($via).'&csrfmiddlewaretoken='.$nxs_gTkn.'&form_url=';  
@@ -311,9 +309,9 @@ if (!class_exists("nxs_snapClassWL")) { class nxs_snapClassWL {
         <?php } else foreach ($ntOpts as $indx=>$pbo){ if (trim($pbo['nName']=='')) $pbo['nName'] = $pbo[$ntInfo['defNName']]; ?>
           <p style="margin:0px;margin-left:5px;">
             <input value="1" name="<?php echo $ntInfo['lcode']; ?>[<?php echo $indx; ?>][apDo<?php echo $ntInfo['code']; ?>]" onchange="doShowHideBlocks('<?php echo $ntInfo['code']; ?>');" type="checkbox" <?php if ((int)$pbo['do'.$ntInfo['code']] == 1) echo "checked"; ?> /> <?php if ((int)$pbo['catSel'] == 1) { ?>   <span onmouseout="nxs_hidePopUpInfo('popOnlyCat');" onmouseover="nxs_showPopUpInfo('popOnlyCat', event);"><?php echo "*[".(substr_count($pbo['catSelEd'], ",")+1)."]*" ?></span><?php } ?>
-            <strong><?php  _e('Auto-publish to', 'social-networks-auto-poster-facebook-twitter-g'); ?> <?php echo $ntInfo['name']; ?> <i style="color: #005800;"><?php if($pbo['nName']!='') echo "(".$pbo['nName'].")"; ?></i></strong>
+            <strong><?php  _e('Auto-publish to', 'social-networks-auto-poster-facebook-twitter-g'); ?> <?php echo esc_html($ntInfo['name']); ?> <i style="color: #005800;"><?php if($pbo['nName']!='') echo '('.esc_html($pbo['nName']).')'; ?></i></strong>
           &nbsp;&nbsp;<?php if ($ntInfo['tstReq'] && (!isset($pbo[$ntInfo['lcode'].'OK']) || $pbo[$ntInfo['lcode'].'OK']=='')){ ?><b style="color: #800000"><?php  _e('Attention requred. Unfinished setup', 'social-networks-auto-poster-facebook-twitter-g'); ?> ==&gt;</b><?php } ?><a id="do<?php echo $ntInfo['code'].$indx; ?>A" href="#" onclick="doShowHideBlocks2('<?php echo $ntInfo['code'].$indx; ?>');return false;">[<?php  _e('Show Settings', 'social-networks-auto-poster-facebook-twitter-g'); ?>]</a>&nbsp;&nbsp;
-          <a href="#" onclick="doDelAcct('<?php echo $ntInfo['lcode']; ?>', '<?php echo $indx; ?>', '<?php if (isset($pbo['bgBlogID'])) echo $pbo['nName']; ?>');return false;">[<?php  _e('Remove Account', 'social-networks-auto-poster-facebook-twitter-g'); ?>]</a>
+          <a href="#" onclick="doDelAcct('<?php echo esc_js($ntInfo['lcode']); ?>', '<?php echo absint($indx); ?>', '<?php if (isset($pbo['bgBlogID'])) echo esc_js($pbo['nName']); ?>');return false;">[<?php  _e('Remove Account', 'social-networks-auto-poster-facebook-twitter-g'); ?>]</a>
           </p><?php $pbo['ntInfo'] = $ntInfo; $this->showNTSettings($indx, $pbo);             
         } ?>
       </div>
@@ -389,7 +387,7 @@ if (!class_exists("nxs_snapClassWL")) { class nxs_snapClassWL {
     <div style="width:100%;"><strong><?php _e('Categories', 'social-networks-auto-poster-facebook-twitter-g'); ?>:</strong>
        <input value="0" id="catSelA<?php echo esc_attr($ii); ?>" type="radio" name="<?php echo esc_attr($nt); ?>[<?php echo esc_attr($ii); ?>][catSel]" <?php if ((int)$options['catSel'] != 1) echo "checked"; ?> /> All                                  
        <input value="1" id="catSelS<?php echo $ntU; ?><?php echo esc_attr($ii); ?>" type="radio" name="<?php echo esc_attr($nt); ?>[<?php echo esc_attr($ii); ?>][catSel]" <?php if ((int)$options['catSel'] == 1) echo "checked"; ?> /> <a href="#" style="text-decoration: none;" class="showCats" id="nxs_SCA_<?php echo $ntU; ?><?php echo esc_attr($ii); ?>" onclick="jQuery('#catSelS<?php echo $ntU; ?><?php echo esc_attr($ii); ?>').attr('checked', true); jQuery('#tmpCatSelNT').val('<?php echo $ntU; ?><?php echo esc_attr($ii); ?>'); nxs_markCats( jQuery('#nxs_SC_<?php echo $ntU; ?><?php echo esc_attr($ii); ?>').val() ); jQuery('#showCatSel').bPopup({ modalClose: false, appendTo: '#nsStForm', opacity: 0.6, follow: [false, false], position: [75, 'auto']}); return false;">Selected<?php if ($options['catSelEd']!='') echo "[".(substr_count($options['catSelEd'], ",")+1)."]"; ?></a>       
-       <input type="hidden" name="<?php echo esc_attr($nt); ?>[<?php echo esc_attr($ii); ?>][catSelEd]" id="nxs_SC_<?php echo $ntU; ?><?php echo esc_attr($ii); ?>" value="<?php echo $options['catSelEd']; ?>" />
+          <input type="hidden" name="<?php echo esc_attr($nt); ?>[<?php echo esc_attr($ii); ?>][catSelEd]" id="nxs_SC_<?php echo esc_attr($ntU); ?><?php echo esc_attr($ii); ?>" value="<?php echo esc_attr($options['catSelEd']); ?>" />
     <br/><i><?php _e('Only selected categories will be autoposted to this account', 'social-networks-auto-poster-facebook-twitter-g'); ?></i></div> 
     <br/>
     <?php } ?>
@@ -411,7 +409,7 @@ if (!class_exists("nxs_snapClassWL")) { class nxs_snapClassWL {
     foreach ($post as $ii => $pval){ 
       if (isset($pval['apWLUName']) && $pval['apWLUName']!=''){ if (!isset($options[$ii])) $options[$ii] = array();
         if (isset($pval['apDoWL']))   $options[$ii]['doWL'] = $pval['apDoWL']; else $options[$ii]['doWL'] = 0;
-        if (isset($pval['nName']))          $options[$ii]['nName'] = trim($pval['nName']);
+        if (isset($pval['nName']))          $options[$ii]['nName'] = sanitize_text_field($pval['nName']);
         if (isset($pval['apWLUName']))   $options[$ii]['wlUName'] = trim($pval['apWLUName']);
         if (isset($pval['apWLPass']))    $options[$ii]['wlPass'] = 'g9c1a'.nsx_doEncode($pval['apWLPass']); else $options[$ii]['wlPass'] = '';
         if (isset($pval['apWLBoard']))   $options[$ii]['wlBoard'] = trim($pval['apWLBoard']);                
@@ -436,16 +434,16 @@ if (!class_exists("nxs_snapClassWL")) { class nxs_snapClassWL {
         $doWL = $ntOpt['doWL'] && (is_array($pMeta) || $ntOpt['catSel']!='1');   
         $isAvailWL =  $ntOpt['wlUName']!='' && $ntOpt['wlPass']!=''; $wlMsgFormat = htmlentities($ntOpt['wlMsgFormat'], ENT_COMPAT, "UTF-8");        
       ?>  
-      <tr><th style="text-align:left;" colspan="2"><?php if ( $ntOpt['catSel']=='1' && trim($ntOpt['catSelEd'])!='' )  { ?> <input type="hidden" class="nxs_SC" id="nxs_SC_WL<?php echo esc_attr($ii); ?>" value="<?php echo $ntOpt['catSelEd']; ?>" /> <?php } ?>
+      <tr><th style="text-align:left;" colspan="2"><?php if ( $ntOpt['catSel']=='1' && trim($ntOpt['catSelEd'])!='' )  { ?> <input type="hidden" class="nxs_SC" id="nxs_SC_WL<?php echo esc_attr($ii); ?>" value="<?php echo esc_attr($ntOpt['catSelEd']); ?>" /> <?php } ?>
       <?php if ($isAvailWL) { ?><input class="nxsGrpDoChb" value="1" id="doWL<?php echo esc_attr($ii); ?>"  type="checkbox" name="wl[<?php echo esc_attr($ii); ?>][doWL]" <?php if ((int)$doWL == 1) echo 'checked="checked" title="def"';  ?> /> 
-      <?php if ($post->post_status == "publish") { ?> <input type="hidden" name="wl[<?php echo esc_attr($ii); ?>][doWL]" value="<?php echo $doWL;?>"> <?php } ?> <?php } ?>
-      <div class="nsx_iconedTitle" style="display: inline; font-size: 13px; background-image: url(<?php echo $nxs_plurl; ?>img/wl16.png);">WaNeLo - <?php _e('publish to', 'social-networks-auto-poster-facebook-twitter-g') ?> (<i style="color: #005800;"><?php echo $ntOpt['nName']; ?></i>)</div></th> <td><?php //## Only show RePost button if the post is "published"
+            <?php if ($post->post_status == "publish") { ?> <input type="hidden" name="wl[<?php echo esc_attr($ii); ?>][doWL]" value="<?php echo esc_attr($doWL); ?>"> <?php } ?> <?php } ?>
+      <div class="nsx_iconedTitle" style="display: inline; font-size: 13px; background-image: url(<?php echo esc_url($nxs_plurl.'img/wl16.png'); ?>);">WaNeLo - <?php _e('publish to', 'social-networks-auto-poster-facebook-twitter-g') ?> (<i style="color: #005800;"><?php echo esc_html($ntOpt['nName']); ?></i>)</div></th> <td><?php //## Only show RePost button if the post is "published"
                     if ($post->post_status == "publish" && $isAvailWL) { ?><input alt="<?php echo esc_attr($ii); ?>" style="float: right;" onmouseout="hidePopShAtt('SV');" onmouseover="showPopShAtt('SV', event);" onclick="return false;"  type="button" class="button" name="rePostToWL_repostButton" id="rePostToWL_button" value="<?php _e('Repost to WaNeLo', 'social-networks-auto-poster-facebook-twitter-g') ?>" />
                     <?php } ?>
 
                     <?php  if (is_array($pMeta) && is_array($pMeta[$ii]) && isset($pMeta[$ii]['pgID']) ) {                         
                         ?> <span id="pstdWL<?php echo esc_attr($ii); ?>" style="float: right;padding-top: 4px; padding-right: 10px;">
-          <a style="font-size: 10px;" href="http://WaNeLo.com<?php echo $pMeta[$ii]['pgID']; ?>" target="_blank"><?php $nType="WaNeLo"; printf( __( 'Posted on', 'social-networks-auto-poster-facebook-twitter-g' ), $nType); ?>  <?php echo (isset($pMeta[$ii]['pDate']) && $pMeta[$ii]['pDate']!='')?(" (".$pMeta[$ii]['pDate'].")"):""; ?></a>
+          <a style="font-size: 10px;" href="<?php echo esc_url('https://wanelo.com'.$pMeta[$ii]['pgID']); ?>" target="_blank" rel="noopener noreferrer"><?php $nType="WaNeLo"; printf(esc_html__( 'Posted on', 'social-networks-auto-poster-facebook-twitter-g' ), esc_html($nType)); ?>  <?php echo (isset($pMeta[$ii]['pDate']) && $pMeta[$ii]['pDate']!='')?esc_html(" (".$pMeta[$ii]['pDate'].")"):""; ?></a>
                     </span><?php } ?>
                     
                 </td></tr>                
@@ -522,7 +520,7 @@ if (!function_exists("nxs_doPublishToWL")) { //## Second Function to Post to G+
       if ($isAttachVid=='1') { $vids = nsFindVidsInPost($post); if (count($vids)>0) { $vidURL = 'http://www.youtube.com/v/'.$vids[0]; $imgURL = 'http://img.youtube.com/vi/'.$vids[0].'/0.jpg'; }}      
     }
     $email = $options['wlUName']; $boardID = $options['wlBoard'];  $pass = substr($options['wlPass'], 0, 5)=='g9c1a'?nsx_doDecode(substr($options['wlPass'], 5)):$options['wlPass'];// prr($boardID); prr($_POST); die();    
-    if (isset($options['wlSvC'])) $nxs_gCookiesArr = maybe_unserialize( $options['wlSvC']); $loginError = true; 
+    if (isset($options['wlSvC'])) $nxs_gCookiesArr = nxs_safe_unserialize($options['wlSvC'], array()); $loginError = true;
     if (is_array($nxs_gCookiesArr)) $loginError = doCheckWaNeLo2(); 
     $extInfo = ' | PostID: '.$postID." - ".$post->post_title; 
     if ($loginError!==false) $loginError = doConnectToWaNeLo2($email, $pass);  if ($loginError!==false) {echo $loginError; nxs_addToLogN('E', 'Error', $logNT, '-=ERROR=- '.print_r($loginError, true), $extInfo); return "BAD USER/PASS";}      
@@ -530,9 +528,9 @@ if (!function_exists("nxs_doPublishToWL")) { //## Second Function to Post to G+
      
     
     if (serialize($nxs_gCookiesArr)!=$options['wlSvC']) { global $plgn_NS_SNAutoPoster;  $gOptions = $plgn_NS_SNAutoPoster->nxs_options; // prr($gOptions['wl']);
-        if (isset($options['ii']) && $options['ii']!=='')  { $gOptions['wl'][$options['ii']]['wlSvC'] = serialize($nxs_gCookiesArr); update_option('NS_SNAutoPoster', $gOptions);  }        
+        if (isset($options['ii']) && $options['ii']!=='')  { $gOptions['wl'][$options['ii']]['wlSvC'] = serialize($nxs_gCookiesArr); update_option('NS_SNAutoPoster', nxs_protect_settings($gOptions), false);  }        
         else foreach ($gOptions['wl'] as $ii=>$gpn) { $result = array_diff($options, $gpn);
-          if (!is_array($result) || count($result)<1) { $gOptions['wl'][$ii]['wlSvC'] = serialize($nxs_gCookiesArr); update_option('NS_SNAutoPoster', $gOptions); break; }
+          if (!is_array($result) || count($result)<1) { $gOptions['wl'][$ii]['wlSvC'] = serialize($nxs_gCookiesArr); update_option('NS_SNAutoPoster', nxs_protect_settings($gOptions), false); break; }
         }        
     } // echo "WL SET:".$msg."|".$imgURL."|".$link."|".$boardID;    
     $ret = doPostToWaNeLo2($msg, $imgURL, $link, $boardID); if ($ret=='OK') $ret = array("code"=>"OK", "post_id"=>'');

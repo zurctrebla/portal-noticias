@@ -1,5 +1,9 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 if ( ! class_exists( 'FooGallery_Default_Gallery_Template' ) ) {
 
 	define( 'FOOGALLERY_DEFAULT_GALLERY_TEMPLATE_URL', plugin_dir_url( __FILE__ ) );
@@ -7,6 +11,11 @@ if ( ! class_exists( 'FooGallery_Default_Gallery_Template' ) ) {
 	class FooGallery_Default_Gallery_Template {
 
 		const TEMPLATE_ID = 'default';
+
+		const THUMBNAIL_DIMENSIONS_DEFAULT = array(
+			'width'  => 270,
+			'height' => 230,
+		);
 
 		/**
 		 * Wire up everything we need to run the extension
@@ -26,36 +35,81 @@ if ( ! class_exists( 'FooGallery_Default_Gallery_Template' ) ) {
 			//build up the arguments needed for rendering this template
 			add_filter( 'foogallery_gallery_template_arguments-default', array( $this, 'build_gallery_template_arguments' ) );
 
-			// add a style block for the gallery based on the thumbnail width.
-			add_action( 'foogallery_loaded_template_before', array( $this, 'add_width_style_block' ), 10, 1 );
+			// add a style block for the gallery
+			add_action( 'foogallery_template_style_block-default', array( $this, 'add_css' ), 10, 2 );
+
+			// set defaults for the gallery
+			add_filter( 'foogallery_override_gallery_template_fields-default', array( $this, 'set_default_fields' ), 10, 2 );
+
+			//alter the crop value if needed
+			add_filter( 'foogallery_render_gallery_template_field_value', array( $this, 'alter_field_value'), 10, 4 );
+
+			// handle aliases for default template settings
+			add_filter( 'foogallery_gallery_template_argument_alias', array( $this, 'handle_alias' ), 10, 2 );
 			// @formatter:on
 		}
 
 		/**
-		 * Add a style block based on the width thumbnail size
+		 * Handle aliases for gallery template settings saved in meta.
+		 *
+		 * @param string $key The key of the setting.
+		 * @param string $template The template slug.
+		 * @return string
+		 */
+		function handle_alias( $key, $template ) {
+			if ( 'spacing' === $key && self::TEMPLATE_ID === $template ) {
+				return 'gap';
+			}
+			return $key;
+		}
+
+		/**
+		 * Make sure the spacing value is set correctly from legacy values.
+		 */
+		function alter_field_value( $value, $field, $gallery, $template ) {
+            //only do something if we are dealing with the thumbnail_dimensions field in this template
+            if ( self::TEMPLATE_ID === $template['slug'] && 'spacing' === $field['id'] ) {
+                if ( strpos( $value, 'fg-gutter-' )  === 0 ) {
+					$value = foogallery_intval( $value );
+				}
+            }
+
+            return $value;
+        }
+
+		/**
+		 * Add css to the page for the gallery
 		 *
 		 * @param $gallery FooGallery
 		 */
-		function add_width_style_block( $gallery ) {
-			if ( self::TEMPLATE_ID !== $gallery->gallery_template ) {
-				return;
-			}
-
+		function add_css( $css, $gallery ) {
 			$id         = $gallery->container_id();
-			$dimensions = foogallery_gallery_template_setting('thumbnail_dimensions');
+			$dimensions = foogallery_gallery_template_setting( 'thumbnail_dimensions' , self::THUMBNAIL_DIMENSIONS_DEFAULT );
+			$layout     = foogallery_gallery_template_setting( 'layout' );
+			$width		= 0;
+			$height		= 0;
 			if ( is_array( $dimensions ) && array_key_exists( 'width', $dimensions ) && intval( $dimensions['width'] ) > 0 ) {
-				$width      = intval( $dimensions['width'] );
-
-				// @formatter:off
-				?>
-<style type="text/css">
-	<?php echo '#' . $id; ?> .fg-image {
-        width: <?php echo $width; ?>px;
-    }
-</style>
-				<?php
-				// @formatter:on
+				$width = intval( $dimensions['width'] );
 			}
+			if ( is_array( $dimensions ) && array_key_exists( 'height', $dimensions ) && intval( $dimensions['height'] ) > 0 ) {
+				$height = intval( $dimensions['height'] );
+			}
+			if ( !empty( $layout ) ) {
+				if ( $width > 0 && $height > 0 ) {
+					$css[] = '#' . $id . ' { --fg-column-max-width: ' . $width . 'px; }';
+				}
+			} else {
+				//default layout. Do as before.
+				if ( $width > 0 ) {
+					$css[] = '#' . $id . ' .fg-image { width: ' . $width . 'px; }';
+				}
+			}
+			$spacing = foogallery_intval( foogallery_gallery_template_setting( 'spacing', '10' ) );
+			if ( $spacing >= 0 ) {
+				$css[] = '#' . $id . ' { --fg-gutter: ' . $spacing . 'px; }';
+			}
+
+			return $css;
 		}
 
 		/**
@@ -79,9 +133,9 @@ if ( ! class_exists( 'FooGallery_Default_Gallery_Template' ) ) {
 		 * @return array
 		 */
 		function add_template( $gallery_templates ) {
-			$gallery_templates[] = array(
+			$gallery_templates[self::TEMPLATE_ID] = array(
 				'slug'                  => self::TEMPLATE_ID,
-				'name'                  => __( 'Responsive Image Gallery', 'foogallery' ),
+				'name'                  => __( 'Responsive', 'foogallery' ),
 				'preview_support'       => true,
 				'common_fields_support' => true,
 				'paging_support'        => true,
@@ -90,31 +144,60 @@ if ( ! class_exists( 'FooGallery_Default_Gallery_Template' ) ) {
 				'thumbnail_dimensions'  => true,
 				'filtering_support'     => true,
 				'enqueue_core'          => true,
+				'icon'                  => '<svg viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7"/>
+        <rect x="14" y="3" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/>
+      </svg>',
 				'fields'                => array(
 					array(
 						'id'       => 'thumbnail_dimensions',
 						'title'    => __( 'Thumbnail Size', 'foogallery' ),
-						'desc'     => __( 'Choose the size of your thumbnails.', 'foogallery' ),
-						'section'  => __( 'General', 'foogallery' ),
-						'type'     => 'thumb_size_no_crop',
-						'default'  => array(
-							'width'  => get_option( 'thumbnail_size_w' ),
-							'height' => get_option( 'thumbnail_size_h' ),
-						),
+							'desc'     => __( 'Choose the size of your thumbnails.', 'foogallery' ),
+							'section'  => __( 'General', 'foogallery' ),
+							'alias'    => 'thumbnail_size',
+							'type'     => 'thumb_size_no_crop',
+						'for'     => 'thumbnail_dimensions_width',
+						'default'  => self::THUMBNAIL_DIMENSIONS_DEFAULT,
 						'row_data' => array(
 							'data-foogallery-change-selector' => 'input',
 							'data-foogallery-preview'         => 'shortcode'
 						)
 					),
 					array(
+						'id'       => 'layout',
+						'title'    => __( 'Columns', 'foogallery' ),
+						'desc'     => __( 'The number of columns to use. Auto will use all available space. Otherwise, you can force the number of columns to show on desktop.', 'foogallery' ),
+						'section'  => __( 'General', 'foogallery' ),
+						'default'  => '',
+						'type'     => 'radio',
+						'alias'    => 'columns',
+						'class'    => 'foogallery-radios-stacked',
+						'choices'  => array(
+							''   => __( 'Auto', 'foogallery' ),
+							'fg-d-col1' => __( '1 Column', 'foogallery' ),
+							'fg-d-col2' => __( '2 Columns', 'foogallery' ),
+							'fg-d-col3' => __( '3 Columns', 'foogallery' ),
+							'fg-d-col4' => __( '4 Columns', 'foogallery' ),
+							'fg-d-col5' => __( '5 Columns', 'foogallery' ),
+							'fg-d-col6' => __( '6 Columns', 'foogallery' ),
+						),
+						'row_data' => array(
+							'data-foogallery-change-selector' => 'input:radio',
+							'data-foogallery-preview'         => 'shortcode'
+						)
+					),
+					array(
 						'id'       => 'mobile_columns',
-						'title'    => __( 'Mobile Layout', 'foogallery' ),
+						'title'    => __( 'Mobile Columns', 'foogallery' ),
 						'desc'     => __( 'Number of columns to show on mobile (screen widths less than 600px)', 'foogallery' ),
 						'section'  => __( 'General', 'foogallery' ),
 						'default'  => '',
 						'type'     => 'radio',
+						'class'    => 'foogallery-radios-stacked',
 						'choices'  => array(
-							''   => __( 'Default', 'foogallery' ),
+							''   => __( 'Auto', 'foogallery' ),
 							'fg-m-col1'   => __( '1 Column', 'foogallery' ),
 							'fg-m-col2' => __( '2 Columns', 'foogallery' ),
 							'fg-m-col3'  => __( '3 Columns', 'foogallery' ),
@@ -130,7 +213,6 @@ if ( ! class_exists( 'FooGallery_Default_Gallery_Template' ) ) {
 						'section' => __( 'General', 'foogallery' ),
 						'default' => 'image',
 						'type'    => 'thumb_link',
-						'desc'    => __( 'You can choose to link each thumbnail to the full size image, the image\'s attachment page, a custom URL, or you can choose to not link to anything.', 'foogallery' ),
 					),
 					array(
 						'id'      => 'lightbox',
@@ -138,21 +220,17 @@ if ( ! class_exists( 'FooGallery_Default_Gallery_Template' ) ) {
 					),
 					array(
 						'id'       => 'spacing',
-						'title'    => __( 'Spacing', 'foogallery' ),
+						'title'    => __( 'Thumbnail Gap', 'foogallery' ),
 						'desc'     => __( 'The spacing or gap between thumbnails in the gallery.', 'foogallery' ),
 						'section'  => __( 'General', 'foogallery' ),
-						'type'     => 'select',
-						'default'  => 'fg-gutter-10',
-						'choices'  => array(
-							'fg-gutter-0'  => __( 'none', 'foogallery' ),
-							'fg-gutter-5'  => __( '5 pixels', 'foogallery' ),
-							'fg-gutter-10' => __( '10 pixels', 'foogallery' ),
-							'fg-gutter-15' => __( '15 pixels', 'foogallery' ),
-							'fg-gutter-20' => __( '20 pixels', 'foogallery' ),
-							'fg-gutter-25' => __( '25 pixels', 'foogallery' ),
-						),
+						'alias'    => 'gap',
+						'type'     => 'slider',
+						'min'      => 0,
+						'max'      => 100,
+						'step'     => 1,
+						'default'  => '10',
 						'row_data' => array(
-							'data-foogallery-change-selector' => 'select',
+							'data-foogallery-change-selector' => 'range-input',
 							'data-foogallery-preview'         => 'shortcode'
 						)
 					),
@@ -163,7 +241,6 @@ if ( ! class_exists( 'FooGallery_Default_Gallery_Template' ) ) {
 						'section'  => __( 'General', 'foogallery' ),
 						'default'  => 'fg-center',
 						'type'     => 'radio',
-						'spacer'   => '<span class="spacer"></span>',
 						'choices'  => array(
 							'fg-left'   => __( 'Left', 'foogallery' ),
 							'fg-center' => __( 'Center', 'foogallery' ),
@@ -209,10 +286,7 @@ if ( ! class_exists( 'FooGallery_Default_Gallery_Template' ) ) {
 		 * @return mixed
 		 */
 		function get_thumbnail_dimensions( $dimensions, $foogallery ) {
-			$dimensions         = $foogallery->get_meta( 'default_thumbnail_dimensions', array(
-				'width'  => get_option( 'thumbnail_size_w' ),
-				'height' => get_option( 'thumbnail_size_h' )
-			) );
+			$dimensions         = $foogallery->get_meta( 'default_thumbnail_dimensions', self::THUMBNAIL_DIMENSIONS_DEFAULT );
 			$dimensions['crop'] = true;
 
 			return $dimensions;
@@ -226,11 +300,37 @@ if ( ! class_exists( 'FooGallery_Default_Gallery_Template' ) ) {
 		 * @return array
 		 */
 		function build_gallery_template_arguments( $args ) {
-			$args         = foogallery_gallery_template_setting( 'thumbnail_dimensions', array() );
+			$args         = foogallery_gallery_template_setting( 'thumbnail_dimensions', self::THUMBNAIL_DIMENSIONS_DEFAULT );
 			$args['crop'] = '1'; //we now force thumbs to be cropped
 			$args['link'] = foogallery_gallery_template_setting( 'thumbnail_link', 'image' );
 
 			return $args;
 		}
+
+		/**
+         * Set default values for the gallery template
+         *
+         * @uses "foogallery_override_gallery_template_fields"
+         * @param $fields
+         * @param $template
+         *
+         * @return array
+         */
+        function set_default_fields( $fields, $template ) {
+            //update specific fields
+            foreach ($fields as &$field) {
+                if ( 'hover_effect_type' === $field['id'] ) {
+	                $field['default'] = 'preset';
+                } else if ( 'hover_effect_preset' === $field['id'] ) {
+	                $field['default'] = 'fg-preset fg-brad';
+                } else if ( 'border_size' === $field['id'] ) {
+	                $field['default'] = '';
+                } else if ( 'drop_shadow' === $field['id'] ) {
+	                $field['default'] = 'fg-shadow-medium';
+                }
+            }
+
+            return $fields;
+        }
 	}
 }

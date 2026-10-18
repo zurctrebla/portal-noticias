@@ -136,7 +136,7 @@ if (!class_exists('nxs_adminMgmt')){
             add_meta_box( $this->page.'_addons', __( 'Social Networks Autoposter (SNAP) Addons', 'social-networks-auto-poster-facebook-twitter-g' ), array( $this, 'metabox_addons' ), $this->page, 'normal' );
             $this->showPage_side();  $this->showPage($this->pluginName.': '. __( 'SNAP Addons', 'social-networks-auto-poster-facebook-twitter-g' ));
         }
-        public function metabox_conns($post) { $conns = new sm_ntConns();  $conns->showMainInterface(); prr($conns->conns); }
+        public function metabox_conns($post) { $conns = new sm_ntConns();  $conns->showMainInterface(); }
         public function metabox_addons($post) { global $nxs_SNAP;  if (!isset($nxs_SNAP)) return; $nxs_SNAP->showAddonsTab();}
 
         public function showPage_accounts() { 
@@ -151,17 +151,17 @@ if (!class_exists('nxs_adminMgmt')){
             add_meta_box( $this->page.'_query', __( 'Social Networks Autoposter (SNAP) Query', 'social-networks-auto-poster-facebook-twitter-g' ), array( $this, 'metabox_query' ), $this->page, 'normal' );                        
             $this->showPage_side();  $this->showPage($this->pluginName.': '. __( 'SNAP Query', 'social-networks-auto-poster-facebook-twitter-g' ));             
         }        
-        public function showPage_reposter() {  if (!empty($_GET['item'])) $post = get_post(intval($_GET['item'])); else $post = null;
+        public function showPage_reposter() { if (!nxs_snap_user_can_access()) wp_die(esc_html__('You are not allowed to manage SNAP reposters.', 'social-networks-auto-poster-facebook-twitter-g'), '', array('response'=>403)); if (!empty($_GET['item'])) $post = get_post(absint($_GET['item'])); else $post = null;
           
-            if (!empty($_GET['action'])&& $_GET['action']=='edit' && !empty($_GET['item']) && !empty($post) ) {  
-              if (!empty($_POST['nxs_snap_reposter_update'])) nxs_Filters::save_filter($post->ID); ?> 
-              <form method="post" id="nxs_form_rep"> <input name="pid" value="<?php echo esc_attr($post->ID); ?>" type="hidden" /> <input name="action" value="nxs_snap_aj" type="hidden" /> <input id="nxs_resetStats" name="resetStats" value="0" type="hidden" />
+            if (!empty($_GET['action'])&& $_GET['action']=='edit' && !empty($_GET['item']) && !empty($post) && $post->post_type === 'nxs_filter' && current_user_can('edit_post', $post->ID)) {
+              if (!empty($_POST['nxs_snap_reposter_update'])) { check_admin_referer('nxs_reposter_update_'.$post->ID, '_nxs_reposter_nonce'); nxs_Filters::save_filter($post->ID); } ?> 
+              <form method="post" id="nxs_form_rep"> <?php wp_nonce_field('nxs_reposter_update_'.$post->ID, '_nxs_reposter_nonce'); ?><input name="pid" value="<?php echo esc_attr($post->ID); ?>" type="hidden" /> <input name="action" value="nxs_snap_aj" type="hidden" /> <input id="nxs_resetStats" name="resetStats" value="0" type="hidden" />
                 <input name="nxsact" value="saveRpst" type="hidden" /> <?php nxs_Filters::showEdit($this->page);
             }
-            elseif (!empty($_GET['action'])&& $_GET['action']=='delete' && !empty($_GET['item']) && !empty($post) ) { check_admin_referer( 'nxsRepDel_'.$_GET['item'] );
-               wp_delete_post(intval($_GET['item'])); ?> <script type="text/javascript">window.location = "<?php echo esc_url(nxs_get_admin_url('admin.php?page=nxssnap-reposter')); ?>"</script>  <?php
+            elseif (!empty($_GET['action'])&& $_GET['action']=='delete' && !empty($_GET['item']) && !empty($post) ) { check_admin_referer('nxsRepDel_'.$post->ID);
+               if ($post->post_type !== 'nxs_filter' || !current_user_can('delete_post', $post->ID)) wp_die(esc_html__('You cannot delete this reposter.', 'social-networks-auto-poster-facebook-twitter-g'), '', array('response'=>403)); wp_delete_post($post->ID, true); ?> <script type="text/javascript">window.location = "<?php echo esc_url(nxs_get_admin_url('admin.php?page=nxssnap-reposter')); ?>"</script>  <?php
             } elseif (!empty($_POST['action'])&& $_POST['action']=='delete' && !empty($_POST['nxs_filter']) ) {
-               foreach ($_POST['nxs_filter'] as $rr) wp_delete_post($rr);                
+               check_admin_referer('my_bulk_action_nonce', 'my_bulk_action_nonce'); foreach ((array)$_POST['nxs_filter'] as $rr) { $rr = absint($rr); if (get_post_type($rr)==='nxs_filter' && current_user_can('delete_post', $rr)) wp_delete_post($rr, true); }
                ?> <script type="text/javascript">window.location = "<?php echo esc_url(nxs_get_admin_url('admin.php?page=nxssnap-reposter')); ?>"</script>  <?php
             } else {            
               add_meta_box( $this->page.'_reposter', __( 'Social Networks Autoposter (SNAP) Auto-Reposter', 'social-networks-auto-poster-facebook-twitter-g' ), array( $this, 'metabox_reposter' ), $this->page, 'normal' );                        

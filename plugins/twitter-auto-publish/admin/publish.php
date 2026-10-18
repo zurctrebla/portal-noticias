@@ -6,9 +6,9 @@ function xyz_twap_save_metabox_meta($post_id) {
     if (!current_user_can('edit_post', $post_id)) return;
     if (isset($_POST['xyz_twap_twpost_permission'])) {
         $data = array(
-            'xyz_twap_twpost_permission'       => $_POST['xyz_twap_twpost_permission'],
-            'xyz_twap_twpost_image_permission' => $_POST['xyz_twap_twpost_image_permission'] ?? '',
-            'xyz_twap_twmessage'       => $_POST['xyz_twap_twmessage'] ?? '',
+			'xyz_twap_twpost_permission' => isset($_POST['xyz_twap_twpost_permission']) ? sanitize_text_field($_POST['xyz_twap_twpost_permission']) : '',
+			'xyz_twap_twpost_image_permission' => isset($_POST['xyz_twap_twpost_image_permission']) ? sanitize_text_field($_POST['xyz_twap_twpost_image_permission']) : '',
+			'xyz_twap_twmessage' => sanitize_textarea_field($_POST['xyz_twap_twmessage'] ?? ''),
         );
         update_post_meta($post_id, 'xyz_twap_future_to_publish', $data);
     }
@@ -245,8 +245,6 @@ $tw_af=1;
 		
 		$content = html_entity_decode($content, ENT_QUOTES, get_bloginfo('charset'));
 		$excerpt = $postpp->post_excerpt;
-		if($exc_flag==1)
-			$excerpt = apply_filters('the_excerpt', $excerpt);
 		
 		$excerpt = html_entity_decode($excerpt, ENT_QUOTES, get_bloginfo('charset'));
 		$content = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', "", $content);
@@ -270,6 +268,8 @@ $tw_af=1;
 			$excerpt=strip_tags($excerpt);
 			$excerpt=strip_shortcodes($excerpt);
 		}
+		if($exc_flag==1)
+		$excerpt = apply_filters('the_excerpt', $excerpt);
 		$description = $content;
 		
 		$description_org=$description;

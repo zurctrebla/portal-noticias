@@ -51,6 +51,15 @@ class AS3CF_Plugin_Compatibility {
 	private $removed_files = array();
 
 	/**
+	 * Parent attachment's file to be removed from local, if appropriate.
+	 * Array key is child attachment's ID to allow for multiples, but also
+	 * ensure crop etc just happened.
+	 *
+	 * @var array
+	 */
+	private $attachment_parent_to_remove = array();
+
+	/**
 	 * @param Amazon_S3_And_CloudFront $as3cf
 	 */
 	function __construct( $as3cf ) {
@@ -108,7 +117,18 @@ class AS3CF_Plugin_Compatibility {
 		add_filter( 'as3cf_get_attached_file_noop', array( $this, 'image_editor_download_file' ), 10, 4 );
 		add_filter( 'as3cf_get_attached_file', array( $this, 'image_editor_download_file' ), 10, 4 );
 		add_filter( 'as3cf_remove_local_files', array( $this, 'image_editor_remove_original_image' ), 10, 3 );
+
+		/*
+		 * Customizer Crop.
+		 */
 		add_filter( 'as3cf_get_attached_file', array( $this, 'customizer_crop_download_file' ), 10, 4 );
+		add_action( 'add_attachment', array( $this, 'action_add_attachment' ) );
+		add_filter(
+			'wp_update_attachment_metadata',
+			array( $this, 'maybe_set_attachment_parent_to_remove_from_local' ),
+			10,
+			2
+		);
 		add_filter( 'as3cf_remove_local_files', array( $this, 'customizer_crop_remove_original_image' ), 10, 3 );
 		add_filter( 'wp_unique_filename', array( $this, 'customizer_crop_unique_filename' ), 10, 3 );
 
@@ -122,13 +142,19 @@ class AS3CF_Plugin_Compatibility {
 		 * Regenerate Thumbnails v3+ and other REST-API using plugins that need a local file.
 		 */
 		add_filter( 'rest_dispatch_request', array( $this, 'rest_dispatch_request_copy_back_to_local' ), 10, 4 );
-		add_filter( 'as3cf_wait_for_generate_attachment_metadata', array( $this, 'wait_for_generate_attachment_metadata' ) );
+		add_filter(
+			'as3cf_wait_for_generate_attachment_metadata',
+			array( $this, 'wait_for_generate_attachment_metadata' )
+		);
 
 		/*
 		 * WP-CLI Compatibility
 		 */
 		if ( defined( 'WP_CLI' ) && class_exists( 'WP_CLI' ) ) {
-			WP_CLI::add_hook( 'before_invoke:media regenerate', array( $this, 'enable_copy_back_and_wait_for_generate_metadata' ) );
+			WP_CLI::add_hook(
+				'before_invoke:media regenerate',
+				array( $this, 'enable_copy_back_and_wait_for_generate_metadata' )
+			);
 		}
 	}
 
@@ -144,7 +170,13 @@ class AS3CF_Plugin_Compatibility {
 	 * @return string
 	 */
 	function legacy_copy_back_to_local( $url, $file, $attachment_id, Media_Library_Item $as3cf_item ) {
-		$copy_back_to_local = apply_filters( 'as3cf_get_attached_file_copy_back_to_local', false, $file, $attachment_id, $as3cf_item );
+		$copy_back_to_local = apply_filters(
+			'as3cf_get_attached_file_copy_back_to_local',
+			false,
+			$file,
+			$attachment_id,
+			$as3cf_item
+		);
 		if ( false === $copy_back_to_local ) {
 			// Not copying back file
 			return $url;
@@ -217,7 +249,12 @@ class AS3CF_Plugin_Compatibility {
 	 *
 	 * @return bool
 	 */
-	public function prevent_copy_back_to_local_after_remove( $copy_back_to_local, $file, $attachment_id, Media_Library_Item $as3cf_item ) {
+	public function prevent_copy_back_to_local_after_remove(
+		$copy_back_to_local,
+		$file,
+		$attachment_id,
+		Media_Library_Item $as3cf_item
+	) {
 		if ( $copy_back_to_local && in_array( $file, $this->removed_files ) ) {
 			$copy_back_to_local = false;
 		}
@@ -236,6 +273,11 @@ class AS3CF_Plugin_Compatibility {
 	 * @return mixed
 	 */
 	public function wp_generate_attachment_metadata( $metadata ) {
+		// During customizer crop, leave wait lock alone until parent data is available.
+		if ( $this->is_customizer_crop_action() && empty( $metadata['attachment_parent'] ) ) {
+			return $metadata;
+		}
+
 		$this->wait_for_generate_attachment_metadata = false;
 
 		return $metadata;
@@ -268,6 +310,8 @@ class AS3CF_Plugin_Compatibility {
 	 * @param null|string|array $context_key
 	 *
 	 * @return bool
+	 *
+	 * phpcs:disable WordPress.Security.NonceVerification
 	 */
 	public function maybe_process_on_action( $action_key, $ajax, $context_key = null ) {
 		if ( $ajax !== AS3CF_Utils::is_ajax() ) {
@@ -362,6 +406,7 @@ class AS3CF_Plugin_Compatibility {
 	 * @return bool
 	 */
 	public function image_editor_remove_files( $cancel, $data, $post_id, $as3cf_item ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- existence/equality check, admin_init
 		if ( ! isset( $_POST['do'] ) || 'restore' !== $_POST['do'] ) {
 			return $cancel;
 		}
@@ -413,6 +458,7 @@ class AS3CF_Plugin_Compatibility {
 		// but we actually need to copy back the original image at this point
 		// for the restore to be successful and edited images to be deleted from the bucket
 		// via image_editor_remove_files()
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- existence/equality check, admin_init
 		if ( isset( $_POST['do'] ) && 'restore' == $_POST['do'] ) {
 			$objects = $as3cf_item->objects();
 			if ( isset( $objects['full-orig'] ) ) {
@@ -460,6 +506,7 @@ class AS3CF_Plugin_Compatibility {
 			return $files_to_remove;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- existence/equality check, admin_init
 		if ( isset( $_POST['action'] ) && 'image-editor' === sanitize_key( $_POST['action'] ) ) { // input var okay
 			if ( ( $original_file = $this->get_original_image_file( $as3cf_item ) ) ) {
 				$files_to_remove[] = $original_file;
@@ -519,8 +566,68 @@ class AS3CF_Plugin_Compatibility {
 	}
 
 	/**
+	 * If doing customizer crop, enable wait lock when new attachment created
+	 * so we can wait until parent data available in metadata for removal of downloaded
+	 * original file for parent.
+	 *
+	 * @handles add_attachment
+	 *
+	 * @param int $post_id Attachment ID.
+	 */
+	public function action_add_attachment( $post_id ) {
+		if ( $this->is_customizer_crop_action() ) {
+			$this->wait_for_generate_attachment_metadata = true;
+		}
+	}
+
+	/**
+	 * Check to see whether customizer has been used to crop an item, and we
+	 * should therefore set a marker to remove the original file when the cropped
+	 * image files start to be offloaded and removed from local.
+	 *
+	 * This is hooked in before our main implementation that copies the files to the bucket
+	 * so that we can disable the wait lock if we have the required parent data.
+	 *
+	 * @handles wp_update_attachment_metadata
+	 *
+	 * @param array $data          Array of updated attachment meta data.
+	 * @param int   $attachment_id Attachment post ID.
+	 */
+	public function maybe_set_attachment_parent_to_remove_from_local( $data, $attachment_id ) {
+		if ( false === $this->is_customizer_crop_action() ) {
+			return $data;
+		}
+
+		// We're looking for the parent item, which can only be found by checking
+		// the attachment metadata for an attachment_parent value.
+		if (
+			is_array( $data ) &&
+			! empty( $data['attachment_parent'] ) &&
+			is_int( $data['attachment_parent'] )
+		) {
+			// With parent data ready to remove from local if offloaded or not,
+			// we can now turn off the wait lock for processing offloads.
+			$this->wait_for_generate_attachment_metadata = false;
+
+			$as3cf_item_parent = Media_Library_Item::get_by_source_id( $data['attachment_parent'] );
+		}
+
+		if ( ! empty( $as3cf_item_parent ) ) {
+			$original_file = $this->get_original_image_file( $as3cf_item_parent );
+		}
+
+		if ( ! empty( $original_file ) && is_string( $original_file ) ) {
+			$this->attachment_parent_to_remove[ $attachment_id ] = $original_file;
+		}
+
+		return $data;
+	}
+
+	/**
 	 * Allow the WordPress Image Editor to remove the main image file after it has been copied
-	 * back from the bucket after it has done the edit.
+	 * back from the bucket, after it has done the edit.
+	 *
+	 * @handles as3cf_remove_local_files
 	 *
 	 * @param array $files_to_remove
 	 * @param Item  $as3cf_item
@@ -533,8 +640,13 @@ class AS3CF_Plugin_Compatibility {
 			return $files_to_remove;
 		}
 
-		if ( ( $original_file = $this->get_original_image_file( $as3cf_item ) ) ) {
-			$files_to_remove[] = $original_file;
+		// Check for a previously set marker that was set when the parent attachment data was available.
+		if (
+			! empty( $this->attachment_parent_to_remove[ $as3cf_item->source_id() ] ) &&
+			is_string( $this->attachment_parent_to_remove[ $as3cf_item->source_id() ] )
+		) {
+			$files_to_remove[] = $this->attachment_parent_to_remove[ $as3cf_item->source_id() ];
+			unset( $this->attachment_parent_to_remove[ $as3cf_item->source_id() ] );
 		}
 
 		return $files_to_remove;
@@ -659,7 +771,11 @@ class AS3CF_Plugin_Compatibility {
 		$client = $this->register_stream_wrapper( $as3cf_item->region() );
 
 		if ( ! empty( $client ) ) {
-			return $client->prepare_stream_wrapper_file( $as3cf_item->region(), $as3cf_item->bucket(), $as3cf_item->key() );
+			return $client->prepare_stream_wrapper_file(
+				$as3cf_item->region(),
+				$as3cf_item->bucket(),
+				$as3cf_item->key()
+			);
 		}
 
 		return $url;
@@ -730,8 +846,10 @@ class AS3CF_Plugin_Compatibility {
 		}
 
 		// Bail early if an image has been inserted and later edited.
-		if ( preg_match( '/-e[0-9]{13}/', $image_meta['file'], $img_edit_hash ) && strpos( wp_basename( $image_src ), $img_edit_hash[0] ) === false ) {
-
+		if (
+			preg_match( '/-e[0-9]{13}/', $image_meta['file'], $img_edit_hash ) &&
+			strpos( wp_basename( $image_src ), $img_edit_hash[0] ) === false
+		) {
 			return $image;
 		}
 
@@ -933,13 +1051,18 @@ class AS3CF_Plugin_Compatibility {
 	 * is planned to be increased in a subsequent release.
 	 */
 	public function maybe_warn_about_php_version() {
-		$key_base = 'php-version-72';
+		$key_base    = 'php-version-81';
+		$php_version = '8.1';
 
-		if ( version_compare( PHP_VERSION, '7.2', '<' ) ) {
+		if ( version_compare( PHP_VERSION, $php_version, '<' ) ) {
 			$message = sprintf(
-				__( '<strong>Warning:</strong> This site is using PHP %1$s, in a future update WP Offload Media will require PHP %2$s or later. %3$s', 'amazon-s3-and-cloudfront' ),
+			/* translators: %1$s is a version string, %2$s a different version string, %3$s is a documentation link. */
+				__(
+					'<strong>Warning:</strong> This site is using PHP %1$s, in a future update WP Offload Media will require PHP %2$s or later. %3$s',
+					'amazon-s3-and-cloudfront'
+				),
 				PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION,
-				'7.2',
+				$php_version,
 				$this->as3cf->more_info_link( '/wp-offload-media/doc/php-version-requirements/', 'upgrade-php-version' )
 			);
 

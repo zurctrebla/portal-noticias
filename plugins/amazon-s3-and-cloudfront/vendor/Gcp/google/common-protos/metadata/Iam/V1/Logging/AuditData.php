@@ -14,12 +14,7 @@ class AuditData
             return;
         }
         \DeliciousBrains\WP_Offload_Media\Gcp\GPBMetadata\Google\Iam\V1\Policy::initOnce();
-        $pool->internalAddGeneratedFile('
-
-&google/iam/v1/logging/audit_data.protogoogle.iam.v1.logging"=
-	AuditData0
-policy_delta (2.google.iam.v1.PolicyDeltaB†
-com.google.iam.v1.loggingBAuditDataProtoPZ9cloud.google.com/go/iam/apiv1/logging/loggingpb;loggingpbªGoogle.Cloud.Iam.V1.Loggingbproto3', \true);
+        $pool->internalAddGeneratedFile("\n\x8f\x02\n&google/iam/v1/logging/audit_data.proto\x12\x15google.iam.v1.logging\"=\n\tAuditData\x120\n\fpolicy_delta\x18\x02 \x01(\v2\x1a.google.iam.v1.PolicyDeltaB\x86\x01\n\x19com.google.iam.v1.loggingB\x0eAuditDataProtoP\x01Z9cloud.google.com/go/iam/apiv1/logging/loggingpb;loggingpb\xaa\x02\x1bGoogle.Cloud.Iam.V1.Loggingb\x06proto3", \true);
         static::$is_initialized = \true;
     }
 }

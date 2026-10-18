@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2014-2018 ServMask Inc.
+ * Copyright (C) 2014-2025 ServMask Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
+ * Attribution: This code is part of the All-in-One WP Migration plugin, developed by
+ *
  * ███████╗███████╗██████╗ ██╗   ██╗███╗   ███╗ █████╗ ███████╗██╗  ██╗
  * ██╔════╝██╔════╝██╔══██╗██║   ██║████╗ ████║██╔══██╗██╔════╝██║ ██╔╝
  * ███████╗█████╗  ██████╔╝██║   ██║██╔████╔██║███████║███████╗█████╔╝
@@ -23,12 +25,16 @@
  * ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	die( 'Kangaroos cannot jump here' );
+}
+
 class Ai1wm_Import_Blogs {
 
 	public static function execute( $params ) {
 
 		// Set progress
-		Ai1wm_Status::info( __( 'Preparing blogs...', AI1WM_PLUGIN_NAME ) );
+		Ai1wm_Status::info( __( 'Preparing blogs...', 'all-in-one-wp-migration' ) );
 
 		$blogs = array();
 
@@ -75,6 +81,26 @@ class Ai1wm_Import_Blogs {
 							$subsite['Stylesheet'] = null;
 						}
 
+						// Set uploads path (backward compatibility)
+						if ( empty( $subsite['Uploads'] ) ) {
+							$subsite['Uploads'] = null;
+						}
+
+						// Set uploads URL path (backward compatibility)
+						if ( empty( $subsite['UploadsURL'] ) ) {
+							$subsite['UploadsURL'] = null;
+						}
+
+						// Set uploads path (backward compatibility)
+						if ( empty( $subsite['WordPress']['Uploads'] ) ) {
+							$subsite['WordPress']['Uploads'] = null;
+						}
+
+						// Set uploads URL path (backward compatibility)
+						if ( empty( $subsite['WordPress']['UploadsURL'] ) ) {
+							$subsite['WordPress']['UploadsURL'] = null;
+						}
+
 						// Set blog items
 						$blogs[] = array(
 							'Old' => array(
@@ -86,6 +112,9 @@ class Ai1wm_Import_Blogs {
 								'Plugins'         => $subsite['Plugins'],
 								'Template'        => $subsite['Template'],
 								'Stylesheet'      => $subsite['Stylesheet'],
+								'Uploads'         => $subsite['Uploads'],
+								'UploadsURL'      => $subsite['UploadsURL'],
+								'WordPress'       => $subsite['WordPress'],
 							),
 							'New' => array(
 								'BlogID'          => null,
@@ -96,22 +125,21 @@ class Ai1wm_Import_Blogs {
 								'Plugins'         => $subsite['Plugins'],
 								'Template'        => $subsite['Template'],
 								'Stylesheet'      => $subsite['Stylesheet'],
+								'Uploads'         => get_option( 'upload_path' ),
+								'UploadsURL'      => get_option( 'upload_url_path' ),
+								'WordPress'       => array(
+									'UploadsURL' => ai1wm_get_uploads_url(),
+								),
 							),
 						);
 					} else {
-						throw new Ai1wm_Import_Exception(
-							__( 'The archive should contain <strong>Single WordPress</strong> site! Please revisit your export settings.', AI1WM_PLUGIN_NAME )
-						);
+						throw new Ai1wm_Import_Exception( esc_html__( 'The archive must contain only a single WordPress site. The process cannot continue. Please revisit your export settings.', 'all-in-one-wp-migration' ) );
 					}
 				} else {
-					throw new Ai1wm_Import_Exception(
-						__( 'At least <strong>one WordPress</strong> site should be presented in the archive.', AI1WM_PLUGIN_NAME )
-					);
+					throw new Ai1wm_Import_Exception( esc_html__( 'The archive must contain at least one WordPress site. The process cannot continue. Please check your export settings.', 'all-in-one-wp-migration' ) );
 				}
 			} else {
-				throw new Ai1wm_Import_Exception(
-					__( 'Unable to import <strong>WordPress Network</strong> into WordPress <strong>Single</strong> site.', AI1WM_PLUGIN_NAME )
-				);
+				throw new Ai1wm_Import_Exception( esc_html__( 'Could not import a WordPress Network into a single WordPress site. The process cannot continue. Please check your import settings.', 'all-in-one-wp-migration' ) );
 			}
 		}
 
@@ -121,7 +149,7 @@ class Ai1wm_Import_Blogs {
 		ai1wm_close( $handle );
 
 		// Set progress
-		Ai1wm_Status::info( __( 'Done preparing blogs.', AI1WM_PLUGIN_NAME ) );
+		Ai1wm_Status::info( __( 'Blogs prepared.', 'all-in-one-wp-migration' ) );
 
 		return $params;
 	}

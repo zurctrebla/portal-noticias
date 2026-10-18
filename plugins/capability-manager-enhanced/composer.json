@@ -2,7 +2,7 @@
   "name": "publishpress/publishpress-capabilities",
   "type": "wordpress-plugin",
   "description": "",
-  "license": "GPL-2",
+  "license": "GPL-2.0-or-later",
   "authors": [
     {
       "name": "PublishPress",
@@ -12,45 +12,31 @@
   "config": {
     "preferred-install": {
       "*": "dist"
-    }
+    },
+    "allow-plugins": {
+      "publishpress/dev-workspace": true,
+      "php-http/discovery": true,
+      "dealerdirect/phpcodesniffer-composer-installer": true,
+      "phpstan/extension-installer": true,
+      "composer/installers": true
+    },
+    "process-timeout": 0
   },
   "minimum-stability": "stable",
   "prefer-stable": true,
   "require": {
     "php": ">=7.2.5"
   },
-  "scripts": {
-    "build": "ppbuild build",
-    "build:dir": "ppbuild build-dir",
-    "build:clean": "ppbuild clean",
-    "get:version": "ppbuild version",
-    "gen:mo": "wp i18n make-mo ./languages ./languages --allow-root",
-    "gen:pot": "wp i18n make-pot . languages/capability-manager-enhanced.pot --domain=capability-manager-enhanced --exclude=dev-workspace,.wordpress-org,.github,dist,tests,vendor, --allow-root",
-    "check:longpath": "longpath .",
-    "check:lint": "phplint",
-    "check:phpcs": "phpcs",
-    "check:php": [
-        "@check:php56",
-        "@check:php72",
-        "@check:php74",
-        "@check:php80",
-        "@check:php81",
-        "@check:php82"
-    ],
-    "check:php56": "phpcs --standard=.phpcs-php-compatibility.xml --runtime-set testVersion 5.6 ./capability-manager-enhanced.php",
-    "check:php72": "phpcs --standard=.phpcs-php-compatibility.xml --runtime-set testVersion 7.2",
-    "check:php74": "phpcs --standard=.phpcs-php-compatibility.xml --runtime-set testVersion 7.4",
-    "check:php80": "phpcs --standard=.phpcs-php-compatibility.xml --runtime-set testVersion 8.0",
-    "check:php81": "phpcs --standard=.phpcs-php-compatibility.xml --runtime-set testVersion 8.1",
-    "check:php82": "phpcs --standard=.phpcs-php-compatibility.xml --runtime-set testVersion 8.2",
-    "pre-autoload-dump": "composer dumpautoload --working-dir=./lib",
-    "pre-update-cmd": "composer update --working-dir=./lib",
-    "pre-install-cmd": "composer install --working-dir=./lib",
-	  "term": "cd dev-workspace && ./run"
+  "require-dev": {
+    "publishpress/dev-workspace": "^1.0"
   },
   "extra": {
     "plugin-name": "publishpress-capabilities",
     "plugin-slug": "capsman-enhanced",
-    "plugin-folder": "capability-manager-enhanced"
+    "plugin-folder": "capability-manager-enhanced",
+    "version-constant": "CAPSMAN_VERSION",
+    "plugin-lang-domain": "capability-manager-enhanced",
+    "plugin-github-repo": "publishpress/publishpress-capabilities",
+    "plugin-composer-package": "publishpress/publishpress-capabilities"
   }
 }

@@ -1,4 +1,9 @@
 <?php
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * FooGallery Blocks Initializer
  *
@@ -13,11 +18,44 @@ if ( ! class_exists( 'FooGallery_Blocks' ) ) {
 
 		function __construct() {
 			//Backend editor block assets.
-			add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_block_editor_assets' ) );
+			//add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_block_editor_assets' ) );
+			add_action( 'enqueue_block_assets', array( $this, 'enqueue_block_editor_assets' ) );
+			if ( version_compare( $GLOBALS['wp_version'], '5.8', '<' ) ) {
+				add_filter( 'block_categories', array( $this, 'ensure_media_block_category' ) );
+			}
+			add_filter( 'block_categories_all', array( $this, 'ensure_media_block_category' ) );
 
 			add_action( 'init', array( $this, 'php_block_init' ) );
 
 			add_filter( 'foogallery_build_container_data_options', array( $this, 'add_data_options_for_block_editor' ), 10, 3 );
+		}
+
+		/**
+		 * Add the Media block category when running a WordPress version that predates it.
+		 *
+		 * WordPress 5.3 rejects client-side block registration when the declared category
+		 * is unavailable. Newer WordPress versions already provide this category.
+		 *
+		 * @param array $categories Registered block categories.
+		 * @return array
+		 */
+		function ensure_media_block_category( $categories ) {
+			if ( ! is_array( $categories ) ) {
+				$categories = array();
+			}
+
+			foreach ( $categories as $category ) {
+				if ( is_array( $category ) && isset( $category['slug'] ) && 'media' === $category['slug'] ) {
+					return $categories;
+				}
+			}
+
+			$categories[] = array(
+				'slug'  => 'media',
+				'title' => __( 'Media', 'foogallery' ),
+			);
+
+			return $categories;
 		}
 
 		/**
@@ -35,17 +73,28 @@ if ( ! class_exists( 'FooGallery_Blocks' ) ) {
 				return;
 			}
 
+			if ( !is_admin() ) {
+				return;
+			}
+
 			//enqueue foogallery dependencies
+			wp_enqueue_script( 'lodash' );
 			wp_enqueue_script( 'masonry' );
-			foogallery_enqueue_core_gallery_template_script();
+			foogallery_enqueue_core_gallery_template_script( array('jquery', 'masonry' ) );
 			foogallery_enqueue_core_gallery_template_style();
 
             $path = FOOGALLERY_PATH . 'gutenberg/assets/blocks';
             $url = FOOGALLERY_URL . 'gutenberg/assets/blocks';
-            $asset = require_once( $path . '.asset.php' );
+            $asset = require( $path . '.asset.php' );
+            if ( ! is_array( $asset ) ) {
+                $asset = array(
+                    'dependencies' => array(),
+                    'version' => false,
+                );
+            }
 
-            if ( is_array( $asset[ 'dependencies' ] ) ){
-                $asset[ 'dependencies' ][] = 'foogallery-core';
+            if ( isset( $asset['dependencies'] ) && is_array( $asset['dependencies'] ) ){
+                $asset['dependencies'][] = 'foogallery-core';
             }
 
 			// Scripts.
@@ -64,33 +113,67 @@ if ( ! class_exists( 'FooGallery_Blocks' ) ) {
 				array( 'dashicons', 'wp-components', 'wp-edit-blocks', 'foogallery-core' ), // Dependency to include the CSS after it.
                 $asset[ 'version' ]
 			);
+			wp_style_add_data( 'foogallery-block-editor-css', 'rtl', 'replace' );
 
-			$local_data = false;
-
-			if ( function_exists( 'wp_get_jed_locale_data' ) ) {
-				$local_data = wp_get_jed_locale_data( 'foogallery' );
-			} else if ( function_exists( 'gutenberg_get_jed_locale_data' ) ) {
-				$local_data = gutenberg_get_jed_locale_data( 'foogallery' );
+			if ( function_exists( 'wp_set_script_translations' ) ) {
+				wp_set_script_translations( 'foogallery-block-js', 'foogallery' );
 			}
 
 			$block_js_data = apply_filters('foogallery_gutenberg_block_js_data', array(
-				"editGalleryUrl" => $this->get_edit_gallery_url()
+				"editGalleryUrl" => $this->get_edit_gallery_url(),
+				"dynamicOptions" => $this->get_dynamic_gallery_options()
 			));
 
-			$inline_script = 'window.FOOGALLERY_BLOCK = ' . json_encode( $block_js_data ) . ';';
-			if ( false !== $local_data ) {
-				/*
-				 * Pass already loaded translations to our JavaScript.
-				 *
-				 * This happens _before_ our JavaScript runs, afterwards it's too late.
-				 */
-				$inline_script .= PHP_EOL . 'wp.i18n.setLocaleData( ' . json_encode( $local_data ) . ', "foogallery" );';
-			}
+			$inline_script = 'if ( typeof window.lodash === "undefined" && typeof window._ !== "undefined" ) { window.lodash = window._; }';
+			$inline_script .= PHP_EOL . 'if ( typeof window._ === "undefined" && typeof window.lodash !== "undefined" ) { window._ = window.lodash; }';
+			$inline_script .= PHP_EOL . 'window.FOOGALLERY_BLOCK = ' . json_encode( $block_js_data ) . ';';
 
 			wp_add_inline_script(
 				'foogallery-block-js',
 				$inline_script,
 				'before'
+			);
+		}
+
+
+		/**
+		 * Get options used by the dynamic block inspector controls.
+		 *
+		 * @return array
+		 */
+		function get_dynamic_gallery_options() {
+			$templates = array();
+			$gallery_templates = foogallery_gallery_templates();
+
+			if ( is_array( $gallery_templates ) ) {
+				foreach ( $gallery_templates as $gallery_template ) {
+					if ( ! is_array( $gallery_template ) || ! isset( $gallery_template['slug'] ) ) {
+						continue;
+					}
+
+					$slug = sanitize_key( $gallery_template['slug'] );
+					if ( empty( $slug ) ) {
+						continue;
+					}
+
+					$templates[ $slug ] = isset( $gallery_template['name'] ) ? sanitize_text_field( $gallery_template['name'] ) : $slug;
+				}
+			}
+
+			$default_template = foogallery_default_gallery_template();
+			if ( empty( $default_template ) || ! isset( $templates[ $default_template ] ) ) {
+				$default_template = 'default';
+			}
+
+			$lightboxes = foogallery_gallery_template_field_lightbox_choices();
+			if ( ! is_array( $lightboxes ) ) {
+				$lightboxes = array();
+			}
+
+			return array(
+				'templates' => $templates,
+				'lightboxes' => $lightboxes,
+				'defaultTemplate' => $default_template,
 			);
 		}
 
@@ -121,20 +204,50 @@ if ( ! class_exists( 'FooGallery_Blocks' ) ) {
 				return;
 			}
 
-			// Register our block, and explicitly define the attributes we accept.
-			register_block_type(
-				'fooplugins/foogallery', array(
-				'attributes' => array(
-					'id' => array(
-						'type' => 'number',
-						'default' => 0
-					),
-					'className' => array(
-						'type' => 'string'
-					),
-				),
-				'render_callback' => array( $this, 'render_block' ),
-			));
+			if ( function_exists( 'register_block_type_from_metadata' ) ) {
+				// phpcs:ignore -- Compatibility is guarded by function_exists().
+				register_block_type_from_metadata(
+					FOOGALLERY_PATH . 'gutenberg',
+					array(
+						'render_callback' => array( $this, 'render_block' ),
+					)
+				);
+			} else {
+				// Register our block, and explicitly define the attributes we accept.
+				register_block_type(
+					'fooplugins/foogallery', array(
+					'attributes' => array(
+							'id' => array(
+								'type' => 'number',
+								'default' => 0
+							),
+							'attachment_ids' => array(
+								'type' => 'array',
+								'default' => array()
+							),
+							'template' => array(
+								'type' => 'string',
+								'default' => ''
+							),
+							'lightbox' => array(
+								'type' => 'string',
+								'default' => ''
+							),
+							'paging_type' => array(
+								'type' => 'string',
+								'default' => ''
+							),
+							'filtering_type' => array(
+								'type' => 'string',
+								'default' => ''
+							),
+							'className' => array(
+								'type' => 'string'
+							),
+						),
+						'render_callback' => array( $this, 'render_block' ),
+				));
+			}
 		}
 
 		/**
@@ -145,6 +258,32 @@ if ( ! class_exists( 'FooGallery_Blocks' ) ) {
 		 * @return false|string|null
 		 */
 		function render_block( $attributes ) {
+			$attributes = is_array( $attributes ) ? $attributes : array();
+			$attributes['id'] = isset( $attributes['id'] ) ? absint( $attributes['id'] ) : 0;
+			$attachment_ids = array();
+			if ( isset( $attributes['attachment_ids'] ) && is_array( $attributes['attachment_ids'] ) ) {
+				$attachment_ids = array_values( array_filter( array_map( 'absint', $attributes['attachment_ids'] ) ) );
+			}
+
+			$is_dynamic_gallery = ! empty( $attachment_ids );
+
+			if ( $is_dynamic_gallery ) {
+				$attributes['attachment_ids'] = $attachment_ids;
+
+				foreach ( array( 'template', 'lightbox', 'paging_type', 'filtering_type' ) as $key ) {
+					if ( ! array_key_exists( $key, $attributes ) ) {
+						continue;
+					}
+
+					$attributes[ $key ] = sanitize_key( $attributes[ $key ] );
+					if ( '' === $attributes[ $key ] ) {
+						unset( $attributes[ $key ] );
+					}
+				}
+			} else {
+				unset( $attributes['attachment_ids'], $attributes['template'], $attributes['lightbox'], $attributes['paging_type'], $attributes['filtering_type'] );
+			}
+
 			//create new instance of template engine
 			$engine = new FooGallery_Template_Loader();
 

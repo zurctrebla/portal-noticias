@@ -2968,11 +2968,10 @@ FooGallery.utils, FooGallery.utils.is, FooGallery.utils.str);
    * @memberof FooGallery.utils.
    * @class Timer
    * @param {number} [interval=1000] - The internal tick interval of the timer.
-   * @augments FooGallery.utils.EventClass
    */
 
   _.Timer = _.EventClass.extend(
-  /** @lends FooGallery.utils.Timer.prototype */
+  /** @lends FooGallery.utils.Timer */
   {
     /**
      * @ignore
@@ -3259,7 +3258,6 @@ FooGallery.utils, FooGallery.utils.is, FooGallery.utils.str);
       if (self.isRunning) {
         self.isRunning = false;
         self.isPaused = true;
-        self.canResume = self.__remaining > 0;
         self.trigger("pause", self.__eventArgs());
       }
 
@@ -3901,6 +3899,12 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 	 * });
 	 */
 
+    var mobileSize = globalThis?.FooGallery_mobileSize ?? '782px';
+    /**
+     * A very simple screen size based check for mobile sized screens.
+     */
+    _.isMobile = !!(globalThis.matchMedia && globalThis.matchMedia( `(max-width: ${ mobileSize })` ).matches);
+
 	/**
 	 * @summary Checks if the supplied image src is cached by the browser.
 	 * @param {string} src - The image src to check.
@@ -4186,6 +4190,122 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 		}
 	} );
 
+    /**
+     * Checks if the supplied URL is cross-origin.
+     * @param {string} url
+     * @returns {boolean} True if the URL is cross-origin, otherwise False.
+     */
+	_.isCrossOrigin = function(url) {
+		const parsed = _utils.url.parts(url);
+		if ( parsed !== null ) {
+			return parsed.origin !== window.location.origin;
+		}
+		return false;
+	};
+
+    /**
+     * Generates a UUID (version 4) according to RFC 4122. In modern browsers,
+     * this method uses the `crypto.randomUUID()` method, which is more secure.
+     * In older browsers, a fallback method is used.
+     *
+     * @returns {string} A UUID (version 4) according to RFC 4122.
+     * @see https://developer.mozilla.org/en-US/docs/Web/API/Crypto/randomUUID
+     * @see https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)
+     */
+    _.generateGUID = () => {
+        // Check if the crypto object and randomUUID method are available
+        if ( window.crypto && crypto.randomUUID ) {
+            return crypto.randomUUID();
+        } else {
+            // Fallback method for non-secure contexts
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace( /[xy]/g, function( c ) {
+                var r = Math.random() * 16 | 0,
+                    v = c === 'x' ? r : ( r & 0x3 | 0x8 );
+                return v.toString( 16 );
+            } );
+        }
+    };
+
+	const _domParser = new DOMParser();
+
+	/**
+	 * Uses the native DOMParser to decode HTMLEntities in a string.
+	 * @param str
+	 * @returns {string}
+	 */
+	_.decodeHTMLEntities = ( str ) => {
+		let result = '';
+		try {
+			result = _domParser.parseFromString( str, "text/html" ).documentElement.textContent;
+		} catch ( err ) {
+			console.error( `Error decoding HTMLEntities in string "${ str }".`, err );
+		}
+		return result;
+	};
+
+	/**
+	 * Detects Facebook and Messenger in-app browsers.
+	 * @param {?string} [userAgent=null]
+	 * @returns {boolean}
+	 */
+	_.isFacebookMessengerBrowser = function( userAgent = null ){
+		const ua = _is.string( userAgent ) ? userAgent : window.navigator.userAgent || "";
+		if ( /facebookexternalhit|facebot/i.test( ua ) ) {
+			return false;
+		}
+		return /\bFB_IAB\/(?:FB4A|MESSENGER|Orca-Android)\b|\bFBAN\/(?:FBIOS|FB4A|MessengerForiOS|MessengerLite|Messenger)\b|\bFBAV\//i.test( ua );
+	};
+
+	/**
+	 * More reliable way to trigger the download/Save As dialog for images than simply relying on a[download].
+	 * @param {string} url
+	 * @param {?string} [name=null]
+	 * @returns {Promise<void>}
+	 */
+	_.downloadImage = function( url, name = null ){
+		if ( _is.string( url ) && !_is.empty( url ) && _.isFacebookMessengerBrowser() ) {
+			window.location.assign( url );
+			return Promise.resolve();
+		}
+
+		let downloadName = name;
+		if ( !_is.string( downloadName ) || _is.empty( downloadName ) ) {
+			downloadName = 'image';
+			const parsed = _utils.url.parts( url );
+			if ( parsed !== null && _is.string( parsed.pathname ) ) {
+				const filename = parsed.pathname.replace( /\/+$/, '' ).split( '/' ).pop();
+				if ( _is.string( filename ) && !_is.empty( filename ) ) {
+					try {
+						downloadName = decodeURIComponent( filename );
+					} catch ( err ) {
+						downloadName = filename;
+					}
+				}
+			}
+		}
+		return fetch(url)
+			.then(function (res) {
+				if (!res.ok) {
+					throw new Error(`Failed to fetch image: ${res.status} ${res.statusText}`);
+				}
+				return res.blob();
+			})
+			.then(function (blob) {
+				const objectUrl = window.URL.createObjectURL(blob);
+				try {
+					const a = document.createElement('a');
+					a.href = objectUrl;
+					a.download = downloadName;
+					document.body.appendChild(a);
+					a.click();
+					a.remove();
+				} finally {
+					// Always runs if objectUrl was created
+					window.URL.revokeObjectURL(objectUrl);
+				}
+			});
+	};
+
 })(
 	FooGallery.$,
 	FooGallery,
@@ -4194,6 +4314,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 	FooGallery.utils.fn,
 	FooGallery.utils.str
 );
+
 ( function( _ ) {
     const GlobalAttributes = new globalThis.Set( [ "accesskey", "autocapitalize", "autofocus", "class", "contenteditable", "data-", "dir", "draggable", "enterkeyhint", "exportparts", "hidden", "id", "inert", "inputmode", "is", "itemid", "itemprop", "itemref", "itemscope", "itemtype", "lang", "nonce", "part", "popover", "role", "slot", "spellcheck", "style", "tabindex", "title", "translate" ] );
     const ElementsAttributesMap = new globalThis.Map( [ [ "html", [ "xmlns" ] ], [ "base", [ "href", "target" ] ], [ "head", [] ], [ "link", [ "as", "crossorigin", "disabled", "fetchpriority", "href", "hreflang", "imagesizes", "imagesrcset", "integrity", "media", "referrerpolicy", "rel", "sizes", "type" ] ], [ "meta", [ "charset", "content", "http-equiv", "name" ] ], [ "style", [ "media" ] ], [ "title", [] ], [ "body", [ "onafterprint", "onbeforeprint", "onbeforeunload", "onblur", "onerror", "onfocus", "onhashchange", "onlanguagechange", "onload", "onmessage", "onoffline", "ononline", "onpopstate", "onresize", "onstorage", "onunload" ] ], [ "address", [] ], [ "article", [] ], [ "aside", [] ], [ "footer", [] ], [ "header", [] ], [ "h1", [] ], [ "h2", [] ], [ "h3", [] ], [ "h4", [] ], [ "h5", [] ], [ "h6", [] ], [ "hgroup", [] ], [ "main", [] ], [ "nav", [] ], [ "section", [] ], [ "search", [] ], [ "blockquote", [ "cite" ] ], [ "dd", [] ], [ "div", [] ], [ "dl", [] ], [ "dt", [] ], [ "figcaption", [] ], [ "figure", [] ], [ "hr", [] ], [ "li", [ "value" ] ], [ "menu", [] ], [ "ol", [ "reversed", "start", "type" ] ], [ "p", [] ], [ "pre", [] ], [ "ul", [] ], [ "a", [ "download", "href", "hreflang", "ping", "referrerpolicy", "rel", "target", "type" ] ], [ "abbr", [] ], [ "b", [] ], [ "bdi", [] ], [ "bdo", [] ], [ "br", [] ], [ "cite", [] ], [ "code", [] ], [ "data", [ "value" ] ], [ "dfn", [] ], [ "em", [] ], [ "i", [] ], [ "kbd", [] ], [ "mark", [] ], [ "q", [ "cite" ] ], [ "rp", [] ], [ "rt", [] ], [ "ruby", [] ], [ "s", [] ], [ "samp", [] ], [ "small", [] ], [ "span", [] ], [ "strong", [] ], [ "sub", [] ], [ "sup", [] ], [ "time", [ "datetime" ] ], [ "u", [] ], [ "var", [] ], [ "wbr", [] ], [ "area", [ "alt", "coords", "download", "href", "ping", "referrerpolicy", "rel", "shape", "target" ] ], [ "audio", [ "autoplay", "controls", "controlslist", "crossorigin", "disableremoteplayback", "loop", "muted", "preload", "src" ] ], [ "img", [ "alt", "crossorigin", "decoding", "elementtiming", "fetchpriority", "height", "ismap", "loading", "referrerpolicy", "sizes", "src", "srcset", "usemap", "width" ] ], [ "map", [ "name" ] ], [ "track", [ "default", "kind", "label", "src", "srclang" ] ], [ "video", [ "autoplay", "controls", "controlslist", "crossorigin", "disablepictureinpicture", "disableremoteplayback", "height", "loop", "muted", "playsinline", "poster", "preload", "src", "width" ] ], [ "embed", [ "height", "src", "type", "width" ] ], [ "iframe", [ "allow", "allowfullscreen", "height", "loading", "name", "referrerpolicy", "sandbox", "src", "srcdoc", "width" ] ], [ "object", [ "data", "form", "height", "name", "type", "width" ] ], [ "picture", [] ], [ "portal", [ "referrerpolicy", "src" ] ], [ "source", [ "height", "media", "sizes", "src", "srcset", "type", "width" ] ], [ "svg", [ "height", "preserveaspectratio", "viewbox", "width", "x", "y" ] ], [ "canvas", [ "height", "width" ] ], [ "noscript", [] ], [ "script", [ "async", "crossorigin", "defer", "fetchpriority", "integrity", "nomodule", "referrerpolicy", "src", "type" ] ], [ "del", [ "cite", "datetime" ] ], [ "ins", [ "cite", "datetime" ] ], [ "caption", [] ], [ "col", [ "span" ] ], [ "colgroup", [ "span" ] ], [ "table", [] ], [ "tbody", [] ], [ "td", [ "colspan", "headers", "rowspan" ] ], [ "tfoot", [] ], [ "th", [ "abbr", "colspan", "headers", "rowspan", "scope" ] ], [ "thead", [] ], [ "tr", [] ], [ "button", [ "disabled", "form", "formaction", "formenctype", "formmethod", "formnovalidate", "formtarget", "name", "popovertarget", "popovertargetaction", "type", "value" ] ], [ "datalist", [] ], [ "fieldset", [ "disabled", "form", "name" ] ], [ "form", [ "accept-charset", "autocomplete", "name", "rel" ] ], [ "input", [] ], [ "label", [ "for" ] ], [ "legend", [] ], [ "meter", [ "form", "high", "low", "max", "min", "optimum", "value" ] ], [ "optgroup", [ "disabled", "label" ] ], [ "option", [ "disabled", "label", "selected", "value" ] ], [ "output", [ "for", "form", "name" ] ], [ "progress", [ "max", "value" ] ], [ "select", [ "autocomplete", "disabled", "form", "multiple", "name", "required", "size" ] ], [ "textarea", [ "autocomplete", "cols", "dirname", "disabled", "form", "maxlength", "minlength", "name", "placeholder", "readonly", "required", "rows", "wrap" ] ], [ "details", [ "name", "open" ] ], [ "dialog", [ "open" ] ], [ "summary", [] ], [ "slot", [ "name" ] ], [ "template", [ "shadowrootclonable", "shadowrootdelegatesfocus", "shadowrootmode" ] ] ] );
@@ -4332,26 +4453,43 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             this.className = "fg-icon";
             this.registered = {
                 "default": {
-                    "close": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M13.957 3.457l-1.414-1.414-4.543 4.543-4.543-4.543-1.414 1.414 4.543 4.543-4.543 4.543 1.414 1.414 4.543-4.543 4.543 4.543 1.414-1.414-4.543-4.543z"></path></svg>',
-                    "arrow-left": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M10.5 16l1.5-1.5-6.5-6.5 6.5-6.5-1.5-1.5-8 8 8 8z"></path></svg>',
-                    "arrow-right": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M5.5 0l-1.5 1.5 6.5 6.5-6.5 6.5 1.5 1.5 8-8-8-8z"></path></svg>',
-                    "maximize": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M2 2v4h-2v-5c0-0.552 0.448-1 1-1h14c0.552 0 1 0.448 1 1v14c0 0.552-0.448 1-1 1h-14c-0.552 0-1-0.448-1-1v-9h9c0.552 0 1 0.448 1 1v7h4v-12h-12z"/></svg>',
-                    "expand": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M2 5h-2v-4c0-0.552 0.448-1 1-1h4v2h-3v3z"></path><path d="M16 5h-2v-3h-3v-2h4c0.552 0 1 0.448 1 1v4z"></path><path d="M15 16h-4v-2h3v-3h2v4c0 0.552-0.448 1-1 1z"></path><path d="M5 16h-4c-0.552 0-1-0.448-1-1v-4h2v3h3v2z"></path></svg>',
-                    "shrink": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M3 0h2v4c0 0.552-0.448 1-1 1h-4v-2h3v-3z"></path><path d="M11 0h2v3h3v2h-4c-0.552 0-1-0.448-1-1v-4z"></path><path d="M12 11h4v2h-3v3h-2v-4c0-0.552 0.448-1 1-1z"></path><path d="M0 11h4c0.552 0 1 0.448 1 1v4h-2v-3h-3v-2z"></path></svg>',
-                    "info": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M7 4.75c0-0.412 0.338-0.75 0.75-0.75h0.5c0.412 0 0.75 0.338 0.75 0.75v0.5c0 0.412-0.338 0.75-0.75 0.75h-0.5c-0.412 0-0.75-0.338-0.75-0.75v-0.5z"></path><path d="M10 12h-4v-1h1v-3h-1v-1h3v4h1z"></path><path d="M8 0c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8-3.582-8-8-8zM8 14.5c-3.59 0-6.5-2.91-6.5-6.5s2.91-6.5 6.5-6.5 6.5 2.91 6.5 6.5-2.91 6.5-6.5 6.5z"></path></svg>',
-                    "comment": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M3 4h10v1h-10zM3 6h8v1h-8zM3 8h4v1h-4zM14.5 1h-13c-0.825 0-1.5 0.675-1.5 1.5v8c0 0.825 0.675 1.5 1.5 1.5h2.5v4l4.8-4h5.7c0.825 0 1.5-0.675 1.5-1.5v-8c0-0.825-0.675-1.5-1.5-1.5zM14 10h-5.924l-3.076 2.73v-2.73h-3v-7h12v7z"></path></svg>',
-                    "thumbs": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M3 3v10h-2v-11c0-0.552 0.448-1 1-1h12c0.552 0 1 0.448 1 1v12c0 0.552-0.448 1-1 1h-12c-0.552 0-1-0.448-1-1v-1h4v-2h-2v-2h2v-2h-2v-2h2v-2h2v10h6v-10h-10z"></path></svg>',
-                    "cart": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M13.238 9c0.55 0 1.124-0.433 1.275-0.962l1.451-5.077c0.151-0.529-0.175-0.962-0.725-0.962h-10.238c0-1.105-0.895-2-2-2h-3v2h3v8.5c0 0.828 0.672 1.5 1.5 1.5h9.5c0.552 0 1-0.448 1-1s-0.448-1-1-1h-9v-1h8.238zM5 4h9.044l-0.857 3h-8.187v-3z"></path><path d="M6 14.5c0 0.828-0.672 1.5-1.5 1.5s-1.5-0.672-1.5-1.5c0-0.828 0.672-1.5 1.5-1.5s1.5 0.672 1.5 1.5z"></path><path d="M15 14.5c0 0.828-0.672 1.5-1.5 1.5s-1.5-0.672-1.5-1.5c0-0.828 0.672-1.5 1.5-1.5s1.5 0.672 1.5 1.5z"></path></svg>',
-                    "circle-close": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M8 0c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8-3.582-8-8-8zM8 14.5c-3.59 0-6.5-2.91-6.5-6.5s2.91-6.5 6.5-6.5 6.5 2.91 6.5 6.5-2.91 6.5-6.5 6.5z"></path><path d="M10.5 4l-2.5 2.5-2.5-2.5-1.5 1.5 2.5 2.5-2.5 2.5 1.5 1.5 2.5-2.5 2.5 2.5 1.5-1.5-2.5-2.5 2.5-2.5z"></path></svg>',
-                    "auto-progress": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path class="[ICON_CLASS]-idle" d="M11.39 8c2.152-1.365 3.61-3.988 3.61-7 0-0.339-0.019-0.672-0.054-1h-13.891c-0.036 0.328-0.054 0.661-0.054 1 0 3.012 1.457 5.635 3.609 7-2.152 1.365-3.609 3.988-3.609 7 0 0.339 0.019 0.672 0.054 1h13.891c0.036-0.328 0.054-0.661 0.054-1 0-3.012-1.457-5.635-3.609-7zM2.5 15c0-2.921 1.253-5.397 3.5-6.214v-1.572c-2.247-0.817-3.5-3.294-3.5-6.214v0h11c0 2.921-1.253 5.397-3.5 6.214v1.572c2.247 0.817 3.5 3.294 3.5 6.214h-11zM9.462 10.462c-1.12-0.635-1.181-1.459-1.182-1.959v-1.004c0-0.5 0.059-1.327 1.184-1.963 0.602-0.349 1.122-0.88 1.516-1.537h-6.4c0.395 0.657 0.916 1.188 1.518 1.538 1.12 0.635 1.181 1.459 1.182 1.959v1.004c0 0.5-0.059 1.327-1.184 1.963-1.135 0.659-1.98 1.964-2.236 3.537h7.839c-0.256-1.574-1.102-2.879-2.238-3.538z"/><circle class="[ICON_CLASS]-circle" r="4" cx="8" cy="8"/><path class="[ICON_CLASS]-play" d="M3 2l10 6-10 6z"/><path class="[ICON_CLASS]-pause" d="M2 2h5v12h-5zM9 2h5v12h-5z"/></svg>',
-                    "search": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M16 13.5l-4.695-4.695c0.444-0.837 0.695-1.792 0.695-2.805 0-3.314-2.686-6-6-6s-6 2.686-6 6 2.686 6 6 6c1.013 0 1.968-0.252 2.805-0.695l4.695 4.695 2.5-2.5zM2 6c0-2.209 1.791-4 4-4s4 1.791 4 4-1.791 4-4 4-4-1.791-4-4z"></path></svg>',
-                    "exif-aperture": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M 8,0 C 3.5876443,0 0,3.5876443 0,8 c 0,4.412356 3.5876443,8 8,8 4.412356,0 8,-3.587644 8,-8 C 16,3.5876443 12.412356,0 8,0 Z m 0,1 c 3.871916,0 7,3.1280844 7,7 0,3.871916 -3.128084,7 -7,7 C 4.1280844,15 1,11.871916 1,8 1,4.1280844 4.1280844,1 8,1 Z M 7.53125,2.0214844 A 6,6 0 0 0 3.1835938,4.4335938 H 8.9257812 Z M 8.6132812,2.03125 C 9.5587451,3.6702105 10.504247,5.3091484 11.451172,6.9472656 L 12.863281,4.5 A 6,6 0 0 0 8.6132812,2.03125 Z M 2.5957031,5.4101562 A 6,6 0 0 0 2,8 6,6 0 0 0 2.5273438,10.439453 L 5.4296875,5.4101562 Z m 10.8261719,0.033203 -2.855469,4.9433598 h 2.935547 A 6,6 0 0 0 14,8 6,6 0 0 0 13.421875,5.4433592 Z M 4.5722656,8.8945312 3.0996094,11.449219 a 6,6 0 0 0 4.40625,2.527343 z m 2.5820313,2.4707028 1.4960937,2.591797 a 6,6 0 0 0 4.3144534,-2.591797 z"></path></svg>',
-                    "exif-camera": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="m 8.0000002,5 a 4,4 0 0 0 -4,4 4,4 0 0 0 4,4 A 4,4 0 0 0 12,9 4,4 0 0 0 8.0000002,5 Z m 0.019531,1.015625 a 3,2.9814477 0 0 1 2.9804688,3 l -1,-0.00586 a 2,2 0 0 0 0,-0.00976 2,2 0 0 0 -1.9863279,-2 z M 5.125,1 C 4.5,1 4,1.5 4,2.125 V 3.0000004 L 1.125,3 C 0.5,2.9999999 0,3.5 0,4.125 v 9.75 C 0,14.5 0.5,15 1.125,15 h 13.75 C 15.5,15 16,14.5 16,13.875 V 4.125 C 16,3.5 15.5,3 14.875,3 H 12 V 2.125 C 12,1.5 11.5,1 10.875,1 Z M 5.25,2.0000004 h 5.5 c 0.125,0 0.25,0.1249996 0.25,0.25 v 1.75 h 3.75 c 0.125,0 0.25,0.1249996 0.25,0.25 V 13.75 C 15,13.875 14.875,14 14.75,14 H 1.25 C 1.125,14 1,13.875 1,13.75 V 4.25 C 1,4.125 1.125,4 1.25,4 l 3.75,4e-7 v -1.75 c 0,-0.1250004 0.125,-0.25 0.25,-0.25 z"></path></svg>',
-                    "exif-created-timestamp": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M 3,1 V 2 H 1 V 15 H 16 V 2 H 14 V 1 H 13 V 2 H 4 V 1 Z M 2,4 H 15 V 14 H 2 Z M 6,5 V 7 H 8 V 5 Z m 3,0 v 2 h 2 V 5 Z m 3,0 v 2 h 2 V 5 Z M 3,8 v 2 H 5 V 8 Z m 3,0 v 2 H 8 V 8 Z m 3,0 v 2 h 2 V 8 Z m 3,0 v 2 h 2 V 8 Z m -9,3 v 2 h 2 v -2 z m 3,0 v 2 h 2 v -2 z m 3,0 v 2 h 2 v -2 z"></path></svg>',
-                    "exif-shutter-speed": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M 8,0 C 3.5876443,0 -2.9415707e-8,3.5876443 0,8 c 2.3532563e-7,4.412356 3.5876445,8 8,8 4.412356,0 8,-3.587644 8,-8 C 16,3.5876443 12.412356,0 8,0 Z m 0,1 c 3.871916,0 7,3.1280844 7,7 0,3.871915 -3.128085,7 -7,7 -3.8719154,0 -6.9999998,-3.128085 -7,-7 -3e-8,-3.8719156 3.1280844,-7 7,-7 z M 11.646484,3.6464844 8.6445312,6.6484375 A 1.5,1.5 0 0 0 8,6.5 1.5,1.5 0 0 0 6.5,8 1.5,1.5 0 0 0 8,9.5 1.5,1.5 0 0 0 9.5,8 1.5,1.5 0 0 0 9.3515625,7.3554688 L 12.353516,4.3535156 Z M 2,7.5 v 1 h 2 v -1 z M 7.5,12 v 2 h 1 V 12 Z M 12,7.5 v 1 h 2 v -1 z M 7.5,2 v 2 h 1 V 2 Z"></path></svg>',
-                    "exif-focal-length": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="m 1,4.125 -1,0.25 v 7.25 l 1,0.25 z M 5,1 2,4 v 8 l 3,3 h 6.875 C 12.500003,15 13,14.5 13,13.875 V 2.125 C 13,1.4999986 12.5,1 11.875,1 9.576807,0.99914375 7.1414067,0.96597644 5,1 Z M 5.5,2 H 6 V 14 H 5.5 L 3,11.5 v -7 z M 7,2 h 4.75 C 11.875,2 12,2.1249997 12,2.25 v 11.5 c 0,0.125 -0.125,0.250622 -0.25,0.25 H 7 Z m 7,0 c 1,2.2 1.5,4.35 1.5,6 0,1.65 -0.5,3.8 -1.5,6"></path></svg>',
-                    "exif-iso": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M 7.5,0 V 1.6015625 C 6.0969201,1.7146076 4.8392502,2.256185 3.828125,3.1210938 L 2.6035156,1.8964844 1.8964844,2.6035156 3.1210938,3.828125 C 2.256185,4.8392502 1.7146076,6.0969201 1.6015625,7.5 H 0 v 1 h 1.6015625 c 0.1130451,1.4030799 0.6546225,2.66075 1.5195313,3.671875 l -1.2246094,1.224609 0.7070312,0.707032 1.2246094,-1.22461 C 4.8392502,13.743815 6.0969201,14.285392 7.5,14.398438 V 16 h 1 v -1.601562 c 1.4030799,-0.113046 2.66075,-0.654623 3.671875,-1.519532 l 1.224609,1.22461 0.707032,-0.707032 -1.22461,-1.224609 C 13.743815,11.16075 14.285392,9.9030799 14.398438,8.5 H 16 v -1 H 14.398438 C 14.285392,6.0969201 13.743815,4.8392502 12.878906,3.828125 L 14.103516,2.6035156 13.396484,1.8964844 12.171875,3.1210938 C 11.16075,2.256185 9.9030799,1.7146076 8.5,1.6015625 V 0 Z M 8,2.5 c 3.043488,0 5.5,2.4565116 5.5,5.5 0,3.043488 -2.456512,5.5 -5.5,5.5 C 4.9565116,13.5 2.5,11.043488 2.5,8 2.5,4.9565116 4.9565116,2.5 8,2.5 Z"></path></svg>',
-                    "exif-orientation": '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M 1.25,0 C 0.625,0 0,0.625 0,1.25 V 5 H 1 V 3 h 8 v 2 h 1 V 1.25 C 10,0.625 9.375,0 8.75,0 Z m 0,1 h 7.5 C 8.875,1 9,1.125 9,1.25 V 2 H 1 V 1.25 C 1,1.125 1.125,1 1.25,1 Z m 0,5 C 0.625,6 0,6.625 0,7.25 v 7.5 C 0,15.375 0.625,16 1.25,16 h 13.5 C 15.375,16 16,15.375 16,14.75 V 7.25 C 16,6.625 15.375,6 14.75,6 Z m 0,1 H 2 v 3 H 1 V 7.25 C 1,7.125 1.125,7 1.25,7 Z M 3,7 h 10 v 8 H 3 Z m 11,0 h 0.75 C 14.875,7 15,7.125 15,7.25 v 7.5 C 15,14.875 14.875,15 14.75,15 H 14 Z M 1,12 h 1 v 3 H 1.25 C 1.125,15 1,14.875 1,14.75 Z"></path></svg>'
+                    "close": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M13.957 3.457l-1.414-1.414-4.543 4.543-4.543-4.543-1.414 1.414 4.543 4.543-4.543 4.543 1.414 1.414 4.543-4.543 4.543 4.543 1.414-1.414-4.543-4.543z"></path></svg>',
+                    "arrow-left": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M10.5 16l1.5-1.5-6.5-6.5 6.5-6.5-1.5-1.5-8 8 8 8z"></path></svg>',
+                    "arrow-right": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M5.5 0l-1.5 1.5 6.5 6.5-6.5 6.5 1.5 1.5 8-8-8-8z"></path></svg>',
+                    "arrow-down": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M3.5 6l4.5 4.5 4.5-4.5h-9z"></path></svg>',
+                    "maximize": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M2 2v4h-2v-5c0-0.552 0.448-1 1-1h14c0.552 0 1 0.448 1 1v14c0 0.552-0.448 1-1 1h-14c-0.552 0-1-0.448-1-1v-9h9c0.552 0 1 0.448 1 1v7h4v-12h-12z"/></svg>',
+                    "expand": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M2 5h-2v-4c0-0.552 0.448-1 1-1h4v2h-3v3z"></path><path d="M16 5h-2v-3h-3v-2h4c0.552 0 1 0.448 1 1v4z"></path><path d="M15 16h-4v-2h3v-3h2v4c0 0.552-0.448 1-1 1z"></path><path d="M5 16h-4c-0.552 0-1-0.448-1-1v-4h2v3h3v2z"></path></svg>',
+                    "shrink": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M3 0h2v4c0 0.552-0.448 1-1 1h-4v-2h3v-3z"></path><path d="M11 0h2v3h3v2h-4c-0.552 0-1-0.448-1-1v-4z"></path><path d="M12 11h4v2h-3v3h-2v-4c0-0.552 0.448-1 1-1z"></path><path d="M0 11h4c0.552 0 1 0.448 1 1v4h-2v-3h-3v-2z"></path></svg>',
+                    "info": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M7 4.75c0-0.412 0.338-0.75 0.75-0.75h0.5c0.412 0 0.75 0.338 0.75 0.75v0.5c0 0.412-0.338 0.75-0.75 0.75h-0.5c-0.412 0-0.75-0.338-0.75-0.75v-0.5z"></path><path d="M10 12h-4v-1h1v-3h-1v-1h3v4h1z"></path><path d="M8 0c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8-3.582-8-8-8zM8 14.5c-3.59 0-6.5-2.91-6.5-6.5s2.91-6.5 6.5-6.5 6.5 2.91 6.5 6.5-2.91 6.5-6.5 6.5z"></path></svg>',
+                    "comment": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M3 4h10v1h-10zM3 6h8v1h-8zM3 8h4v1h-4zM14.5 1h-13c-0.825 0-1.5 0.675-1.5 1.5v8c0 0.825 0.675 1.5 1.5 1.5h2.5v4l4.8-4h5.7c0.825 0 1.5-0.675 1.5-1.5v-8c0-0.825-0.675-1.5-1.5-1.5zM14 10h-5.924l-3.076 2.73v-2.73h-3v-7h12v7z"></path></svg>',
+                    "thumbs": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M3 3v10h-2v-11c0-0.552 0.448-1 1-1h12c0.552 0 1 0.448 1 1v12c0 0.552-0.448 1-1 1h-12c-0.552 0-1-0.448-1-1v-1h4v-2h-2v-2h2v-2h-2v-2h2v-2h2v10h6v-10h-10z"></path></svg>',
+                    "cart": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M13.238 9c0.55 0 1.124-0.433 1.275-0.962l1.451-5.077c0.151-0.529-0.175-0.962-0.725-0.962h-10.238c0-1.105-0.895-2-2-2h-3v2h3v8.5c0 0.828 0.672 1.5 1.5 1.5h9.5c0.552 0 1-0.448 1-1s-0.448-1-1-1h-9v-1h8.238zM5 4h9.044l-0.857 3h-8.187v-3z"></path><path d="M6 14.5c0 0.828-0.672 1.5-1.5 1.5s-1.5-0.672-1.5-1.5c0-0.828 0.672-1.5 1.5-1.5s1.5 0.672 1.5 1.5z"></path><path d="M15 14.5c0 0.828-0.672 1.5-1.5 1.5s-1.5-0.672-1.5-1.5c0-0.828 0.672-1.5 1.5-1.5s1.5 0.672 1.5 1.5z"></path></svg>',
+                    "download": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M2.5 7l5.5 5.5 5.5-5.5h-3.5v-6h-4v6z"></path><path d="M14 8v6h-12v-6h-2v6.5c0 0.825 0.675 1.5 1.5 1.5h13c0.825 0 1.5-0.675 1.5-1.5v-6.5h-2z"></path></svg>',
+                    "circle-close": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M8 0c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8-3.582-8-8-8zM8 14.5c-3.59 0-6.5-2.91-6.5-6.5s2.91-6.5 6.5-6.5 6.5 2.91 6.5 6.5-2.91 6.5-6.5 6.5z"></path><path d="M10.5 4l-2.5 2.5-2.5-2.5-1.5 1.5 2.5 2.5-2.5 2.5 1.5 1.5 2.5-2.5 2.5 2.5 1.5-1.5-2.5-2.5 2.5-2.5z"></path></svg>',
+                    "circle-plus": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M8 0c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8-3.582-8-8-8zM8 14c-3.314 0-6-2.686-6-6s2.686-6 6-6c3.314 0 6 2.686 6 6s-2.686 6-6 6zM12 9h-3v3h-2v-3h-3v-2h3v-3h2v3h3z"></path></svg>',
+                    "circle-minus": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M8 0c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8-3.582-8-8-8zM8 14c-3.314 0-6-2.686-6-6s2.686-6 6-6c3.314 0 6 2.686 6 6s-2.686 6-6 6zM4 7h8v2h-8z"></path></svg>',
+                    "heart": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M16 5.596c0 1.349-0.582 2.563-1.508 3.404h0.008l-5 5c-0.5 0.5-1 1-1.5 1s-1-0.5-1.5-1l-4.992-5c-0.926-0.841-1.508-2.054-1.508-3.404 0-2.538 2.058-4.596 4.596-4.596 1.349 0 2.563 0.582 3.404 1.508 0.841-0.926 2.054-1.508 3.404-1.508 2.538 0 4.596 2.058 4.596 4.596z"></path></svg>',
+                    "heart-outline": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M16 5.596c0-2.538-2.058-4.596-4.596-4.596-1.349 0-2.563 0.582-3.404 1.508-0.841-0.926-2.054-1.508-3.404-1.508-2.538 0-4.596 2.058-4.596 4.596 0 1.349 0.582 2.563 1.508 3.404h-0.008l5 5c0.5 0.5 1 1 1.5 1s1-0.5 1.5-1l4.992-5c0.926-0.841 1.508-2.054 1.508-3.404zM13.148 7.519l-5.062 5.067c-0.026 0.026-0.055 0.055-0.086 0.086-0.031-0.030-0.060-0.059-0.086-0.086l-5.062-5.066c-0.549-0.499-0.852-1.182-0.852-1.923 0-1.432 1.165-2.596 2.596-2.596 0.741 0 1.424 0.303 1.923 0.852l1.481 1.631 1.481-1.631c0.499-0.55 1.182-0.852 1.923-0.852 1.432 0 2.596 1.165 2.596 2.596 0 0.741-0.303 1.424-0.852 1.923z"></path></svg>',
+                    "auto-progress": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path class="[ICON_CLASS]-idle" d="M11.39 8c2.152-1.365 3.61-3.988 3.61-7 0-0.339-0.019-0.672-0.054-1h-13.891c-0.036 0.328-0.054 0.661-0.054 1 0 3.012 1.457 5.635 3.609 7-2.152 1.365-3.609 3.988-3.609 7 0 0.339 0.019 0.672 0.054 1h13.891c0.036-0.328 0.054-0.661 0.054-1 0-3.012-1.457-5.635-3.609-7zM2.5 15c0-2.921 1.253-5.397 3.5-6.214v-1.572c-2.247-0.817-3.5-3.294-3.5-6.214v0h11c0 2.921-1.253 5.397-3.5 6.214v1.572c2.247 0.817 3.5 3.294 3.5 6.214h-11zM9.462 10.462c-1.12-0.635-1.181-1.459-1.182-1.959v-1.004c0-0.5 0.059-1.327 1.184-1.963 0.602-0.349 1.122-0.88 1.516-1.537h-6.4c0.395 0.657 0.916 1.188 1.518 1.538 1.12 0.635 1.181 1.459 1.182 1.959v1.004c0 0.5-0.059 1.327-1.184 1.963-1.135 0.659-1.98 1.964-2.236 3.537h7.839c-0.256-1.574-1.102-2.879-2.238-3.538z"/><circle class="[ICON_CLASS]-circle" r="4" cx="8" cy="8"/><path class="[ICON_CLASS]-play" d="M3 2l10 6-10 6z"/><path class="[ICON_CLASS]-pause" d="M2 2h5v12h-5zM9 2h5v12h-5z"/></svg>',
+                    "search": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M16 13.5l-4.695-4.695c0.444-0.837 0.695-1.792 0.695-2.805 0-3.314-2.686-6-6-6s-6 2.686-6 6 2.686 6 6 6c1.013 0 1.968-0.252 2.805-0.695l4.695 4.695 2.5-2.5zM2 6c0-2.209 1.791-4 4-4s4 1.791 4 4-1.791 4-4 4-4-1.791-4-4z"></path></svg>',
+                    "spinner": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M8 16c-2.137 0-4.146-0.832-5.657-2.343s-2.343-3.52-2.343-5.657c0-1.513 0.425-2.986 1.228-4.261 0.781-1.239 1.885-2.24 3.193-2.895l0.672 1.341c-1.063 0.533-1.961 1.347-2.596 2.354-0.652 1.034-0.997 2.231-0.997 3.461 0 3.584 2.916 6.5 6.5 6.5s6.5-2.916 6.5-6.5c0-1.23-0.345-2.426-0.997-3.461-0.635-1.008-1.533-1.822-2.596-2.354l0.672-1.341c1.308 0.655 2.412 1.656 3.193 2.895 0.803 1.274 1.228 2.748 1.228 4.261 0 2.137-0.832 4.146-2.343 5.657s-3.52 2.343-5.657 2.343z"></path></svg>',
+                    "exif-aperture": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M 8,0 C 3.5876443,0 0,3.5876443 0,8 c 0,4.412356 3.5876443,8 8,8 4.412356,0 8,-3.587644 8,-8 C 16,3.5876443 12.412356,0 8,0 Z m 0,1 c 3.871916,0 7,3.1280844 7,7 0,3.871916 -3.128084,7 -7,7 C 4.1280844,15 1,11.871916 1,8 1,4.1280844 4.1280844,1 8,1 Z M 7.53125,2.0214844 A 6,6 0 0 0 3.1835938,4.4335938 H 8.9257812 Z M 8.6132812,2.03125 C 9.5587451,3.6702105 10.504247,5.3091484 11.451172,6.9472656 L 12.863281,4.5 A 6,6 0 0 0 8.6132812,2.03125 Z M 2.5957031,5.4101562 A 6,6 0 0 0 2,8 6,6 0 0 0 2.5273438,10.439453 L 5.4296875,5.4101562 Z m 10.8261719,0.033203 -2.855469,4.9433598 h 2.935547 A 6,6 0 0 0 14,8 6,6 0 0 0 13.421875,5.4433592 Z M 4.5722656,8.8945312 3.0996094,11.449219 a 6,6 0 0 0 4.40625,2.527343 z m 2.5820313,2.4707028 1.4960937,2.591797 a 6,6 0 0 0 4.3144534,-2.591797 z"></path></svg>',
+                    "exif-camera": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="m 8.0000002,5 a 4,4 0 0 0 -4,4 4,4 0 0 0 4,4 A 4,4 0 0 0 12,9 4,4 0 0 0 8.0000002,5 Z m 0.019531,1.015625 a 3,2.9814477 0 0 1 2.9804688,3 l -1,-0.00586 a 2,2 0 0 0 0,-0.00976 2,2 0 0 0 -1.9863279,-2 z M 5.125,1 C 4.5,1 4,1.5 4,2.125 V 3.0000004 L 1.125,3 C 0.5,2.9999999 0,3.5 0,4.125 v 9.75 C 0,14.5 0.5,15 1.125,15 h 13.75 C 15.5,15 16,14.5 16,13.875 V 4.125 C 16,3.5 15.5,3 14.875,3 H 12 V 2.125 C 12,1.5 11.5,1 10.875,1 Z M 5.25,2.0000004 h 5.5 c 0.125,0 0.25,0.1249996 0.25,0.25 v 1.75 h 3.75 c 0.125,0 0.25,0.1249996 0.25,0.25 V 13.75 C 15,13.875 14.875,14 14.75,14 H 1.25 C 1.125,14 1,13.875 1,13.75 V 4.25 C 1,4.125 1.125,4 1.25,4 l 3.75,4e-7 v -1.75 c 0,-0.1250004 0.125,-0.25 0.25,-0.25 z"></path></svg>',
+                    "exif-created-timestamp": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M 3,1 V 2 H 1 V 15 H 16 V 2 H 14 V 1 H 13 V 2 H 4 V 1 Z M 2,4 H 15 V 14 H 2 Z M 6,5 V 7 H 8 V 5 Z m 3,0 v 2 h 2 V 5 Z m 3,0 v 2 h 2 V 5 Z M 3,8 v 2 H 5 V 8 Z m 3,0 v 2 H 8 V 8 Z m 3,0 v 2 h 2 V 8 Z m 3,0 v 2 h 2 V 8 Z m -9,3 v 2 h 2 v -2 z m 3,0 v 2 h 2 v -2 z m 3,0 v 2 h 2 v -2 z"></path></svg>',
+                    "exif-shutter-speed": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M 8,0 C 3.5876443,0 -2.9415707e-8,3.5876443 0,8 c 2.3532563e-7,4.412356 3.5876445,8 8,8 4.412356,0 8,-3.587644 8,-8 C 16,3.5876443 12.412356,0 8,0 Z m 0,1 c 3.871916,0 7,3.1280844 7,7 0,3.871915 -3.128085,7 -7,7 -3.8719154,0 -6.9999998,-3.128085 -7,-7 -3e-8,-3.8719156 3.1280844,-7 7,-7 z M 11.646484,3.6464844 8.6445312,6.6484375 A 1.5,1.5 0 0 0 8,6.5 1.5,1.5 0 0 0 6.5,8 1.5,1.5 0 0 0 8,9.5 1.5,1.5 0 0 0 9.5,8 1.5,1.5 0 0 0 9.3515625,7.3554688 L 12.353516,4.3535156 Z M 2,7.5 v 1 h 2 v -1 z M 7.5,12 v 2 h 1 V 12 Z M 12,7.5 v 1 h 2 v -1 z M 7.5,2 v 2 h 1 V 2 Z"></path></svg>',
+                    "exif-focal-length": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="m 1,4.125 -1,0.25 v 7.25 l 1,0.25 z M 5,1 2,4 v 8 l 3,3 h 6.875 C 12.500003,15 13,14.5 13,13.875 V 2.125 C 13,1.4999986 12.5,1 11.875,1 9.576807,0.99914375 7.1414067,0.96597644 5,1 Z M 5.5,2 H 6 V 14 H 5.5 L 3,11.5 v -7 z M 7,2 h 4.75 C 11.875,2 12,2.1249997 12,2.25 v 11.5 c 0,0.125 -0.125,0.250622 -0.25,0.25 H 7 Z m 7,0 c 1,2.2 1.5,4.35 1.5,6 0,1.65 -0.5,3.8 -1.5,6"></path></svg>',
+                    "exif-iso": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M 7.5,0 V 1.6015625 C 6.0969201,1.7146076 4.8392502,2.256185 3.828125,3.1210938 L 2.6035156,1.8964844 1.8964844,2.6035156 3.1210938,3.828125 C 2.256185,4.8392502 1.7146076,6.0969201 1.6015625,7.5 H 0 v 1 h 1.6015625 c 0.1130451,1.4030799 0.6546225,2.66075 1.5195313,3.671875 l -1.2246094,1.224609 0.7070312,0.707032 1.2246094,-1.22461 C 4.8392502,13.743815 6.0969201,14.285392 7.5,14.398438 V 16 h 1 v -1.601562 c 1.4030799,-0.113046 2.66075,-0.654623 3.671875,-1.519532 l 1.224609,1.22461 0.707032,-0.707032 -1.22461,-1.224609 C 13.743815,11.16075 14.285392,9.9030799 14.398438,8.5 H 16 v -1 H 14.398438 C 14.285392,6.0969201 13.743815,4.8392502 12.878906,3.828125 L 14.103516,2.6035156 13.396484,1.8964844 12.171875,3.1210938 C 11.16075,2.256185 9.9030799,1.7146076 8.5,1.6015625 V 0 Z M 8,2.5 c 3.043488,0 5.5,2.4565116 5.5,5.5 0,3.043488 -2.456512,5.5 -5.5,5.5 C 4.9565116,13.5 2.5,11.043488 2.5,8 2.5,4.9565116 4.9565116,2.5 8,2.5 Z"></path></svg>',
+                    "exif-orientation": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M 1.25,0 C 0.625,0 0,0.625 0,1.25 V 5 H 1 V 3 h 8 v 2 h 1 V 1.25 C 10,0.625 9.375,0 8.75,0 Z m 0,1 h 7.5 C 8.875,1 9,1.125 9,1.25 V 2 H 1 V 1.25 C 1,1.125 1.125,1 1.25,1 Z m 0,5 C 0.625,6 0,6.625 0,7.25 v 7.5 C 0,15.375 0.625,16 1.25,16 h 13.5 C 15.375,16 16,15.375 16,14.75 V 7.25 C 16,6.625 15.375,6 14.75,6 Z m 0,1 H 2 v 3 H 1 V 7.25 C 1,7.125 1.125,7 1.25,7 Z M 3,7 h 10 v 8 H 3 Z m 11,0 h 0.75 C 14.875,7 15,7.125 15,7.25 v 7.5 C 15,14.875 14.875,15 14.75,15 H 14 Z M 1,12 h 1 v 3 H 1.25 C 1.125,15 1,14.875 1,14.75 Z"></path></svg>',
+                    "social-share": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M13.5 11c-0.706 0-1.342 0.293-1.797 0.763l-6.734-3.367c0.021-0.129 0.032-0.261 0.032-0.396s-0.011-0.267-0.032-0.396l6.734-3.367c0.455 0.47 1.091 0.763 1.797 0.763 1.381 0 2.5-1.119 2.5-2.5s-1.119-2.5-2.5-2.5-2.5 1.119-2.5 2.5c0 0.135 0.011 0.267 0.031 0.396l-6.734 3.367c-0.455-0.47-1.091-0.763-1.797-0.763-1.381 0-2.5 1.119-2.5 2.5s1.119 2.5 2.5 2.5c0.706 0 1.343-0.293 1.797-0.763l6.734 3.367c-0.021 0.129-0.031 0.261-0.031 0.396 0 1.381 1.119 2.5 2.5 2.5s2.5-1.119 2.5-2.5c0-1.381-1.119-2.5-2.5-2.5z"></path></svg>',
+                    "social-facebook": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M9.5 3h2.5v-3h-2.5c-1.93 0-3.5 1.57-3.5 3.5v1.5h-2v3h2v8h3v-8h2.5l0.5-3h-3v-1.5c0-0.271 0.229-0.5 0.5-0.5z"></path></svg>',
+                    "social-linkedin": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M6 6h2.767v1.418h0.040c0.385-0.691 1.327-1.418 2.732-1.418 2.921 0 3.461 1.818 3.461 4.183v4.817h-2.885v-4.27c0-1.018-0.021-2.329-1.5-2.329-1.502 0-1.732 1.109-1.732 2.255v4.344h-2.883v-9z"></path><path d="M1 6h3v9h-3v-9z"></path><path d="M4 3.5c0 0.828-0.672 1.5-1.5 1.5s-1.5-0.672-1.5-1.5c0-0.828 0.672-1.5 1.5-1.5s1.5 0.672 1.5 1.5z"></path></svg>',
+                    "social-pinterest": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M8 1.069c-3.828 0-6.931 3.103-6.931 6.931 0 2.938 1.828 5.444 4.406 6.453-0.059-0.547-0.116-1.391 0.025-1.988 0.125-0.541 0.813-3.444 0.813-3.444s-0.206-0.416-0.206-1.028c0-0.963 0.559-1.684 1.253-1.684 0.591 0 0.878 0.444 0.878 0.975 0 0.594-0.378 1.484-0.575 2.306-0.166 0.691 0.344 1.253 1.025 1.253 1.231 0 2.178-1.3 2.178-3.175 0-1.659-1.194-2.819-2.894-2.819-1.972 0-3.128 1.478-3.128 3.009 0 0.597 0.228 1.234 0.516 1.581 0.056 0.069 0.066 0.128 0.047 0.2-0.053 0.219-0.169 0.691-0.194 0.787-0.031 0.128-0.1 0.153-0.231 0.094-0.866-0.403-1.406-1.669-1.406-2.684 0-2.188 1.587-4.194 4.578-4.194 2.403 0 4.272 1.712 4.272 4.003 0 2.388-1.506 4.313-3.597 4.313-0.703 0-1.362-0.366-1.588-0.797 0 0-0.347 1.322-0.431 1.647-0.156 0.603-0.578 1.356-0.862 1.816 0.65 0.2 1.337 0.309 2.053 0.309 3.828 0 6.931-3.103 6.931-6.931 0-3.831-3.103-6.934-6.931-6.934z"></path></svg>',
+                    "social-reddit": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M4 10c0-0.552 0.448-1 1-1s1 0.448 1 1c0 0.552-0.448 1-1 1s-1-0.448-1-1zM10 10c0-0.552 0.448-1 1-1s1 0.448 1 1c0 0.552-0.448 1-1 1s-1-0.448-1-1zM10.049 12.137c0.258-0.203 0.631-0.159 0.834 0.099s0.159 0.631-0.099 0.834c-0.717 0.565-1.81 0.93-2.783 0.93s-2.066-0.365-2.784-0.93c-0.258-0.203-0.302-0.576-0.099-0.834s0.576-0.302 0.834-0.099c0.413 0.325 1.23 0.675 2.049 0.675s1.636-0.35 2.049-0.675zM16 8c0-1.105-0.895-2-2-2-0.752 0-1.406 0.415-1.748 1.028-1.028-0.562-2.28-0.926-3.645-1.010l1.193-2.68 2.284 0.659c0.206 0.583 0.761 1.002 1.415 1.002 0.828 0 1.5-0.672 1.5-1.5s-0.672-1.5-1.5-1.5c-0.571 0-1.068 0.319-1.321 0.789l-2.545-0.735c-0.285-0.082-0.587 0.058-0.707 0.329l-1.621 3.641c-1.33 0.094-2.551 0.453-3.557 1.004-0.342-0.613-0.996-1.028-1.748-1.028-1.105 0-2 0.895-2 2 0 0.817 0.491 1.52 1.193 1.83-0.126 0.375-0.193 0.767-0.193 1.17 0 2.761 3.134 5 7 5s7-2.239 7-5c0-0.403-0.067-0.795-0.193-1.17 0.703-0.31 1.193-1.013 1.193-1.83zM13.5 2.938c0.311 0 0.563 0.252 0.563 0.563s-0.252 0.563-0.563 0.563-0.563-0.252-0.563-0.563 0.252-0.563 0.563-0.563zM1 8c0-0.551 0.449-1 1-1 0.399 0 0.743 0.234 0.904 0.573-0.523 0.396-0.956 0.854-1.276 1.355-0.368-0.148-0.628-0.508-0.628-0.928zM8 14.813c-3.21 0-5.813-1.707-5.813-3.813s2.602-3.813 5.813-3.813c3.21 0 5.813 1.707 5.813 3.813s-2.602 3.813-5.813 3.813zM14.372 8.928c-0.32-0.502-0.753-0.959-1.276-1.355 0.161-0.338 0.505-0.573 0.904-0.573 0.551 0 1 0.449 1 1 0 0.42-0.26 0.78-0.628 0.928z"></path></svg>',
+                    "social-tumblr": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M9.001 7l-0 3.659c0 0.928-0.012 1.463 0.086 1.727 0.098 0.262 0.342 0.534 0.609 0.691 0.354 0.212 0.758 0.318 1.214 0.318 0.81 0 1.289-0.107 2.090-0.633v2.405c-0.683 0.321-1.279 0.509-1.833 0.639-0.555 0.129-1.154 0.194-1.798 0.194-0.732 0-1.163-0.092-1.725-0.276-0.562-0.185-1.042-0.45-1.438-0.79-0.398-0.343-0.672-0.706-0.826-1.091s-0.23-0.944-0.23-1.676v-5.611h-2.147v-2.266c0.628-0.204 1.331-0.497 1.778-0.877 0.449-0.382 0.809-0.839 1.080-1.374 0.272-0.534 0.459-1.214 0.561-2.039h2.579l-0 4h3.999v3h-3.999z"></path></svg>',
+                    "social-twitter": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M12.163 1.5h2.205l-4.818 5.507 5.668 7.493h-4.438l-3.476-4.545-3.977 4.545h-2.207l5.153-5.89-5.437-7.11h4.551l3.142 4.154zM11.389 13.18h1.222l-7.888-10.429h-1.311z"></path></svg>',
+                    "social-vk": '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><path d="M14.977 4.063c0.117 0.32-0.25 1.070-1.172 2.297-1.516 2.016-1.68 1.828-0.43 2.992 1.203 1.117 1.453 1.656 1.492 1.727 0 0 0.5 0.875-0.555 0.883l-2 0.031c-0.43 0.086-1-0.305-1-0.305-0.75-0.516-1.453-1.852-2-1.68 0 0-0.563 0.18-0.547 1.383 0.008 0.258-0.117 0.398-0.117 0.398s-0.141 0.148-0.414 0.172h-0.898c-1.977 0.125-3.719-1.695-3.719-1.695s-1.906-1.969-3.578-5.898c-0.109-0.258 0.008-0.383 0.008-0.383s0.117-0.148 0.445-0.148l2.141-0.016c0.203 0.031 0.344 0.141 0.344 0.141s0.125 0.086 0.187 0.25c0.352 0.875 0.805 1.672 0.805 1.672 0.781 1.609 1.313 1.883 1.617 1.719 0 0 0.398-0.242 0.312-2.188-0.031-0.703-0.227-1.023-0.227-1.023-0.18-0.242-0.516-0.312-0.664-0.336-0.117-0.016 0.078-0.297 0.336-0.422 0.383-0.187 1.062-0.195 1.867-0.187 0.633 0.008 0.813 0.047 1.055 0.102 0.742 0.18 0.492 0.867 0.492 2.523 0 0.531-0.102 1.273 0.281 1.516 0.164 0.109 0.57 0.016 1.57-1.688 0 0 0.469-0.813 0.836-1.758 0.062-0.172 0.195-0.242 0.195-0.242s0.125-0.070 0.297-0.047l2.25-0.016c0.68-0.086 0.789 0.227 0.789 0.227z"></path></svg>',
+                    "social-email": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M15 2h-14c-0.55 0-1 0.45-1 1v10c0 0.55 0.45 1 1 1h14c0.55 0 1-0.45 1-1v-10c0-0.55-0.45-1-1-1zM14 4v0.719l-6 3.536-6-3.536v-0.719h12zM2 12v-5.54l6 3.536 6-3.536v5.54h-12z"></path></svg>',
+                    "social-download": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M2.5 7l5.5 5.5 5.5-5.5h-3.5v-6h-4v6z"></path><path d="M14 8v6h-12v-6h-2v6.5c0 0.825 0.675 1.5 1.5 1.5h13c0.825 0 1.5-0.675 1.5-1.5v-6.5h-2z"></path></svg>',
                 }
             };
         },
@@ -5037,7 +5175,10 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 		 */
 		make: function (options, element) {
 			element = _is.jq(element) ? element : $(element);
-			options = _obj.extend({}, options, element.data("foogallery"));
+            options = _obj.extend({}, options, element.data("foogallery"));
+            if (_.isMobile) {
+                options = _obj.extend({}, options, element.data("foogalleryMobile"));
+            }
 			var self = this, type = self.type(options, element);
 			if (!self.contains(type)) return null;
 			options = self.options(type, options);
@@ -5758,6 +5899,20 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			return match != null && match.length >= 2 ? match[1] : def;
 		},
 
+        /**
+         * @summary Get the BCP 47 language tag to use with APIs like Intl.NumberFormat.
+         * @memberof FooGallery.Template#
+         * @function
+         * @name getLanguage
+         * @returns {string} Returns either the `html[lang]` attribute value, otherwise the `lang` option value.
+         */
+        getLanguage: function(){
+            if ( document.documentElement.lang !== '' ) {
+                return document.documentElement.lang;
+            }
+            return this.opt.lang;
+        },
+
 		// ###############
 		// ## Listeners ##
 		// ###############
@@ -5791,11 +5946,13 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 		srcset: "data-srcset-fg",
 		src: "data-src-fg",
 		protected: false,
+        lang: "en", // the language to use if there's no html[lang] attribute value
+        cors: null,
 		template: {},
 		regex: {
 			theme: /(?:\s|^)(fg-(?:light|dark|custom))(?:\s|$)/,
 			loadingIcon: /(?:\s|^)(fg-loading-(?:default|bars|dots|partial|pulse|trail))(?:\s|$)/,
-			hoverIcon: /(?:\s|^)(fg-hover-(?:zoom|zoom2|zoom3|plus|circle-plus|eye|external|tint))(?:\s|$)/,
+			hoverIcon: /(?:\s|^)(fg-hover-(?:zoom|zoom2|zoom3|zoom4|zoom5|plus|plus2|plus3|circle-plus|circle-plus2|square-plus|eye|external|tint))(?:\s|$)/,
 			videoIcon: /(?:\s|^)(fg-video-(?:default|1|2|3|4))(?:\s|$)/,
 			border: /(?:\s|^)(fg-border-(?:thin|medium|thick))(?:\s|$)/,
 			hoverColor: /(?:\s|^)(fg-hover-(?:colorize|grayscale))(?:\s|$)/,
@@ -5860,6 +6017,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 		FooGallery.utils.fn,
 		FooGallery.utils.str
 );
+
 (function(_, _utils, _is){
 
 	_.Component = _utils.EventClass.extend(/** @lend FooGallery.Component */{
@@ -6241,6 +6399,14 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 					tmpl.trigger("after-state", [obj]);
 				}
 			}
+		},
+		getItemHash: function(item) {
+			const self = this;
+			if (self.enabled && item instanceof _.Item) {
+				let state = self.get(item);
+				return self.hashify(state);
+			}
+			return '';
 		},
 		onPopState: function(e){
 			var self = this, parsed = self.parse();
@@ -7126,7 +7292,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			 * @name id
 			 * @type {string}
 			 */
-			self.id = self.opt.id;
+			self.id = `${ self.opt.id }`;
 			/**
 			 * @memberof FooGallery.Item#
 			 * @name productId
@@ -7139,6 +7305,12 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			 * @type {string}
 			 */
 			self.href = self.opt.href;
+			/**
+			 * @memberof FooGallery.Item#
+			 * @name download
+			 * @type {string}
+			 */
+			self.download = self.opt.download;
 			/**
 			 * @memberof FooGallery.Item#
 			 * @name placeholder
@@ -7205,6 +7377,16 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			 * @type {FooGallery.Item~Attributes}
 			 */
 			self.attr = self.opt.attr;
+			var attr = self.attr || {},
+				anchor = attr.anchor || {},
+				image = attr.image || {},
+				caption = anchor["data-title"] || anchor["data-caption-title"],
+				description = anchor["data-description"] || anchor["data-caption-desc"];
+
+			if (_is.empty(self.title) && _is.string(image.title)) self.title = _.safeParse(image.title);
+			if (_is.empty(self.alt) && _is.string(image.alt)) self.alt = _.safeParse(image.alt);
+			if (_is.empty(self.caption) && _is.string(caption)) self.caption = _.safeParse(caption);
+			if (_is.empty(self.description) && _is.string(description)) self.description = _.safeParse(description);
 			/**
 			 * @memberof FooGallery.Item#
 			 * @name tags
@@ -7507,6 +7689,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			self.$anchor = $(el.querySelector(sel.anchor)).on("click.foogallery", {self: self}, self.onAnchorClick);
 			self.$image = $(el.querySelector(sel.image));
 			self.$caption = $(el.querySelector(sel.caption.elem)).on("click.foogallery", {self: self}, self.onCaptionClick);
+			self.$caption.on("click.foogallery", ".fg-download-button", {self: self}, self.onDownloadClick);
 			self.$overlay = $(el.querySelector(sel.overlay));
 			self.$wrap = $(el.querySelector(sel.wrap));
 			self.$loader = $(el.querySelector(sel.loader));
@@ -7527,10 +7710,11 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			self.isError = self.$el.hasClass(cls.error);
 
 			var data = self.$anchor.data();
-			self.id = data.id || self.id;
+			self.id = `${ data.id || data.attachmentId || self.id }`;
 			self.productId = data.productId || self.productId;
 			self.tags = data.tags || self.tags;
 			self.href = data.href || self.$anchor.attr('href') || self.href;
+			self.download = data.download || self.download || self.href;
 
 			var $img;
 			if (self.$image.is("picture")){
@@ -7575,6 +7759,12 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 				if (desc !== self.description) {
 					self.$caption.find(sel.caption.description).html(desc);
 				}
+			}
+			if (!self.showCaptionTitle) {
+				self.$caption.find(sel.caption.title).remove();
+			}
+			if (!self.showCaptionDescription) {
+				self.$caption.find(sel.caption.description).remove();
 			}
 
 			// if the image has no src url then set the placeholder
@@ -7770,7 +7960,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 				"data-description": self.description,
 				"data-tags": self.tags,
 				"data-exif": self.exif,
-				"data-product-id": self.productId
+				"data-product-id": self.productId,
+				"data-download": self.download
 			});
 
 			if (!_is.string(self.placeholder) || self.placeholder.length === 0){
@@ -7882,8 +8073,11 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 						if (_is.string(button.target) && button.target.length > 0){
 							captionButton.target = button.target;
 						}
-						if (_is.string(button.classes) && button.classes.length > 0){
-							captionButton.className = button.classes;
+						const buttonClasses = [ button.classes, button.class ]
+							.filter( classNames => _is.string( classNames ) && classNames.length > 0 )
+							.join( " " );
+						if ( buttonClasses.length > 0 ){
+							captionButton.className = buttonClasses;
 						}
 						if (_is.hash(button.attr)){
 							self._setAttributes(captionButton, button.attr);
@@ -7924,6 +8118,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 				self.$image = $(image);
 			}
 			self.$caption = $(caption).on("click.foogallery", {self: self}, self.onCaptionClick);
+			self.$caption.on("click.foogallery", ".fg-download-button", {self: self}, self.onDownloadClick);
 			self.$loader = $(loader);
 
 			return true;
@@ -8140,15 +8335,13 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 		loadIMG: function(){
 			var self = this;
 			return new $.Deferred(function(def){
-				var img = self.isPicture ? self.$image.find("img").get(0) : self.$image.get(0);
+				var img = self.getImageElement();
 				if (!img){
 					return def.reject("Unable to find img element.");
 				}
 				var ph_src = img.src, ph_srcset = img.srcset;
 				img.onload = function () {
 					img.onload = img.onerror = null;
-					img.style.removeProperty("width");
-					img.style.removeProperty("height");
 					def.resolve(img);
 				};
 				img.onerror = function () {
@@ -8174,18 +8367,29 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 						}
 					});
 				}
-				var size = img.getBoundingClientRect();
-				img.style.width = size.width;
-				img.style.height = size.height;
 
-				img.src = self.src;
-				if (!_is.empty(self.srcset)){
-					img.srcset = self.srcset;
+                const { opt: { cors } } = self.tmpl;
+                if ( _is.string( cors ) ) {
+                    if ( img.crossOrigin === null && _.isCrossOrigin(self.src) ) {
+                        img.crossOrigin = cors;
+                    }
 				}
+                if (!_is.empty(self.srcset)){
+                    img.srcset = self.srcset;
+                }
+				img.src = self.src;
 				if (img.complete){
 					img.onload();
 				}
 			}).promise();
+		},
+        /**
+         * @summary Utility method for getting the current items' <img/> element.
+         * @returns {HTMLImageElement|undefined}
+         */
+		getImageElement: function(){
+			var self = this;
+			return self.isPicture ? self.$image.find("img").get(0) : self.$image.get(0);
 		},
 		/**
 		 * @summary Create an empty placeholder image using the supplied dimensions.
@@ -8291,6 +8495,26 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			var self = e.data.self, evt = self.tmpl.trigger("caption-click-item", [self]);
 			if (!evt.isDefaultPrevented() && self.$anchor.length > 0 && !$(e.target).is("a[href],:input")) {
 				self.$anchor.get(0).click();
+			}
+		},
+		/**
+		 * @summary Listens for clicks on caption download buttons and triggers the client-side download helper.
+		 * @memberof FooGallery.Item#
+		 * @function onDownloadClick
+		 * @param {jQuery.Event} e - The jQuery.Event object for the click event.
+		 * @private
+		 */
+		onDownloadClick: function (e) {
+			var self = e.data.self,
+				$button = $(e.target).closest(".fg-download-button"),
+				url = $button.attr("data-download") || $button.prop("href") || self.download;
+
+			if (_is.string(url) && url.length > 0 && _is.fn(_.downloadImage)) {
+				e.preventDefault();
+				e.stopPropagation();
+				_.downloadImage(url).catch(function(err){
+					console.error(err);
+				});
 			}
 		}
 	});
@@ -8474,6 +8698,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 	FooGallery.utils.obj,
 	FooGallery.utils.str
 );
+
 (function($, _, _utils, _is){
 
     _.Image = _.Item.extend({});
@@ -8645,7 +8870,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			self.sel = self.tmpl.sel.paging;
 			self.pushOrReplace = self.opt.pushOrReplace;
 			self.type = self.opt.type;
-			self.theme = self.opt.theme;
+			self.theme = self.opt.theme ?? template.getCSSClass('theme');
 			self.size = self.opt.size;
 			self.position = self.opt.position;
 			self.scrollToTop = self.opt.scrollToTop;
@@ -8877,7 +9102,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 
 	_.paging.register("default", _.Paging, null, {
 		type: "none",
-		theme: "fg-light",
+		theme: null,
 		size: 30,
 		pushOrReplace: "push",
 		position: "none",
@@ -9078,6 +9303,24 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 self.areas.push( self.cart );
             }
 
+            if ( _.Panel.Comments ){
+                self.comments = new _.Panel.Comments(self);
+                self.areas.push( self.comments );
+            }
+
+            // Make sure only one side area can occupy the same position, overrides supplied options
+            // There can be only one...
+            const highlanders = self.areas.filter( a => a instanceof _.Panel.SideArea && a.isVisible && a.opt.group === 'overlay' );
+            while ( highlanders.length > 0 ) {
+                const theOne = highlanders.shift();
+                highlanders.forEach( challenger => {
+                    if ( challenger.isTargetingSamePosition( theOne ) ) {
+                        challenger.isVisible = false;
+                        challenger.button.isPressed = false;
+                    }
+                } );
+            }
+
             self.$el = null;
 
             self.el = null;
@@ -9115,6 +9358,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             self.isSmallScreen = false;
             self.isMediumScreen = false;
             self.isLargeScreen = false;
+            self.isMobileLayout = false;
 
             self.breakpointClassNames = self.opt.breakpoints.map(function(bp){
                 return "fg-" + bp.name + " fg-" + bp.name + "-width" + " fg-" + bp.name + "-height";
@@ -9177,10 +9421,10 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             if (self.opt.keyboard){
                 self.$el.attr("tabindex", -1).on("keydown.foogallery", {self: self}, self.onKeyDown);
             }
+            self.buttons.appendTo( self.$el );
             self.areas.forEach(function(area){
                 area.appendTo( self.$el );
             });
-            self.buttons.appendTo( self.content.$el );
             return true;
         },
         createElem: function(){
@@ -9202,6 +9446,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 _is.boolean(self.opt.hoverScale) && self.opt.hoverScale ? self.cls.hoverScale : self.tmpl.getCSSClass("hoverScale"),
                 _is.string(self.opt.button) ? self.opt.button : "",
                 _is.string(self.opt.highlight) ? self.opt.highlight : "",
+                self.opt.adjustBackgroundColor ? self.cls.dominantColor : "",
                 self.opt.stackSideAreas ? self.cls.stackSideAreas : "",
                 self.opt.preserveButtonSpace ? self.cls.preserveButtonSpace : "",
                 self.opt.fitMedia ? self.cls.fitMedia : "",
@@ -9312,6 +9557,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             self.isLargeScreen = self.$el.hasClass("fg-large");
             self.isXLargeScreen = self.$el.hasClass("fg-x-large");
             self.isSmallScreen = !self.isMediumScreen && !self.isLargeScreen && !self.isXLargeScreen;
+            self.isMobileLayout = self.isSmallScreen && !self.opt.noMobile;
             self.areas.forEach(function (area) {
                 area.resize();
             });
@@ -9386,6 +9632,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 self.currentItem = item;
                 self.prevItem = self.tmpl.items.prev(item, self.isVisible, self.opt.loop);
                 self.nextItem = self.tmpl.items.next(item, self.isVisible, self.opt.loop);
+                self.updateBackgroundColor(item);
                 self.doLoad(media).then(def.resolve).fail(def.reject);
             }).always(function(){
                 self.isLoading = false;
@@ -9397,6 +9644,22 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 self.isError = true;
                 self.trigger("error", [item]);
             }).promise();
+        },
+        updateBackgroundColor: function( item ){
+            var self = this, color = "";
+            if (!self.opt.adjustBackgroundColor || !self.el) return;
+            if (item instanceof _.Item && _is.element(item.el)){
+                color = item.el.style.getPropertyValue("--fg-lightbox-dominant-color");
+                if (_is.empty(color) && window.getComputedStyle){
+                    color = window.getComputedStyle(item.el).getPropertyValue("--fg-lightbox-dominant-color");
+                }
+            }
+            color = _is.string(color) ? color.trim() : "";
+            if (_is.empty(color)){
+                self.el.style.removeProperty("--fg-dominant-color");
+            } else {
+                self.el.style.setProperty("--fg-dominant-color", color);
+            }
         },
         doLoad: function( media ){
             var self = this, wait = [];
@@ -9473,18 +9736,30 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             var self = this;
             self.isClosing = true;
             return $.Deferred(function(def){
-                self.content.close(immediate).then(function(){
+                var closeArea = function(area){
+                    try {
+                        return area.close(immediate);
+                    } catch (err){
+                        return _fn.reject(err);
+                    }
+                };
+                $.when(closeArea(self.content)).always(function(){
                     var wait = [];
                     self.areas.forEach(function(area){
                         if (area !== self.content){
-                            wait.push(area.close(immediate));
+                            wait.push(closeArea(area));
                         }
                     });
-                    $.when.apply($, wait).then(def.resolve).fail(def.reject);
+                    _fn.allSettled(wait).then(function(){
+                        def.resolve();
+                    });
                 });
             }).always(function(){
                 self.isClosing = false;
                 self.currentItem = null;
+                if (self.opt.adjustBackgroundColor && self.el){
+                    self.el.style.removeProperty("--fg-dominant-color");
+                }
                 self.buttons.close();
                 if (detach) self.detach();
                 self.tmpl.state.clear();
@@ -9501,7 +9776,11 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
         onTrapFocusKeydown: function(e){
             // If TAB key pressed
             if (e.keyCode === 9) {
-                var self = e.data.self, $target = $(e.target), $dialog = $target.parents('[role=dialog]');
+                var self = e.data.self,
+                    $target = $(e.target),
+                    targetIsDialog = $target.is('[role=dialog]'),
+                    $dialog = targetIsDialog ? $target : $target.parents('[role=dialog]');
+
                 // If inside a Modal dialog (determined by attribute role="dialog")
                 if ($dialog.length) {
                     // Find first or last input element in the dialog parent (depending on whether Shift was pressed).
@@ -9510,7 +9789,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                         $boundary = e.shiftKey ? $first : $last,
                         $new = e.shiftKey ? $last : $first;
 
-                    if ($boundary.length && $target.is($boundary)) {
+                    if ($boundary.length && ( targetIsDialog || $target.is($boundary) )) {
                         e.preventDefault();
                         $new.trigger('focus');
                     }
@@ -9563,7 +9842,9 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             loop: true,
             autoProgress: 0,
             autoProgressStart: true,
+            autoProgressVisible: true,
             fitMedia: false,
+            adjustBackgroundColor: false,
             keyboard: true,
             noScrollbars: true,
             swipe: true,
@@ -9610,7 +9891,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 autoProgress: true,
                 info: true,
                 thumbs: false,
-                cart: true
+                cart: true,
+                download: false
             },
             breakpoints: [{
                 name: "medium",
@@ -9640,6 +9922,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             stickyVideoIcon: "fg-video-sticky",
             hoverScale: "fg-hover-scale",
             noMobile: "fg-panel-no-mobile",
+            dominantColor: "fg-dominant-color",
 
             loader: "fg-loader",
 
@@ -9678,7 +9961,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 maximize: "fg-panel-button fg-panel-button-maximize",
                 info: "fg-panel-button fg-panel-button-info",
                 thumbs: "fg-panel-button fg-panel-button-thumbs",
-                cart: "fg-panel-button fg-panel-button-cart"
+                cart: "fg-panel-button fg-panel-button-cart",
+                download: "fg-panel-button fg-panel-button-download"
             },
 
             transition: {
@@ -9692,12 +9976,15 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 inner: "fg-panel-area-inner"
             },
 
-            content: {},
+            content: {
+                buttons: "fg-panel-content-buttons"
+            },
 
             sideArea: {
                 toggle: "fg-panel-area-toggle",
                 button: "fg-panel-area-button",
                 visible: "fg-panel-area-visible",
+                overlay: "fg-panel-area-overlay",
                 position: {
                     top: "fg-panel-area-top",
                     right: "fg-panel-area-right",
@@ -9757,7 +10044,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 autoProgress: "Auto Progress",
                 info: "Toggle Information",
                 thumbs: "Toggle Thumbnails",
-                cart: "Toggle Cart"
+                cart: "Toggle Cart",
+                download: "Download Media"
             }
         }
     });
@@ -9771,6 +10059,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
     FooGallery.utils.fn,
     FooGallery.utils.transition
 );
+
 (function($, _, _icons, _utils, _is){
 
     _.Panel.Buttons = _utils.Class.extend({
@@ -9817,6 +10106,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 
             // area buttons are inserted by default with priority 99
 
+            this.register(new _.Panel.Download(this.panel), 170);
             this.register(new _.Panel.Maximize(this.panel), 180);
             this.register(new _.Panel.Fullscreen(this.panel), 190);
             this.register(new _.Panel.Button(this.panel, "close", {
@@ -9851,11 +10141,11 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             var self = this;
             if (prioritize){
                 self.__registered.sort(function(a, b){
-                    return a.priority - b.priority;
+                    return b.priority - a.priority;
                 });
             }
-            self.__registered.forEach(function(registered){
-                callback.call(self, registered.button);
+            self.__registered.forEach(function(registered, index){
+                callback.call(self, registered.button, index);
             });
         },
 
@@ -9873,10 +10163,12 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 
         press: function( name, pressed ){
             var self = this, button = self.get(name);
-            if ( self.panel.isSmallScreen && pressed && _is.string(button.groupName) ){
+            if ( pressed && _is.string(button.groupName) ){
                 self.each(function(btn){
                     if ( button !== btn && btn instanceof _.Panel.SideAreaButton && button.groupName === btn.groupName ){
-                        btn.area.toggle( false );
+                        if ( self.panel.isSmallScreen || btn.isTargetingSamePosition( button ) ) {
+                            btn.area.toggle( false );
+                        }
                     }
                 });
             }
@@ -9985,6 +10277,11 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
         },
 
         resize: function(){
+            const prev = this.get("prev");
+            const next = this.get("next");
+            const target = this.panel.isMobileLayout ? this.$el : this.panel.content.$buttons;
+            if ( next ) next.appendTo( target );
+            if ( prev ) prev.appendTo( target );
             this.each(function(button){
                 button.resize();
             });
@@ -10056,7 +10353,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 var enabled = self.isEnabled();
                 self.toggle(enabled);
                 self.disable(!enabled);
-                if (self.isToggle) self.press( self.opt.pressed );
+                if (self.isToggle) self.press( self.isPressed );
             }
             return self.isCreated;
         },
@@ -10068,16 +10365,31 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             return !this.isCreated;
         },
         appendTo: function(parent){
+            if ( this.isAttached ) {
+                this.detach();
+            }
             if ((this.isCreated || this.create()) && !this.isAttached){
                 this.$el.appendTo(parent);
+                this.isAttached = true;
+            }
+            return this.isAttached;
+        },
+        prependTo: function(parent){
+            if ( this.isAttached ) {
+                this.detach();
+            }
+            if ((this.isCreated || this.create()) && !this.isAttached){
+                this.$el.prependTo(parent);
+                this.isAttached = true;
             }
             return this.isAttached;
         },
         detach: function(){
             if (this.isCreated && this.isAttached){
                 this.$el.detach();
+                this.isAttached = false;
             }
-            return !this.isAttached;
+            return this.isAttached;
         },
         toggle: function(visible){
             if (!this.isCreated) return;
@@ -10087,10 +10399,9 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
         disable: function(disabled){
             if (!this.isCreated) return;
             this.isDisabled = _is.boolean(disabled) ? disabled : !this.isDisabled;
-            this.$el.toggleClass(this.cls.states.disabled, this.isDisabled).attr({
-                "aria-disabled": this.isDisabled,
-                "disabled": this.isDisabled
-            });
+            this.$el.toggleClass(this.cls.states.disabled, this.isDisabled)
+                .attr("aria-disabled", this.isDisabled)
+                .prop("disabled", this.isDisabled);
         },
         press: function(pressed){
             if ( !this.isCreated ) return;
@@ -10172,6 +10483,12 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 }
             }
         },
+        isTargetingSamePosition: function( button ) {
+            if ( button instanceof _.Panel.SideAreaButton ) {
+                return button.area.isTargetingSamePosition( this.area );
+            }
+            return false;
+        },
         resize: function(){
             var enabled = this.area.isEnabled(), supported = enabled && this.area.canLoad(this.area.currentMedia);
             this.checkAutoHide(enabled, supported);
@@ -10203,6 +10520,9 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
         },
         create: function () {
             if (this._super()){
+                if (this.panel.opt.autoProgressVisible === false){
+                    this.toggle(false);
+                }
                 this.$icon = this.$el.find("svg");
                 this.$circle = this.$icon.find("circle");
                 var radius = parseFloat(this.$circle.attr("r"));
@@ -10282,6 +10602,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
     FooGallery,
     FooGallery.utils
 );
+
 (function($, _, _utils){
 
     _.fullscreen = new _utils.FullscreenAPI();
@@ -10355,6 +10676,47 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 );
 (function($, _, _is){
 
+    var root = document.documentElement;
+    var scrollKeys = {
+        " ": true,
+        ArrowDown: true,
+        ArrowLeft: true,
+        ArrowRight: true,
+        ArrowUp: true,
+        End: true,
+        Home: true,
+        PageDown: true,
+        PageUp: true
+    };
+
+    function getElement( target ) {
+        if (target && target.nodeType === 3) return target.parentElement;
+        return target && target.nodeType === 1 ? target : null;
+    }
+
+    function hasScrollableAncestor( target, panel ) {
+        var element = getElement(target), style;
+        while (element && panel.contains(element)) {
+            style = window.getComputedStyle(element);
+            if (
+                (/(auto|scroll|overlay)/.test(style.overflowY) && element.scrollHeight > element.clientHeight) ||
+                (/(auto|scroll|overlay)/.test(style.overflowX) && element.scrollWidth > element.clientWidth)
+            ) {
+                return true;
+            }
+            if (element === panel) break;
+            element = element.parentElement;
+        }
+        return false;
+    }
+
+    function isEditable( target ) {
+        return target && (
+            target.isContentEditable ||
+            (target.tagName && /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test( target.tagName.toUpperCase() ))
+        );
+    }
+
     _.Panel.Maximize = _.Panel.Button.extend({
         construct: function(panel){
             this._super(panel, "maximize", {
@@ -10362,7 +10724,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 label: panel.il8n.buttons.maximize,
                 toggle: true
             });
-            this.scrollPosition = [];
+            this._scrollState = null;
             this.$placeholder = $("<span/>");
         },
         click: function(){
@@ -10379,6 +10741,66 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             visible = _is.boolean(visible) ? visible : this.isVisible;
             this.toggle(visible);
         },
+        lockScroll: function(){
+            var body = document.body;
+            if (!body || this._scrollState) return;
+
+            var pageHeight = Math.max(root.scrollHeight, body.scrollHeight, root.clientHeight);
+            var panel = this.panel.$el.get(0);
+            var state = this._scrollState = {
+                x: window.scrollX,
+                y: window.scrollY,
+                rootMinHeight: root.style.minHeight,
+                bodyPosition: body.style.position,
+                bodyTop: body.style.top,
+                bodyLeft: body.style.left,
+                bodyRight: body.style.right,
+                bodyWidth: body.style.width,
+                preventScroll: function(event){
+                    if (!hasScrollableAncestor(event.target, panel)) event.preventDefault();
+                },
+                preventKey: function(event){
+                    if (
+                        scrollKeys[event.key] &&
+                        !isEditable(event.target) &&
+                        !hasScrollableAncestor(event.target, panel)
+                    ) {
+                        event.preventDefault();
+                    }
+                }
+            };
+
+            root.classList.add(this.panel.cls.noScrollbars);
+            root.style.minHeight = pageHeight + "px";
+            body.style.position = "fixed";
+            body.style.top = -state.y + "px";
+            body.style.left = -state.x + "px";
+            body.style.right = "0";
+            body.style.width = "100%";
+
+            document.addEventListener("wheel", state.preventScroll, {capture: true, passive: false});
+            document.addEventListener("touchmove", state.preventScroll, {capture: true, passive: false});
+            document.addEventListener("keydown", state.preventKey, true);
+        },
+        unlockScroll: function(){
+            var state = this._scrollState, body = document.body;
+            if (!state || !body) return;
+
+            document.removeEventListener("wheel", state.preventScroll, {capture: true});
+            document.removeEventListener("touchmove", state.preventScroll, {capture: true});
+            document.removeEventListener("keydown", state.preventKey, true);
+
+            root.classList.remove(this.panel.cls.noScrollbars);
+            root.style.minHeight = state.rootMinHeight;
+            body.style.position = state.bodyPosition;
+            body.style.top = state.bodyTop;
+            body.style.left = state.bodyLeft;
+            body.style.right = state.bodyRight;
+            body.style.width = state.bodyWidth;
+
+            this._scrollState = null;
+            window.scrollTo(state.x, state.y);
+        },
         enter: function(){
             if (this.panel.isMaximized) return;
             this.panel.isMaximized = true;
@@ -10390,8 +10812,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             this.panel.buttons.press('maximize', true);
             this.panel.trapFocus();
             if (this.panel.opt.noScrollbars){
-                this.scrollPosition = [window.scrollX, window.scrollY];
-                $("html").addClass(this.panel.cls.noScrollbars);
+                this.lockScroll();
             }
         },
         exit: function(){
@@ -10406,12 +10827,42 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             this.panel.buttons.press('maximize', false);
             this.panel.releaseFocus();
             if (this.panel.opt.noScrollbars){
-                $("html").removeClass(this.panel.cls.noScrollbars)
-                    .prop("clientWidth"); // query the clientWidth to force the class to be removed prior to setting the scroll position
-                if (_is.array(this.scrollPosition) && this.scrollPosition.length === 2){
-                    window.scrollTo(this.scrollPosition[0], this.scrollPosition[1]);
-                }
-                this.scrollPosition = [];
+                this.unlockScroll();
+            }
+        }
+    });
+
+})(
+    FooGallery.$,
+    FooGallery,
+    FooGallery.utils.is
+);
+
+(function($, _, _is){
+
+    _.Panel.Download = _.Panel.Button.extend({
+        construct: function(panel){
+            this._super(panel, "download", {
+                icon: "download",
+                label: panel.il8n.buttons.download,
+                toggle: false
+            });
+            this.downloadable = [ 'image' ];
+        },
+        beforeLoad: function(media) {
+            this._super( media );
+            if ( this.isEnabled() ) {
+                this.toggle( this.downloadable.includes( media?.item?.type ) );
+            }
+        },
+        click: function(){
+            this._super();
+            const i = this.panel.currentItem;
+            if ( i instanceof _.Item && _is.string( i.download ) ) {
+                this.disable( true );
+                _.downloadImage( i.download )
+                    .catch( err => console.error( err ) )
+                    .finally( () => this.disable( false ) );
             }
         }
     });
@@ -10583,6 +11034,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                     self.panel.trigger("area-unload", [self, current]);
                     return self.doUnload(current, false).then(function() {
                         self.panel.trigger("area-unloaded", [self, current]);
+                    }).always(function(){
                         self.currentMedia = null;
                     });
                 }
@@ -10617,6 +11069,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
     FooGallery.utils.obj,
     FooGallery.utils.str
 );
+
 (function($, _, _fn, _t){
 
     /**
@@ -10634,11 +11087,13 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             this._super(panel, "content", {
                 waitForUnload: false
             }, panel.cls.content);
+            this.$buttons = null;
             this.robserver = null;
         },
         doCreate: function(){
             var self = this;
             if (self._super()){
+                self.$buttons = $( "<div/>" ).addClass( self.cls.buttons ).appendTo( self.$el );
                 if (self.panel.opt.swipe){
                     self.$inner.fgswipe({data: {self: self}, swipe: self.onSwipe, allowPageScroll: true});
                 }
@@ -10723,6 +11178,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
     FooGallery.utils.fn,
     FooGallery.utils.transition
 );
+
 (function($, _, _icons, _utils, _is, _fn, _obj){
 
     /**
@@ -10745,12 +11201,15 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 icon: null,
                 label: null,
                 position: null,
+                overlay: false,
                 visible: true,
                 autoHide: false,
-                toggle: !!panel.opt.buttons[name]
+                toggle: !!panel.opt.buttons[name],
+                priority: 99
             }, options), _obj.extend({
                 toggle: this.__cls(cls.toggle, name, true),
                 visible: this.__cls(cls.visible, name),
+                overlay: this.__cls(cls.overlay, name),
                 position: {
                     top: this.__cls(cls.position.top, name),
                     right: this.__cls(cls.position.right, name),
@@ -10761,22 +11220,16 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             self.isVisible = self.opt.visible;
             self.allPositionClasses = Object.keys(self.cls.position).map(function (key) {
                 return self.cls.position[key];
-            }).join(" ");
+            }).join(" ") + " " + self.cls.overlay;
             self.button = self.registerButton();
         },
         registerButton: function(){
             var btn = new _.Panel.SideAreaButton(this);
-            this.panel.buttons.register(btn);
+            this.panel.buttons.register(btn, this.opt.priority);
             return btn;
         },
         doCreate: function(){
             if (this._super()){
-                if (this.opt.toggle){
-                    $('<button/>', {type: 'button'}).addClass(this.cls.toggle)
-                        .append(_icons.get("circle-close", this.panel.opt.icons))
-                        .on("click.foogallery", {self: this}, this.onToggleClick)
-                        .appendTo(this.$inner);
-                }
                 if (this.isEnabled()){
                     this.panel.$el.toggleClass(this.cls.visible, this.isVisible);
                     this.setPosition( this.opt.position );
@@ -10789,16 +11242,23 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             return this.cls.position.hasOwnProperty(this.opt.position);
         },
         canLoad: function(media){
-            return media instanceof _.Panel.Media;
+            return this.isEnabled() && media instanceof _.Panel.Media;
         },
         getPosition: function(){
             if (this.isEnabled()){
-                return this.cls.position[this.opt.position];
+                const position = this.cls.position[this.opt.position];
+                return this.opt.overlay ? position + " " + this.cls.overlay : position;
             }
             return null;
         },
-        setPosition: function( position ){
+        /**
+         *
+         * @param {string} position
+         * @param {?boolean} [overlay]
+         */
+        setPosition: function( position, overlay = null ){
             this.opt.position = this.cls.position.hasOwnProperty(position) ? position : null;
+            if (_is.boolean(overlay)) this.opt.overlay = overlay;
             if (_is.jq(this.panel.$el)){
                 this.panel.$el.removeClass(this.allPositionClasses).addClass(this.getPosition());
             }
@@ -10813,6 +11273,14 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
         onToggleClick: function(e){
             e.preventDefault();
             e.data.self.toggle();
+        },
+        isTargetingSamePosition: function( area ) {
+            if ( area instanceof _.Panel.SideArea ) {
+                const pos1 = this.opt.position,
+                    pos2 = area.opt.position;
+                return _is.string( pos1 ) && _is.string( pos2 ) && pos1 === pos2;
+            }
+            return false;
         }
     });
 
@@ -10848,9 +11316,9 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 autoHide: panel.opt.infoAutoHide,
                 align: panel.opt.infoAlign,
                 waitForUnload: false,
-                group: "overlay"
+                group: "overlay",
+                priority: 90
             }, panel.cls.info);
-            this.allPositionClasses += " " + this.cls.overlay;
         },
         doCreate: function(){
             var self = this;
@@ -10861,14 +11329,6 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 return true;
             }
             return false;
-        },
-        getPosition: function(){
-            var result = this._super();
-            return result != null && this.opt.overlay ? result + " " + this.cls.overlay : result;
-        },
-        setPosition: function( position, overlay ){
-            if (_is.boolean(overlay)) this.opt.overlay = overlay;
-            this._super( position );
         },
         canLoad: function(media){
             return this._super(media) && media.caption.canLoad();
@@ -11142,9 +11602,14 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 }
             }).always(function(){
                 self.scrollIndex = scrollIndex;
-                self.$prev.toggleClass(states.disabled, scrollIndex <= 0);
-                self.$next.toggleClass(states.disabled, scrollIndex >= maxIndex);
+                self.disableButton(self.$prev, scrollIndex <= 0, states.disabled);
+                self.disableButton(self.$next, scrollIndex >= maxIndex, states.disabled);
             }).promise();
+        },
+        disableButton: function( $button, state, cls ) {
+            $button.toggleClass( cls, state )
+                .attr("aria-disabled", state)
+                .prop("disabled", state);
         },
         getInfo: function(){
             var isHorizontal = this.isHorizontal(),
@@ -11247,6 +11712,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
     FooGallery.utils.fn,
     FooGallery.utils.transition
 );
+
 (function($, _, _utils, _is, _fn, _obj, _str, _t){
 
     _.Panel.Media = _utils.Class.extend({
@@ -11269,6 +11735,10 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 
             if ( _.Panel.Media.Product ){
                 self.product = new _.Panel.Media.Product(panel, self);
+            }
+
+            if ( _.Panel.Media.Comments ){
+                self.comments = new _.Panel.Media.Comments(panel, self);
             }
 
             self.$el = null;
@@ -11395,14 +11865,24 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                     def.rejectWith("default prevented");
                     return;
                 }
-                self.$el.removeClass(states.allLoading).addClass(states.loading);
-                self.doLoad().then(def.resolve).fail(def.reject);
+                if ( self.isLoaded ) {
+                    def.resolve();
+                } else if ( self.isError ) {
+                    def.reject('previous error');
+                } else {
+                    self.isLoading = true;
+                    self.$el.removeClass(states.allLoading).addClass(states.loading);
+                    self.doLoad().then(def.resolve).fail(def.reject);
+                }
             }).always(function(){
+                self.isLoading = false;
                 self.$el.removeClass(states.loading);
             }).then(function(){
+                self.isLoaded = true;
                 self.$el.addClass(states.loaded);
                 self.panel.trigger("media-loaded", [self]);
             }).fail(function(){
+                self.isError = true;
                 self.$el.addClass(states.loaded);
                 self.panel.trigger("media-error", [self]);
             }).promise();
@@ -11478,6 +11958,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                     body: "fg-media-product-body",
                     footer: "fg-media-product-footer",
                     button: "fg-panel-button",
+                    primary: "fg-panel-button-primary",
+                    secondary: "fg-panel-button-secondary",
                     hidden: "fg-hidden",
                     disabled: "fg-disabled",
                     loading: "fg-loading"
@@ -11491,6 +11973,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                     title: "Product Information",
                     addToCart: "Add to Cart",
                     viewProduct: "View Product",
+                    goToCheckout: "Go to Checkout",
                     success: "Successfully added to cart.",
                     error: "Something went wrong adding to cart."
                 }
@@ -11510,6 +11993,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
     FooGallery.utils.str,
     FooGallery.utils.transition
 );
+
 (function ($, _, _icons, _utils, _is, _fn, _obj, _str, _t) {
 
     var canHover = !!window.matchMedia && window.matchMedia("(hover: hover)").matches;
@@ -11750,7 +12234,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
     FooGallery.utils.str,
     FooGallery.utils.transition
 );
-(function($, _, _utils, _obj){
+
+(function($, _, _utils, _is, _obj){
 
     _.Panel.Image = _.Panel.Media.extend({
         construct: function(panel, item){
@@ -11795,6 +12280,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             var self = this;
             return $.Deferred(function(def){
                 var img = self.$content.get(0);
+                img.alt = self.item.alt;
                 img.onload = function () {
                     img.onload = img.onerror = null;
                     def.resolve(self);
@@ -11803,6 +12289,12 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                     img.onload = img.onerror = null;
                     def.rejectWith("error loading image");
                 };
+                const { opt: { cors } } = self.panel.tmpl;
+                if ( _is.string( cors ) ) {
+                    if ( img.crossOrigin === null && _.isCrossOrigin(self.item.href) ) {
+                        img.crossOrigin = cors;
+                    }
+                }
                 // set everything in motion by setting the src
                 img.src = self.item.href;
                 if (img.complete){
@@ -11838,6 +12330,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
     FooGallery.$,
     FooGallery,
     FooGallery.utils,
+    FooGallery.utils.is,
     FooGallery.utils.obj
 );
 (function($, _, _utils, _obj){
@@ -12422,17 +12915,38 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 
 	_.ImageViewerTemplate = _.Template.extend({
 		construct: function (options, element) {
-			var self = this;
-			self._super(_obj.extend({}, options, {
-				paging: {
-					pushOrReplace: "replace",
-					theme: "fg-light",
-					type: "default",
-					size: 1,
-					position: "none",
-					scrollToTop: false
-				}
-			}), element);
+			var self = this,
+                overlay = element.hasClass('fg-overlay-controls');
+            if ( overlay && _.paging?.contains('dots') ) {
+                var reg = _.paging.registered['dots'];
+                options = _obj.extend({
+                    cls: {
+                        paging: reg.cls
+                    },
+                    il8n: {
+                        paging: reg.il8n
+                    }
+                }, options, {
+                    paging: {
+                        pushOrReplace: "replace",
+                        type: "dots",
+                        size: 1,
+                        position: element.hasClass('fg-dots-none') ? "none" : "bottom",
+                        scrollToTop: false
+                    }
+                })
+            } else {
+                options = _obj.extend({}, options, {
+                    paging: {
+                        pushOrReplace: "replace",
+                        type: "default",
+                        size: 1,
+                        position: "none",
+                        scrollToTop: false
+                    }
+                });
+            }
+			self._super(options, element);
 			/**
 			 * @summary The jQuery object containing the inner element that wraps all items.
 			 * @memberof FooGallery.ImageViewerTemplate#
@@ -12454,6 +12968,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			 * @type {jQuery}
 			 */
 			self.$total = $();
+			self._autoplayTimeout = null;
+			self._autoplayPaused = false;
 			/**
 			 * @summary The jQuery object for the previous button.
 			 * @memberof FooGallery.ImageViewerTemplate#
@@ -12481,8 +12997,10 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			 * @type {FooGallery.ImageViewerTemplate~CSSSelectors}
 			 */
 			self.on({
+				"loaded-item error-item": self.onFirstItemReady,
 				"pre-init": self.onPreInit,
 				"init": self.onInit,
+				"ready": self.onReady,
 				"destroy": self.onDestroy,
 				"append-item": self.onAppendItem,
 				"after-page-change": self.onAfterPageChange,
@@ -12494,12 +13012,12 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			return $("<div/>", {"class": self.cls.inner}).append(
 					$("<div/>", {"class": self.cls.innerContainer}),
 					$("<div/>", {"class": self.cls.controls}).append(
-							$("<div/>", {"class": self.cls.prev})
+							$("<button/>", {"class": self.cls.prev, type: 'button', title: self.il8n.prev})
 									.append($("<span/>", {text: self.il8n.prev})),
 							$("<label/>", {"class": self.cls.count, text: self.il8n.count})
 									.prepend($("<span/>", {"class": self.cls.countCurrent, text: "0"}))
 									.append($("<span/>", {"class": self.cls.countTotal, text: "0"})),
-							$("<div/>", {"class": self.cls.next})
+							$("<button/>", {"class": self.cls.next, type: 'button', title: self.il8n.next})
 									.append($("<span/>", {text: self.il8n.next}))
 					)
 			);
@@ -12508,14 +13026,24 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			var self = this;
 			self.$el.find(self.sel.inner).remove();
 		},
+        onFirstItemReady: function(event) {
+            this.$el.removeClass("fg-not-ready");
+        },
 
 		onPreInit: function(event){
 			var self = this;
+            self.$el.addClass("fg-not-ready");
 			self.$inner = self.$el.find(self.sel.innerContainer);
 			self.$current = self.$el.find(self.sel.countCurrent);
 			self.$total = self.$el.find(self.sel.countTotal);
 			self.$prev = self.$el.find(self.sel.prev);
+            if ( !self.$prev.attr('title') ) {
+                self.$prev.attr('title', self.il8n.prev);
+            }
 			self.$next = self.$el.find(self.sel.next);
+            if ( !self.$next.attr('title') ) {
+                self.$next.attr('title', self.il8n.next);
+            }
 		},
 		onInit: function (event) {
 			var self = this;
@@ -12525,6 +13053,12 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			}
 			self.$prev.on('click', {self: self}, self.onPrevClick);
 			self.$next.on('click', {self: self}, self.onNextClick);
+			self.$el.on('mouseenter.foogallery-autoplay', {self: self}, self.onAutoplayMouseEnter)
+					.on('mouseleave.foogallery-autoplay', {self: self}, self.onAutoplayMouseLeave);
+		},
+		onReady: function (event) {
+			this.update();
+			this.startAutoplay();
 		},
 		/**
 		 * @summary Destroy the plugin cleaning up any bound events.
@@ -12541,6 +13075,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			}
 			self.$prev.off('click', self.onPrevClick);
 			self.$next.off('click', self.onNextClick);
+			self.$el.off('.foogallery-autoplay');
+			self.clearAutoplay();
 		},
 		onAppendItem: function (event, item) {
 			event.preventDefault();
@@ -12550,10 +13086,12 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 		onAfterPageChange: function(event, current, prev, isFilter){
 			if (!isFilter){
 				this.update();
+				this.startAutoplay();
 			}
 		},
 		onAfterFilterChange: function(event){
 			this.update();
+			this.startAutoplay();
 		},
 
 		update: function(){
@@ -12561,6 +13099,43 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 				this.$current.text(this.pages.current);
 				this.$total.text(this.pages.total);
 			}
+		},
+		getAutoplaySeconds: function(){
+			var seconds = parseInt(this.template.autoplay, 10);
+			return isNaN(seconds) ? 0 : seconds;
+		},
+		clearAutoplay: function(){
+			if (this._autoplayTimeout !== null){
+				clearTimeout(this._autoplayTimeout);
+				this._autoplayTimeout = null;
+			}
+		},
+		startAutoplay: function(){
+			var self = this,
+				seconds = self.getAutoplaySeconds();
+
+			self.clearAutoplay();
+
+			if (self._autoplayPaused || seconds <= 0 || !self.pages || self.pages.total <= 1){
+				return;
+			}
+
+			if (!self.template.loop && self.pages.current >= self.pages.total){
+				return;
+			}
+
+			self._autoplayTimeout = setTimeout(function(){
+				self._autoplayTimeout = null;
+				self.next();
+			}, seconds * 1000);
+		},
+		onAutoplayMouseEnter: function(e){
+			e.data.self._autoplayPaused = true;
+			e.data.self.clearAutoplay();
+		},
+		onAutoplayMouseLeave: function(e){
+			e.data.self._autoplayPaused = false;
+			e.data.self.startAutoplay();
 		},
 		/**
 		 * @summary Navigate to the previous item in the collection.
@@ -12639,7 +13214,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 	_.template.register("image-viewer", _.ImageViewerTemplate, {
 		template: {
 			attachFooBox: false,
-			loop: false
+			loop: false,
+			autoplay: 0
 		}
 	}, {
 		container: "foogallery fg-image-viewer",
@@ -12663,6 +13239,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 		FooGallery.utils,
 		FooGallery.utils.obj
 );
+
 (function($, _, _obj){
 
 	_.ThumbnailTemplate = _.Template.extend({
@@ -12675,7 +13252,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 					pushOrReplace: "replace",
 					theme: "fg-light",
 					type: "default",
-					size: 1,
+					size: $(element).hasClass((options.cls.stacked)) ? 3 : 1,
 					position: "none",
 					scrollToTop: false
 				}
@@ -12683,8 +13260,11 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 		}
 	});
 
-	_.template.register("thumbnail", _.ThumbnailTemplate, null, {
-		container: "foogallery fg-thumbnail"
+	_.template.register("thumbnail", _.ThumbnailTemplate, {
+        template: {}
+    }, {
+		container: "foogallery fg-thumbnail",
+        stacked: "fg-stacked"
 	});
 
 })(
@@ -12901,6 +13481,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             self.$el = _is.jq(element) ? element : $(element);
             self.opt = _obj.extend({}, _.StackAlbum.Pile.defaults, options, self.$el.data());
             self.title = self.opt.title;
+            self.description = self.opt.description;
+            self.captionAlignment = ['left', 'center', 'right'].indexOf(self.opt.captionAlignment) !== -1 ? self.opt.captionAlignment : 'center';
             self.items = self.$el.find('.fg-pile-item').map(function(i, el){
                 return new _.StackAlbum.Item(self, el, { index: i });
             }).get();
@@ -12916,11 +13498,19 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 currentAngle = opt.randomAngle ? self.randomAngle(availableAngles) : opt.angleStep;
 
             if ( self.$cover.length === 0 && self.items.length > 0 ) {
+                const $coverContent = $('<div/>', {'class': 'fg-pile-cover-content fg-pile-caption-align-' + self.captionAlignment}).append(
+                    $('<span/>', {'class': 'fg-pile-cover-title', text: self.opt.title}),
+                    $('<span/>', {'class': 'fg-pile-cover-count', text: self.items.length})
+                );
+
+                if ( self.description ) {
+                    $coverContent.append(
+                        $('<span/>', {'class': 'fg-pile-cover-description', html: self.description})
+                    );
+                }
+
                 self.$cover = $('<div/>', {'class': 'fg-pile-cover'}).append(
-                    $('<div/>', {'class': 'fg-pile-cover-content'}).append(
-                        $('<span/>', {'class': 'fg-pile-cover-title', text: self.opt.title}),
-                        $('<span/>', {'class': 'fg-pile-cover-count', text: self.items.length})
-                    )
+                    $coverContent
                 );
                 self.items[0].$el.addClass('fg-has-cover').append(self.$cover);
             }
@@ -13056,6 +13646,9 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
         },
 
         onCoverClick: function(e){
+            if ($(e.target).closest('a, button, input, select, textarea, [role="button"]').length !== 0){
+                return;
+            }
             e.preventDefault();
             e.stopPropagation();
             var self = e.data.self;
@@ -13065,7 +13658,9 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 
     _.StackAlbum.Pile.defaults = {
         index: -1,
-        title: null
+        title: null,
+        captionAlignment: 'center',
+        description: ''
     };
 
 })(
@@ -13075,6 +13670,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
     FooGallery.utils.is,
     FooGallery.utils.obj
 );
+
 (function($, _, _utils, _is, _obj){
 
     _.StackAlbum.Item = _utils.Class.extend({
@@ -13276,13 +13872,14 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
          * @param {object} cls
          * @param {object} sel
          */
-        construct: function(template, opt, cls, sel){
+        construct: function(template, opt, cls, sel, i18n){
             const self = this;
             self.tmpl = template;
             self.el = template.el;
             self.opt = opt;
             self.cls = cls;
             self.sel = sel;
+            self.i18n = i18n;
             self.elem = {
                 inner: null,
                 center: null,
@@ -13428,6 +14025,9 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             } );
             if ( self.elem.prev.type !== "button" ) self.elem.prev.type = "button";
             self.elem.prev.appendChild( _icons.element( "arrow-left" ) );
+            if ( !self.elem.prev.title?.length ) {
+                self.elem.prev.title = self.i18n.prev;
+            }
 
             self._listeners.add( self.elem.next, "click", function( event ){
                 event.preventDefault();
@@ -13436,6 +14036,12 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             } );
             if ( self.elem.next.type !== "button" ) self.elem.next.type = "button";
             self.elem.next.appendChild( _icons.element( "arrow-right" ) );
+            if ( !self.elem.next.title?.length ) {
+                self.elem.next.title = self.i18n.next;
+            }
+        },
+        getBulletTitle: function( str, num ) {
+            return str.replace( /\{ITEM}/g, `${ num }` );
         },
         initPagination: function(){
             const self = this;
@@ -13444,7 +14050,11 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 const bullet = document.createElement( "button" );
                 bullet.type = "button";
                 bullet.classList.add( self.cls.bullet );
-                if ( i === 0 ) bullet.classList.add( self.cls.activeBullet );
+                bullet.title = self.getBulletTitle( self.i18n.bullet, i + 1 );
+                if ( i === 0 ){
+                    bullet.classList.add( self.cls.activeBullet );
+                    bullet.title = self.getBulletTitle( self.i18n.activeBullet, i + 1 );
+                }
                 self._listeners.add( bullet, "click", function( event ){
                     event.preventDefault();
                     self.interacted = true;
@@ -13626,16 +14236,146 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
         },
         getLayout: function( width ){
             const self = this;
+            const activePosition = self.getActivePosition();
+            const align = self.getAlign();
+            const usePositionedLayout = activePosition !== "center";
+            const mode = activePosition + "|" + align;
 
-            if ( self.cache.has("layout") && self.cache.get("width") === width ){
+            if ( self.cache.has("layout") && self.cache.get("width") === width && self.cache.get("layoutMode") === mode ){
                 return self.cache.get("layout");
             }
             const itemWidth = self.getSize( self.elem.center ).width;
-            const maxOffset = ( self.getSize( self.elem.inner, true ).width / 2 ) + ( itemWidth / 2 );
+            const innerWidth = self.getSize( self.elem.inner, true ).width;
+            const maxOffset = ( innerWidth / 2 ) + ( itemWidth / 2 );
             const layout = self.calculate( itemWidth, maxOffset );
+
+            layout.activeX = 0;
+            layout.sideBySide = null;
+
+            if ( usePositionedLayout ) {
+                const visualLeftSide = self.isRTL ? "right" : "left";
+                const visualRightSide = self.isRTL ? "left" : "right";
+                const dominantSide = activePosition === "start" ? visualRightSide : visualLeftSide;
+                let showCount = Math.max( 0, self.getShowPerSide() * 2 );
+                let positionedLayout = null;
+                let sideLayout = [];
+                let fit = { width: itemWidth, center: 0 };
+
+                // maxItems is a cap; reduce visible items until the positioned sequence fits inner width.
+                while ( showCount >= 0 ){
+                    positionedLayout = self.calculate(
+                        itemWidth,
+                        innerWidth + ( itemWidth / 2 ),
+                        self.opt.gutter.max,
+                        showCount
+                    );
+                    sideLayout = positionedLayout.side;
+                    fit = self.measureAlignedFit( itemWidth, sideLayout, dominantSide );
+                    if ( fit.width <= innerWidth ){
+                        break;
+                    }
+                    showCount -= 1;
+                }
+
+                // Keep the displayed sequence centered while the active item stays at the chosen position.
+                layout.activeX = -fit.center;
+                layout.sideBySide = {};
+                layout.sideBySide.left = [];
+                layout.sideBySide.right = [];
+                layout.sideBySide[dominantSide] = sideLayout;
+                if ( positionedLayout && _is.number( positionedLayout.zIndex ) ){
+                    layout.zIndex = positionedLayout.zIndex;
+                }
+            }
+
+            self.applyVisualAlign( layout, itemWidth, innerWidth );
+
             self.cache.set( "width", width );
-            self.cache.set( "layout", layout );
+            self.cache.set( "layoutMode", mode );
+            if ( layout?.side?.length > 0 ) {
+                self.cache.set( "layout", layout );
+            }
             return layout;
+        },
+        getActivePosition: function(){
+            const value = _is.string( this.opt.activePosition )
+                ? this.opt.activePosition.toLowerCase()
+                : "center";
+            return [ "start", "end" ].indexOf( value ) !== -1 ? value : "center";
+        },
+        getAlign: function(){
+            const value = _is.string( this.opt.align )
+                ? this.opt.align.toLowerCase()
+                : "center";
+            return [ "left", "right" ].indexOf( value ) !== -1 ? value : "center";
+        },
+        applyVisualAlign: function( layout, itemWidth, innerWidth ){
+            const self = this;
+            const align = self.getAlign();
+            if ( align === "center" ) return;
+
+            const bounds = self.measureVisibleBounds( itemWidth, layout );
+            const target = align === "left"
+                ? -( innerWidth / 2 )
+                : ( innerWidth / 2 );
+            const delta = align === "left"
+                ? target - bounds.min
+                : target - bounds.max;
+
+            layout.activeX = ( _is.number( layout.activeX ) ? layout.activeX : 0 ) + delta;
+        },
+        measureVisibleBounds: function( itemWidth, layout ){
+            const self = this;
+            const activeX = _is.number( layout?.activeX ) ? layout.activeX : 0;
+            const leftValues = layout?.sideBySide?.left || layout.side || [];
+            const rightValues = layout?.sideBySide?.right || layout.side || [];
+            const result = {
+                min: activeX - ( itemWidth / 2 ),
+                max: activeX + ( itemWidth / 2 )
+            };
+            const perspective = self.opt.perspective;
+            const update = function( side, values ){
+                for ( let i = 0; i < values.length; i++ ){
+                    const entry = values[i];
+                    const signedX = ( side === "left" && !self.isRTL ) || ( side === "right" && self.isRTL ) ? -entry.x : entry.x;
+                    const centerX = self.getScreenX( signedX, entry.z, perspective ) + activeX;
+                    const width = self.scaleToZ( itemWidth, entry.z, perspective );
+                    const min = centerX - ( width / 2 );
+                    const max = centerX + ( width / 2 );
+                    if ( min < result.min ) result.min = min;
+                    if ( max > result.max ) result.max = max;
+                }
+            };
+
+            update( "left", leftValues );
+            update( "right", rightValues );
+
+            return result;
+        },
+        measureAlignedFit: function( itemWidth, sideLayout, dominantSide ){
+            const self = this;
+            const result = {
+                min: -( itemWidth / 2 ),
+                max: itemWidth / 2,
+                width: itemWidth,
+                center: 0
+            };
+
+            for ( let i = 0; i < sideLayout.length; i++ ){
+                const values = sideLayout[i];
+                const signedX = ( dominantSide === "left" && !self.isRTL ) || ( dominantSide === "right" && self.isRTL ) ? -values.x : values.x;
+                const centerX = self.getScreenX( signedX, values.z, self.opt.perspective );
+                const width = self.scaleToZ( itemWidth, values.z, self.opt.perspective );
+                const left = centerX - ( width / 2 );
+                const right = centerX + ( width / 2 );
+                if ( left < result.min ) result.min = left;
+                if ( right > result.max ) result.max = right;
+            }
+
+            result.width = result.max - result.min;
+            result.center = ( result.min + result.max ) / 2;
+
+            return result;
         },
         round: function( value, precision ){
             let multiplier = Math.pow(10, precision || 0);
@@ -13666,34 +14406,36 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 side: []
             };
 
-            let offset = itemWidth, zIndex = result.zIndex - 1;
-            for (let i = 0; i < showPerSide; i++, zIndex--){
-                const z = self.getSequentialZFromScale( i, self.opt.scale, self.opt.perspective );
-                const width = self.scaleToZ( itemWidth, z, self.opt.perspective );
-                const diff = ( itemWidth - width ) / 2;
+            if ( itemWidth > 0 ) {
+                let offset = itemWidth, zIndex = result.zIndex - 1;
+                for (let i = 0; i < showPerSide; i++, zIndex--){
+                    const z = self.getSequentialZFromScale( i, self.opt.scale, self.opt.perspective );
+                    const width = self.scaleToZ( itemWidth, z, self.opt.perspective );
+                    const diff = ( itemWidth - width ) / 2;
 
-                offset -= diff;
+                    offset -= diff;
 
-                const gutterStep = 1;
-                const gutterValue = self.opt.gutter.unit === "%" ? itemWidth * Math.abs( gutter / 100 ) : Math.abs( gutter );
-                const gutterOffset = self.opt.gutter.unit === "%" ? self.scaleToZ( gutterValue, z, self.opt.perspective ) : gutterValue;
-                if (gutter > 0){
-                    offset += gutterOffset;
-                } else {
-                    offset -= gutterOffset;
-                }
-                if ( offset + width + diff > maxOffset ){
-                    if ( gutter - gutterStep < self.opt.gutter.min ){
-                        return self.calculate( itemWidth, maxOffset, self.opt.gutter.max, showPerSide - 1);
+                    const gutterStep = 1;
+                    const gutterValue = self.opt.gutter.unit === "%" ? itemWidth * Math.abs( gutter / 100 ) : Math.abs( gutter );
+                    const gutterOffset = self.opt.gutter.unit === "%" ? self.scaleToZ( gutterValue, z, self.opt.perspective ) : gutterValue;
+                    if (gutter > 0){
+                        offset += gutterOffset;
+                    } else {
+                        offset -= gutterOffset;
                     }
-                    return self.calculate( itemWidth, maxOffset, gutter - gutterStep, showPerSide);
+                    if ( offset + width + diff > maxOffset ){
+                        if ( gutter - gutterStep < self.opt.gutter.min ){
+                            return self.calculate( itemWidth, maxOffset, self.opt.gutter.max, showPerSide - 1);
+                        }
+                        return self.calculate( itemWidth, maxOffset, gutter - gutterStep, showPerSide);
+                    }
+
+                    const x = self.getVectorX( offset, z, self.opt.perspective );
+
+                    offset += width + diff;
+
+                    result.side.push({x: x, z: z, zIndex: zIndex });
                 }
-
-                const x = self.getVectorX( offset, z, self.opt.perspective );
-
-                offset += width + diff;
-
-                result.side.push({x: x, z: z, zIndex: zIndex });
             }
             return result;
         },
@@ -13722,14 +14464,22 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             self.cleanup( self.sel.activeItem, self.cls.activeItem );
 
             el.classList.add( self.cls.activeItem );
-            el.style.setProperty("transition-duration", self.opt.speed + "ms" );
+            el.style.setProperty("transition-duration", ( self._firstLayout ? 0 : self.opt.speed ) + "ms" );
             el.style.setProperty( "z-index", layout.zIndex );
-            el.style.removeProperty( "transform" );
+            if ( _is.number( layout.activeX ) && layout.activeX !== 0 ){
+                el.style.setProperty( "transform", "translate3d(" + layout.activeX + "px, 0, 0)" );
+            } else {
+                el.style.removeProperty( "transform" );
+            }
 
-            const ai = self.tmpl.items.indexOf( self.activeItem );
+            const ai = self.tmpl.items && _is.fn( self.tmpl.items.indexOf ) ? self.tmpl.items.indexOf( self.activeItem ) : -1;
             Array.from( self.el.querySelectorAll( self.sel.bullet ) ).forEach( function( node, i ){
                 node.classList.remove( self.cls.activeBullet );
-                if ( i === ai ) node.classList.add( self.cls.activeBullet );
+                node.title = self.getBulletTitle( self.i18n.bullet, i + 1 );
+                if ( i === ai ){
+                    node.classList.add( self.cls.activeBullet );
+                    node.title = self.getBulletTitle( self.i18n.activeBullet, i + 1 );
+                }
             } );
             return true;
         },
@@ -13739,12 +14489,23 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 
             self.cleanup( selector, cls, exclude );
 
+            const valuesList = layout?.sideBySide?.[side] || layout.side;
+            const activeX = _is.number( layout?.activeX ) ? layout.activeX : 0;
             let place = self.activeItem;
-            for (let i = 0; i < layout.side.length; i++ ){
-                const values = layout.side[i];
+            for (let i = 0; i < valuesList.length; i++ ){
+                const values = valuesList[i];
                 const item = side === "left" ? self.getPrev( place ) : self.getNext( place );
                 if ( item instanceof _.Item ){
-                    let transform = "translate3d(" + ( ( side === "left" && !self.isRTL ) || ( side === "right" && self.isRTL ) ? "-" : "" ) + values.x + "px, 0,-" + values.z + "px)";
+                    const signedX = ( side === "left" && !self.isRTL ) || ( side === "right" && self.isRTL ) ? -values.x : values.x;
+                    let vectorX = signedX;
+
+                    // Apply active position offset in screen space so perspective math remains bounded.
+                    if ( activeX !== 0 ){
+                        const screenX = self.getScreenX( signedX, values.z, self.opt.perspective ) + activeX;
+                        vectorX = self.getVectorX( screenX, values.z, self.opt.perspective );
+                    }
+
+                    let transform = "translate3d(" + vectorX + "px, 0,-" + values.z + "px)";
                     item.el.classList.add( cls );
                     if ( !item.isLoaded ){
                         item.el.style.setProperty("transition-duration", "0ms" );
@@ -13780,6 +14541,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
     FooGallery.utils,
     FooGallery.utils.is
 );
+
 (function($, _, _obj){
 
     _.CarouselTemplate = _.Template.extend({
@@ -13812,7 +14574,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
         },
         onPreInit: function(){
             const self = this;
-            self.carousel = new _.Carousel( self, self.template, self.cls.carousel, self.sel.carousel );
+            self.carousel = new _.Carousel( self, self.template, self.cls.carousel, self.sel.carousel, self.il8n );
         },
         onInit: function(){
             this.carousel.init();
@@ -13860,6 +14622,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             perspective: 150,
             scale: 0.12,
             speed: 300,
+            align: "center", // "center", "left" or "right". Visual alignment of the entire visible item set.
+            activePosition: "center", // "center", "start" or "end". Controls active item position in the visible sequence.
             centerOnClick: true,
             gutter: {
                 min: -40,
@@ -13886,200 +14650,15 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             nextItem: "fg-item-next",
             progress: "fg-carousel-progress"
         }
+    }, {
+        prev: "Previous",
+        next: "Next",
+        bullet: "Item {ITEM}",
+        activeBullet: "Item {ITEM} - Current"
     });
 
 })(
     FooGallery.$,
     FooGallery,
     FooGallery.utils.obj
-);
-(function ($, _, _utils, _obj, _is) {
-
-	/**
-	 * Contains any FooBox specific integration code.
-	 *
-	 * @namespace FooGallery.__foobox__
-	 * @private
-	 */
-	_.__foobox__ = {
-		/**
-		 * Check if the element is displayed within FooBox.
-		 *
-		 * @param {jQuery} $element
-		 * @return {boolean}
-		 */
-		owns: function( $element ){
-			return $element.parents(".fbx-item").length > 0;
-		},
-		/**
-		 * Check if the template can be handled by FooBox.
-		 *
-		 * @param {FooGallery.Template} template
-		 * @return {boolean}
-		 */
-		handles: function( template ){
-			return template.$el.hasClass("fbx-instance") && _is.object( window[ 'FOOBOX' ] ) && !!$.fn[ 'foobox' ];
-		},
-		/**
-		 * Updates the template's FooBox.
-		 *
-		 * @param {FooGallery.Template} template
-		 */
-		update: function( template ){
-			const opts = [{}];
-			if ( _is.object( window[ 'FOOBOX' ][ 'o' ] ) ) {
-				opts.push( window[ 'FOOBOX' ][ 'o' ] );
-			}
-			if ( template.opt.protected ) {
-				opts.push( { images: { noRightClick: true } } );
-			}
-			if ( _is.fn( template.$el[ 'foobox' ] ) ) {
-				template.$el[ 'foobox' ]( _obj.extend.apply( null, opts ) );
-			}
-		}
-	};
-
-	/**
-	 * Handles the ready, after-page-change and after-filter-change events and conditional raises a post-load event
-	 * on the document body to notify other plugins that content has changed.
-	 * @param e
-	 * @param current
-	 * @param prev
-	 * @param isFilter
-	 */
-	_.triggerPostLoad = function (e, current, prev, isFilter) {
-		const tmpl = e.target;
-		if (tmpl instanceof _.Template){
-			if (tmpl.initialized && (e.type === "ready" || (e.type === "after-page-change" && !isFilter) || e.type === "after-filter-change")) {
-				try {
-					if ( _.__foobox__.owns( tmpl.$el ) ) return;
-
-					if ( _.__foobox__.handles( tmpl ) ){
-						_.__foobox__.update( tmpl );
-					} else {
-						$("body").trigger("post-load");
-					}
-				} catch(err) {
-					console.error(err);
-				}
-			}
-		}
-	};
-
-	/**
-	 * The options applied to all galleries initialized using the auto mechanism.
-	 *
-	 * @memberof FooGallery.
-	 * @name autoDefaults
-	 * @type {object}
-	 */
-	_.autoDefaults = {
-		on: {
-			"ready after-page-change after-filter-change": _.triggerPostLoad
-		}
-	};
-
-	/**
-	 * If set to FALSE then FooGallery will not automatically initialize itself on all valid elements
-	 * with an ID starting with 'foogallery-gallery-'.
-	 *
-	 * @memberof FooGallery.
-	 * @name autoEnabled
-	 * @type {boolean}
-	 * @default true
-	 */
-	_.autoEnabled = true;
-
-	/**
-	 * Allows you to merge options into the FooGallery.autoDefaults object.
-	 *
-	 * @memberof FooGallery.
-	 * @function auto
-	 * @param {object} options
-	 * @returns {object} The result of the merged options.
-	 */
-	_.auto = function (options) {
-		return _.autoDefaults = _obj.merge(_.autoDefaults, options);
-	};
-
-	/**
-	 * Indicates if any globally supplied variables such as the FooGallery_il8n object have been merged.
-	 *
-	 * @memberof FooGallery.
-	 * @name globalsMerged
-	 * @type {boolean}
-	 * @default false
-	 * @readonly
-	 */
-	_.globalsMerged = false;
-
-	/**
-	 * Merges any globally supplied variables such as the FooGallery_il8n object into the various component configurations for the plugin.
-	 */
-	_.mergeGlobals = function(){
-		// if this has already been done, don't do it again
-		if ( _.globalsMerged === true ) return;
-
-		if ( _is.object( window[ 'FooGallery_il8n' ] ) ){
-			_.merge_il8n( window[ 'FooGallery_il8n' ] );
-			_.globalsMerged = true;
-		}
-	};
-
-	/**
-	 * Merges an "il8n" configuration object into the various component configurations for the plugin.
-	 * @param configuration
-	 */
-	_.merge_il8n = function( configuration ){
-		if ( !_is.object( configuration ) ) return;
-		Object.keys( configuration ).forEach( ( factoryName ) => {
-			if ( _is.object( configuration[ factoryName ] ) && _[ factoryName ] instanceof _.Factory ) {
-				const factory = /** @type FooGallery.Factory */ _[ factoryName ],
-					componentConfiguration = configuration[ factoryName ];
-
-				Object.keys( componentConfiguration ).forEach( ( componentName ) => {
-					if ( _is.object( componentConfiguration[ componentName ] ) ) {
-						factory.configure( componentName, null, null, componentConfiguration[ componentName ] );
-					}
-				} );
-			}
-		} );
-	};
-
-	_.load = _.reload = function(){
-		let jqReady = false, customReady = false;
-		// this automatically initializes all templates on page load
-		$(function () {
-			_.mergeGlobals();
-			if (_.autoEnabled){
-				$('[id^="foogallery-gallery-"]:not(.fg-ready)').foogallery(_.autoDefaults);
-			}
-			jqReady = true;
-			if ( jqReady && customReady ){
-				document.dispatchEvent( new CustomEvent( 'foogallery-loaded', { detail: _ } ) );
-			}
-		});
-
-		_utils.ready(function () {
-			_.mergeGlobals();
-			if (_.autoEnabled){
-				$('[id^="foogallery-gallery-"].fg-ready').foogallery(_.autoDefaults);
-			}
-			customReady = true;
-			if ( jqReady && customReady ){
-				document.dispatchEvent( new CustomEvent( 'foogallery-loaded', { detail: _ } ) );
-			}
-		});
-	};
-
-	document.dispatchEvent( new CustomEvent( 'foogallery-ready', { detail: _ } ) );
-
-	_.load();
-
-})(
-	FooGallery.$,
-	FooGallery,
-	FooGallery.utils,
-	FooGallery.utils.obj,
-	FooGallery.utils.is
 );

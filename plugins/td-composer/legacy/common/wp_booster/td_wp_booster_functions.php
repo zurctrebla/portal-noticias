@@ -3520,8 +3520,10 @@ add_filter('body_class', function ($classes) {
 // Load Keyboard Accessibility scripts when enabled from theme panel
 if ( td_util::get_option('tds_keyboard_accessibility') === 'enabled' ) {
     if ( ! is_admin() ) {
-        if( TD_THEME_NAME == "Newspaper" ) {
+        if ( TD_THEME_NAME === 'Newspaper' ) {
             td_resources_load::render_script( TDC_SCRIPTS_URL . '/tdAccessibility.js' . TDC_SCRIPTS_VER, 'tdAccessibility-js', '', 'footer');
+        } else {
+            td_resources_load::render_script( TDC_SCRIPTS_URL . '/tdAccessibilityNewsmag.js' . TDC_SCRIPTS_VER, 'tdAccessibility-js', '', 'footer');
         }
     }
 }

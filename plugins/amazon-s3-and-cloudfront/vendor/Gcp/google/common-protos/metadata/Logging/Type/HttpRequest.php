@@ -14,28 +14,7 @@ class HttpRequest
             return;
         }
         \DeliciousBrains\WP_Offload_Media\Gcp\GPBMetadata\Google\Protobuf\Duration::initOnce();
-        $pool->internalAddGeneratedFile('
-ø
-&google/logging/type/http_request.protogoogle.logging.type"ï
-HttpRequest
-request_method (	
-request_url (	
-request_size (
-status (
-response_size (
-
-user_agent (	
-	remote_ip (	
-	server_ip (	
-referer (	*
-latency (2.google.protobuf.Duration
-cache_lookup (
-	cache_hit	 (*
-"cache_validated_with_origin_server
- (
-cache_fill_bytes (
-protocol (	B¾
-com.google.logging.typeBHttpRequestProtoPZ8google.golang.org/genproto/googleapis/logging/type;ltypeªGoogle.Cloud.Logging.TypeÊGoogle\\Cloud\\Logging\\TypeêGoogle::Cloud::Logging::Typebproto3', \true);
+        $pool->internalAddGeneratedFile("\n\xf8\x04\n&google/logging/type/http_request.proto\x12\x13google.logging.type\"\xef\x02\n\vHttpRequest\x12\x16\n\x0erequest_method\x18\x01 \x01(\t\x12\x13\n\vrequest_url\x18\x02 \x01(\t\x12\x14\n\frequest_size\x18\x03 \x01(\x03\x12\x0e\n\x06status\x18\x04 \x01(\x05\x12\x15\n\rresponse_size\x18\x05 \x01(\x03\x12\x12\n\nuser_agent\x18\x06 \x01(\t\x12\x11\n\tremote_ip\x18\x07 \x01(\t\x12\x11\n\tserver_ip\x18\r \x01(\t\x12\x0f\n\x07referer\x18\x08 \x01(\t\x12*\n\x07latency\x18\x0e \x01(\v2\x19.google.protobuf.Duration\x12\x14\n\fcache_lookup\x18\v \x01(\x08\x12\x11\n\tcache_hit\x18\t \x01(\x08\x12*\n\"cache_validated_with_origin_server\x18\n \x01(\x08\x12\x18\n\x10cache_fill_bytes\x18\f \x01(\x03\x12\x10\n\x08protocol\x18\x0f \x01(\tB\xbe\x01\n\x17com.google.logging.typeB\x10HttpRequestProtoP\x01Z8google.golang.org/genproto/googleapis/logging/type;ltype\xaa\x02\x19Google.Cloud.Logging.Type\xca\x02\x19Google\\Cloud\\Logging\\Type\xea\x02\x1cGoogle::Cloud::Logging::Typeb\x06proto3", \true);
         static::$is_initialized = \true;
     }
 }

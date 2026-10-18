@@ -40,7 +40,7 @@ if (!class_exists("nxs_snapClassVK")) { class nxs_snapClassVK extends nxs_snapCl
             <?php } else { if(isset($options['appAuthUser']) && $options['appAuthUser']>0) { ?>
             <?php _e('Your vKontakte(VK) Account has been authorized.'); ?> User ID: <?php _e(apply_filters('format_to_edit', htmlentities($options['appAuthUser'], ENT_COMPAT, "UTF-8")), 'social-networks-auto-poster-facebook-twitter-g') ?>.
             <?php _e('You can', 'social-networks-auto-poster-facebook-twitter-g'); ?> Re- <?php } ?>      
-            <a target="_blank" href="https://oauth.vk.com/authorize?client_id=<?php echo $options['appID'];?>&scope=offline,wall,photos,pages&redirect_uri=https://oauth.vk.com/blank.html&display=page&v=5.131&response_type=token<?php '&auth=vk&acc='.$ii;?>">Authorize Your vKontakte(VK) Account</a>
+             <a target="_blank" rel="noopener noreferrer" href="<?php echo esc_url(add_query_arg(array('client_id'=>$options['appID'],'scope'=>'offline,wall,photos,pages','redirect_uri'=>'https://oauth.vk.com/blank.html','display'=>'page','v'=>'5.131','response_type'=>'token'), 'https://oauth.vk.com/authorize')); ?>">Authorize Your vKontakte(VK) Account</a>
             <?php if (!isset($options['appAuthUser']) || $options['appAuthUser']<1) { ?> <div class="blnkg">&lt;=== <?php _e('Authorize your account', 'social-networks-auto-poster-facebook-twitter-g'); ?> ===</div> <?php } ?>        
             <?php } ?><br/><br/> <?php $this->elemMsgFormat($ii,'Message Text Format','msgFormat',$options['msgFormat']); ?>
     
@@ -72,7 +72,7 @@ if (!class_exists("nxs_snapClassVK")) { class nxs_snapClassVK extends nxs_snapCl
           $options[$ii]['appAuthToken'] = trim( CutFromTo($pval['authResp'].'&', 'access_token=','&')); 
           $options[$ii]['appAuthUser'] = trim( CutFromTo($pval['authResp']."&", 'user_id=','&')); 
           if (!empty($pval['authResp']))  { $hdrsArr = nxs_getNXSHeaders($pval['url']); $advSet = nxs_mkRemOptsArr($hdrsArr); $response = nxs_remote_get($pval['url'], $advSet); //prr($response);
-            if (is_nxs_error($response)) { echo "ERROR: <br/>"; prr($response); nxsLogIt(array('type'=>'E', 'msg'=>'VK Auth Validation Error:', 'extInfo'=>print_r($response, true))); return $options; }
+            if (is_nxs_error($response)) { echo esc_html__('VK authorization validation failed.', 'social-networks-auto-poster-facebook-twitter-g'); nxsLogIt(array('type'=>'E', 'msg'=>'VK Auth Validation Error', 'extInfo'=>'Remote request failed.')); return $options; }
             $contents = $response['body']; $contents = utf8_decode($contents); $options[$ii]['pgIntID'] = ''; // prr($contents);
             //## Lets Get an ID (First try from OG, then from ID)
               if (stripos($contents, '<meta property="og:url" content="https://vk.com/')!==false) {

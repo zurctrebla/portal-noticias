@@ -11,7 +11,7 @@ if (!class_exists("nxs_class_SNAP_FB")) { class nxs_class_SNAP_FB {
         foreach ($options as $ii=>$ntOpts) $out[$ii] = $this->doPostToNT($ntOpts, $message);
         return $out;
     }
-    function doPostToNT($options, $message){ $badOut = array('Warning'=>'', 'Error'=>''); $wprg = array('sslverify'=>false, 'timeout' => 30);
+    function doPostToNT($options, $message){ $badOut = array('Warning'=>'', 'Error'=>''); $wprg = array('sslverify'=>true, 'timeout' => 30);
         //## Check settings
         if (!is_array($options)) { $badOut['Error'] = 'No Options'; return $badOut; }
         if (empty($options['accessToken']) && empty($options['pageAccessToken']) && empty($options['tpt']) && empty($options['uPass'])) { $badOut['Error'] = 'No Auth Token Found/Not configured'; return $badOut; }

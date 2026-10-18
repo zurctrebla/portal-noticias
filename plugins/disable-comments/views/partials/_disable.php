@@ -1,4 +1,3 @@
-<form id="disableCommentSaveSettings" action="#" aria-label="<?php esc_attr_e('Disable Comments Settings', 'disable-comments'); ?>">
     <div class="disable__comment__option mb50" role="group" aria-labelledby="settings-heading">
         <h3 id="settings-heading" class="title"><?php esc_html_e('Settings', 'disable-comments'); ?></h3>
         <p class="subtitle"><?php esc_html_e('Configure the settings below to disable comments globally or on specific types of posts.', 'disable-comments'); ?></p>
@@ -167,7 +166,208 @@
                 <?php esc_html_e('Disabling comments will also disable trackbacks and pingbacks. All comment-related fields will also be hidden from the edit/quick-edit screens of the affected posts. These settings cannot be overridden for individual posts. Comments will be visible on all other post types.', 'disable-comments'); ?>
             </p>
         </div>
+
+        <div class="disable_option dc-text__block mb30 mt30" role="group" aria-labelledby="existing-comments-heading">
+            <h4 id="existing-comments-heading" class="visually-hidden">
+                <?php esc_html_e('Existing Comments Display Settings', 'disable-comments'); ?>
+            </h4>
+
+            <div class="dissable__switch__item">
+                <input type="hidden" name="show_existing_comments" value="0">
+                <input type="checkbox"
+                    name="show_existing_comments"
+                    id="show_existing_comments"
+                    value="1"
+                    aria-describedby="existing-comments-description"
+                    <?php checked(isset($this->options['show_existing_comments']) ? $this->options['show_existing_comments'] : false); ?>>
+
+                <label for="show_existing_comments">
+                    <span class="switch" role="presentation" tabindex="0">
+                        <span class="switch__text on" aria-hidden="true"><?php esc_html_e('On', 'disable-comments'); ?></span>
+                        <span class="switch__text off" aria-hidden="true"><?php esc_html_e('Off', 'disable-comments'); ?></span>
+                    </span>
+                    <?php esc_html_e('Show Existing Comments', 'disable-comments'); ?>
+                </label>
+
+                <p id="existing-comments-description" class="disable__option__description">
+                    <?php esc_html_e('When enabled, existing approved comments will remain visible even when new comments are disabled. This allows you to stop spam while preserving your existing comment discussions.', 'disable-comments'); ?>
+                </p>
+            </div>
+        </div>
+
+            <!-- Enable Certain Comment Types -->
+        <div class="disable_option dc-text__block mb30 mt30"
+            role="group"
+            aria-labelledby="allowed-comment-types-heading">
+
+            <h4 id="allowed-comment-types-heading" class="visually-hidden">
+                <?php esc_html_e('Allowed Comment Types Settings', 'disable-comments'); ?>
+            </h4>
+
+            <div class="dissable__switch__item">
+                <input type="hidden" name="enable_allowed_comment_types" value="0">
+                <input type="checkbox"
+                    name="enable_allowed_comment_types"
+                    id="enable_allowed_comment_types"
+                    value="1"
+                    aria-controls="allowed_comment_types_wrapper"
+                    aria-expanded="false"
+                    <?php
+                    $allowed_types = isset($this->options['allowed_comment_types']) ? $this->options['allowed_comment_types'] : array();
+                    checked(!empty($allowed_types));
+                    ?>>
+
+                <label for="enable_allowed_comment_types">
+                    <span class="switch" role="presentation" tabindex="0">
+                        <span class="switch__text on" aria-hidden="true"><?php esc_html_e('On', 'disable-comments'); ?></span>
+                        <span class="switch__text off" aria-hidden="true"><?php esc_html_e('Off', 'disable-comments'); ?></span>
+                    </span>
+                    <?php esc_html_e('Enable Certain Comment Types', 'disable-comments'); ?>
+                </label>
+            </div>
+
+            <ul id="allowed_comment_types_wrapper"
+                class="delete__feedback"
+                role="group"
+                aria-label="<?php esc_attr_e('Available comment types', 'disable-comments'); ?>">
+
+                <?php
+                $available_types = $this->get_available_comment_type_options();
+                if (!empty($available_types)):
+                    foreach ($available_types as $type => $label): ?>
+                        <li class="checkbox-style">
+                            <input type="checkbox"
+                                name="allowed_comment_types[]"
+                                id="allowed_comment_type_<?php echo esc_attr($type); ?>"
+                                value="<?php echo esc_attr($type); ?>"
+                                aria-describedby="allowed-comment-types-description"
+                                <?php checked(in_array($type, $allowed_types, true)); ?>>
+                            <label for="allowed_comment_type_<?php echo esc_attr($type); ?>">
+                                <i class="icon" tabindex="0"></i>
+                                <?php echo esc_html($label); ?>
+                            </label>
+                        </li>
+                    <?php endforeach;
+                else: ?>
+                    <li class="disable__option__description">
+                        <?php esc_html_e('Currently, we support WordPress 6.9+ block notes (note type). This option will allow block notes to function even when regular comments are disabled.', 'disable-comments'); ?>
+                    </li>
+                <?php endif; ?>
+            </ul>
+
+            <p id="allowed-comment-types-description" class="disable__option__description mt10">
+                <span class="danger" aria-hidden="true"><?php esc_html_e('Note:', 'disable-comments'); ?></span>
+                <?php esc_html_e('Enabling specific comment types will allow these notes/comments to be added or displayed wherever they normally appear throughout your site, even when regular comments are disabled. These comment types will also be protected from deletion and will not appear in the "Delete Comments" interface.', 'disable-comments'); ?>
+            </p>
+        </div>
+
+            <!-- Close Certain Comment Types -->
+        <div class="disable_option dc-text__block mb30 mt30"
+            role="group"
+            aria-labelledby="blocked-comment-types-heading">
+
+            <h4 id="blocked-comment-types-heading" class="visually-hidden">
+                <?php esc_html_e('Closed Comment Types Settings', 'disable-comments'); ?>
+            </h4>
+
+            <div class="dissable__switch__item">
+                <input type="hidden" name="enable_blocked_comment_types" value="0">
+                <input type="checkbox"
+                    name="enable_blocked_comment_types"
+                    id="enable_blocked_comment_types"
+                    value="1"
+                    aria-controls="blocked_comment_types_wrapper"
+                    aria-expanded="false"
+                    <?php
+                    $blocked_types = isset($this->options['blocked_comment_types']) ? $this->options['blocked_comment_types'] : array();
+                    checked(!empty($blocked_types));
+                    ?>>
+
+                <label for="enable_blocked_comment_types">
+                    <span class="switch" role="presentation" tabindex="0">
+                        <span class="switch__text on" aria-hidden="true"><?php esc_html_e('On', 'disable-comments'); ?></span>
+                        <span class="switch__text off" aria-hidden="true"><?php esc_html_e('Off', 'disable-comments'); ?></span>
+                    </span>
+                    <?php esc_html_e('Close Certain Comment Types', 'disable-comments'); ?>
+                </label>
+            </div>
+
+            <ul id="blocked_comment_types_wrapper"
+                class="delete__feedback"
+                role="group"
+                aria-label="<?php esc_attr_e('Comment types that can be closed', 'disable-comments'); ?>">
+
+                <?php
+                $closeable_types = $this->get_available_comment_type_options();
+                if (!empty($closeable_types)):
+                    foreach ($closeable_types as $type => $label): ?>
+                        <li class="checkbox-style">
+                            <input type="checkbox"
+                                name="blocked_comment_types[]"
+                                id="blocked_comment_type_<?php echo esc_attr($type); ?>"
+                                value="<?php echo esc_attr($type); ?>"
+                                aria-describedby="blocked-comment-types-description"
+                                <?php checked(in_array($type, $blocked_types, true)); ?>>
+                            <label for="blocked_comment_type_<?php echo esc_attr($type); ?>">
+                                <i class="icon" tabindex="0"></i>
+                                <?php echo esc_html($label); ?>
+                            </label>
+                        </li>
+                    <?php endforeach;
+                else: ?>
+                    <li class="disable__option__description">
+                        <?php esc_html_e('No separately closeable comment types were found on this site.', 'disable-comments'); ?>
+                    </li>
+                <?php endif; ?>
+            </ul>
+
+            <p id="blocked-comment-types-description" class="disable__option__description mt10">
+                <span class="danger" aria-hidden="true"><?php esc_html_e('Note:', 'disable-comments'); ?></span>
+                <?php esc_html_e('This is the reverse of the setting above. A comment type closed here stops being accepted even where comments are otherwise open, and everything else on the same posts keeps working — so a WooCommerce store can close product reviews while other comments on products stay open. Existing comments of that type are not deleted; on a product page WooCommerce\'s Reviews tab is hidden while the type is closed. A type ticked in both lists counts as closed.', 'disable-comments'); ?>
+            </p>
+        </div>
+
         <?php if (!is_network_admin()): ?>
+
+            <!-- WooCommerce product reviews -->
+            <?php if ($this->is_woocommerce_active()):
+                $dc_reviews = $this->get_product_review_status(); ?>
+                <div id="woocommerce_reviews_wrapper"
+                    class="disable_option dc-text__block mb30 mt30"
+                    role="group"
+                    aria-labelledby="woocommerce-reviews-heading">
+
+                    <h4 id="woocommerce-reviews-heading">
+                        <?php esc_html_e('WooCommerce Product Reviews', 'disable-comments'); ?>
+                    </h4>
+
+                    <p class="disable__option__description"
+                        aria-live="polite"
+                        data-dc-review-state
+                        data-wc-blocked="<?php echo esc_attr('woocommerce' === $dc_reviews['disabled_by'] ? '1' : '0'); ?>">
+                        <?php
+                        if ('woocommerce' === $dc_reviews['disabled_by']) {
+                            esc_html_e('Product reviews are turned off in WooCommerce\'s own settings, so customers cannot leave one regardless of what is set here.', 'disable-comments');
+                        } elseif ($dc_reviews['reviews_disabled']) {
+                            esc_html_e('Product reviews are currently disabled.', 'disable-comments');
+                        } else {
+                            esc_html_e('Product reviews are currently enabled.', 'disable-comments');
+                        }
+                        ?>
+                    </p>
+
+                    <?php if ($dc_reviews['reviews_disabled'] && $dc_reviews['reviews_allowlisted']): ?>
+                        <p class="disable__option__description">
+                            <?php esc_html_e('Reviews already on your products stay visible, and apps can still read them over the REST API — but no new ones can be submitted, because the review form needs comments to be open on the product.', 'disable-comments'); ?>
+                        </p>
+                    <?php endif; ?>
+
+                    <p class="disable__option__description mt10">
+                        <?php esc_html_e('Reviews are stored as comments on the Products post type, so they follow the settings above: tick Products to turn reviews off. Allowing "Product reviews" under Enable Certain Comment Types keeps existing reviews readable while everything else stays hidden.', 'disable-comments'); ?>
+                    </p>
+                </div>
+            <?php endif; ?>
+
             <div id="exclude_by_role_wrapper"
                 class="disable_option dc-text__block mb30 mt30"
                 role="group"
@@ -211,7 +411,7 @@
                         <select id="exclude_by_role"
                             class="dc-select2"
                             name="exclude_by_role[]"
-                            data-options='<?php echo wp_json_encode($roles); ?>'
+                            data-options='<?php echo esc_attr( wp_json_encode( $roles ) ); // esc_attr() prevents attribute injection; JS handles DOM XSS via $('<span>').text(label).html() ?>'
                             multiple
                             aria-describedby="roles-description">
                         </select>
@@ -229,7 +429,7 @@
                 </p>
             </div>
 
-            <!-- Avatar Settings -->
+        <!-- Avatar Settings -->
             <div class="disable_option dc-text__block mt30"
                 role="group"
                 aria-labelledby="avatar-settings-heading">
@@ -387,4 +587,3 @@
     <?php if (is_network_admin()): ?>
         <input type="hidden" name="is_network_admin" value="1">
     <?php endif; ?>
-</form>

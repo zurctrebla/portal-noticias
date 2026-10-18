@@ -4389,7 +4389,7 @@ class td_util {
 
         // Replace the {url_post_id} string
         if( !( td_util::tdc_is_live_editor_iframe() || td_util::tdc_is_live_editor_ajax() ) ) {
-            if (strpos($string, '{url_post_id}')) {
+            if (strpos($string, '{url_post_id}') !== false) {
                 $replace_with = '';
 
                 if (isset($_GET['post_id'])) {
@@ -4842,12 +4842,54 @@ class td_util {
 
     static function get_attachment_id( $url ) {
 
-        // BAHIA (incidente 2026-08-06): delega ao core attachment_url_to_postid(), que e
-        // acelerado e cacheado pelo mu-plugin bahia-attachment-id-cache (resolve via a tabela
-        // INDEXADA do WP Offload Media, wp_as3cf_items/uidx_source_path). A implementacao
-        // original fazia um full-scan "LIKE '%%'" em wp_postmeta, sem cache, por CADA imagem
-        // em CADA render; sob concorrencia isso derrubava o RDS pequeno (outage 2026-08-06).
-        return (int) attachment_url_to_postid( $url );
+        global $wpdb;
+
+        $dir  = wp_get_upload_dir();
+        $path = $url;
+
+        $site_url   = parse_url( $dir['url'] );
+        $image_path = parse_url( $path );
+
+        // Force the protocols to match if needed.
+        if ( isset( $image_path['scheme'] ) && ( $image_path['scheme'] !== $site_url['scheme'] ) ) {
+            $path = str_replace( $image_path['scheme'], $site_url['scheme'], $path );
+        }
+
+        if ( 0 === strpos( $path, $dir['baseurl'] . '/' ) ) {
+            $path = substr( $path, strlen( $dir['baseurl'] . '/' ) );
+        }
+
+        $sql = $wpdb->prepare(
+            "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_wp_attached_file' AND meta_value LIKE %s",
+            '%' . $path . '%'
+        );
+
+        $results = $wpdb->get_results( $sql );
+        $post_id = null;
+
+        if ( $results ) {
+            // Use the first available result, but prefer a case-sensitive match, if exists.
+            $post_id = reset( $results )->post_id;
+
+            if ( count( $results ) > 1 ) {
+                foreach ( $results as $result ) {
+                    if ( $path === $result->meta_value ) {
+                        $post_id = $result->post_id;
+                        break;
+                    }
+                }
+            }
+        }
+
+        /**
+         * Filters an attachment ID found by URL.
+         *
+         * @since 4.2.0
+         *
+         * @param int|null $post_id The post_id (if any) found by the function.
+         * @param string   $url     The URL being looked up.
+         */
+        return (int) apply_filters( 'attachment_url_to_postid', $post_id, $url );
     }
 
     static function is_post_exclusive( $post_id ) {

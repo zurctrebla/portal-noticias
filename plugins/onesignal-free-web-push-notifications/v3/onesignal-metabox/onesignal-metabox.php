@@ -32,6 +32,7 @@ function onesignal_metabox($post)
       'Authorization' => 'Bearer ' . get_option('OneSignalWPSetting')['app_rest_api_key'],
       'accept' => 'application/json',
       'content-type' => 'application/json',
+      'SDK-Wrapper' => onesignal_get_sdk_wrapper_header(),
     )
   );
 
@@ -53,6 +54,8 @@ function onesignal_metabox($post)
   }
 
   // Meta box content -> js file hides sections depending on whats checked.
+  // Add nonce field for security
+  wp_nonce_field('onesignal_v3_metabox_save', 'onesignal_v3_metabox_nonce');
 ?>
   <label for="os_update">
   <input type="checkbox" name="os_update" id="os_update"
@@ -120,6 +123,10 @@ add_action('admin_print_styles-post-new.php', 'onesignal_meta_files');
 
 function onesignal_meta_files()
 {
+  if (!onesignal_is_post_type_allowed(get_post_type())) {
+    return;
+  }
+
   $cache_buster = ceil(time() / 3600); // updates every hour
   wp_enqueue_script(
     'onesignal_metabox_js',
@@ -141,6 +148,38 @@ add_action('save_post', 'onesignal_save_meta', 10);
 
 function onesignal_save_meta($post_id)
 {
+  // Check if nonce is set
+  if (!isset($_POST['onesignal_v3_metabox_nonce'])) {
+    return;
+  }
+
+  // Verify nonce
+  if (!wp_verify_nonce($_POST['onesignal_v3_metabox_nonce'], 'onesignal_v3_metabox_save')) {
+    return;
+  }
+
+  // Skip autosaves
+  if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+    return;
+  }
+
+  // Check user capability to edit this specific post
+  if (!current_user_can('edit_post', $post_id)) {
+    return;
+  }
+
+  // Skip revisions
+  if (wp_is_post_revision($post_id)) {
+    return;
+  }
+
+  // Verify post type is allowed
+  $post = get_post($post_id);
+  if (!$post || !onesignal_is_post_type_allowed($post->post_type)) {
+    return;
+  }
+
+  // Process and sanitize metadata fields
   $fields = [
     'os_update',
     'os_segment',
@@ -154,7 +193,12 @@ function onesignal_save_meta($post_id)
 
   foreach ($fields as $field) {
     if (array_key_exists($field, $_POST)) {
-      $meta_values[$field] = sanitize_text_field($_POST[$field]);
+      // Sanitize based on field type
+      if ($field === 'os_mobile_url') {
+        $meta_values[$field] = sanitize_url($_POST[$field]);
+      } else {
+        $meta_values[$field] = sanitize_text_field($_POST[$field]);
+      }
     } else {
       unset($meta_values[$field]);
     }

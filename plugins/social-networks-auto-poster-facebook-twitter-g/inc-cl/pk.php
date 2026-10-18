@@ -25,21 +25,21 @@ if (!class_exists("nxs_snapClassPK")) { class nxs_snapClassPK extends nxs_snapCl
   //#### Show Unit  Settings  
   function checkIfSetupFinished($options) { return !empty($options['pgID']) && !empty($options['accessToken']); }
   public function doAuth() { $ntInfo = $this->ntInfo; global $nxs_snapSetPgURL;
-    if (isset($_GET['acc'])) { $acc = sanitize_text_field($_GET['acc']); $options = $this->nt[$acc];
-        if ( isset($_GET['auth']) && $_GET['auth']=='pk'){ require_once('apis/plurkOAuth.php'); prr($options, 'OPTS:');  prr($this->nt, 'OPTS:');
-              $consumer_key = nxs_gak($options['appKey']); $consumer_secret = nxs_gas($options['appSec']); $callback_url = $nxs_snapSetPgURL."&auth=pka&acc=".$acc;
+    if (isset($_GET['acc'])) { $acc = absint($_GET['acc']); if (!nxs_snap_user_can_access() || !isset($this->nt[$acc])) return; $options = $this->nt[$acc];
+        if ( isset($_GET['auth']) && $_GET['auth']=='pk'){ require_once('apis/plurkOAuth.php');
+              $consumer_key = nxs_gak($options['appKey']); $consumer_secret = nxs_gas($options['appSec']); $callback_url = add_query_arg(array('auth'=>'pka','acc'=>$acc,'nxs_state'=>nxs_oauth_state_create('pk', $acc)), $nxs_snapSetPgURL);
               $tum_oauth = new wpPlurkOAuth($consumer_key, $consumer_secret); $request_token = $tum_oauth->getReqToken($callback_url);
               $options['oAuthToken'] = $request_token['oauth_token']; $options['oAuthTokenSecret'] = $request_token['oauth_token_secret']; //prr($tum_oauth); prr($options); //die();
               switch ($tum_oauth->http_code) { case 200: $url = 'https://www.plurk.com/OAuth/authorize?oauth_token='.$options['oAuthToken']; nxs_save_glbNtwrks($ntInfo['lcode'],$acc,$options,'*');
-                echo '<br/><br/>All good?! Redirecting ..... <script type="text/javascript">window.location = "'.$url.'"</script>'; break;
+                echo '<br/><br/>All good. Redirecting ..... <script type="text/javascript">window.location = "'.esc_url($url).'"</script>'; break;
                 default: echo '<br/><b style="color:red">Could not connect to Plurk. Refresh the page or try again later.</b>'; die();
               }
               die();
         }
-        if ( isset($_GET['auth']) && $_GET['auth']=='pka'){ require_once('apis/plurkOAuth.php');
-              $consumer_key = nxs_gak($options['appKey']); $consumer_secret = nxs_gas($options['appSec']); prr($options, 'OPTS:');
+        if ( isset($_GET['auth']) && $_GET['auth']=='pka'){ if (empty($_GET['nxs_state']) || !nxs_oauth_state_validate(wp_unslash($_GET['nxs_state']), 'pk', $state_account) || absint($state_account)!==$acc) wp_die(esc_html__('Invalid or expired Plurk authorization state.', 'social-networks-auto-poster-facebook-twitter-g'), '', array('response'=>403)); require_once('apis/plurkOAuth.php');
+              $consumer_key = nxs_gak($options['appKey']); $consumer_secret = nxs_gas($options['appSec']);
               $tum_oauth = new wpPlurkOAuth($consumer_key, $consumer_secret, $options['oAuthToken'], $options['oAuthTokenSecret']); //prr($tum_oauth);
-              $access_token = $tum_oauth->getAccToken($_GET['oauth_verifier']); prr($access_token);
+              $access_token = $tum_oauth->getAccToken(sanitize_text_field(wp_unslash($_GET['oauth_verifier'])));
               $options['accessToken'] = $access_token['oauth_token'];  $options['accessTokenSec'] = $access_token['oauth_token_secret'];
               nxs_save_glbNtwrks($ntInfo['lcode'],$acc,$options,'*');
               $tum_oauth = new wpPlurkOAuth($consumer_key, $consumer_secret, $options['accessToken'], $options['accessTokenSec']);
@@ -48,11 +48,9 @@ if (!class_exists("nxs_snapClassPK")) { class nxs_snapClassPK extends nxs_snapCl
               if (empty($userinfo) && is_array($uinfo) && isset($uinfo['user_info'])) $userinfo = $uinfo['user_info']['nick_name'];  $options['pgID'] = $userinfo;
               nxs_save_glbNtwrks($ntInfo['lcode'],$acc,$options,'*');
               if ($options['pgID']!='') {
-                  $gGet = $_GET; unset($gGet['auth']); unset($gGet['acc']); unset($gGet['oauth_token']);  unset($gGet['oauth_verifier']); unset($gGet['post_type']);
-                  $sturl = explode('?',$nxs_snapSetPgURL); $nxs_snapSetPgURL = $sturl[0].((!empty($gGet))?'?'.http_build_query($gGet):'');
-                  echo '<br/><br/>All good?! Redirecting ..... <script type="text/javascript">window.location = "'.$nxs_snapSetPgURL.'"</script>'; die();
+                  echo '<br/><br/>All good. Redirecting ..... <script type="text/javascript">window.location = "'.esc_url(nxs_get_admin_url('admin.php?page=nxssnap')).'"</script>'; die();
               }
-                else die("<span style='color:red;'>ERROR: Authorization Error: <span style='color:darkred; font-weight: bold;'>".$options['pgID']."</span></span>");
+                else die(esc_html__('Plurk authorization failed.', 'social-networks-auto-poster-facebook-twitter-g'));
         }
     }
   }    

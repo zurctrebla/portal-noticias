@@ -517,6 +517,26 @@ comm -23 /tmp/vps-uploads.txt /tmp/s3-uploads.txt   # o que só existe na VPS
 **A saída do `comm` tem que ser vazia.** Enquanto não for, a VPS não deve ser terminada — parada
 sim, terminada não.
 
+### Fato do inventário: a VPS ainda é o WordPress de produção, com o DNS mudado
+
+Levantado por SSH em 26/08. A VPS roda um WordPress (Docker Swarm) que conecta no **RDS de
+produção** (`WORDPRESS_DB_HOST=rds-bahiaba-2023`, `DB_NAME=prod`) e serve o **mesmo bucket**
+`static.bahia.ba`. Isso não é anomalia: **ela era o ambiente de produção**, e a virada trocou só
+o DNS. Continuar conectada é o estado natural de uma máquina que ainda não foi desligada.
+
+Consequências para o desligamento, sem as quais a terminação perde coisa:
+- **102 originais existem só na VPS** (falhas de offload; 8,33 MB) — copiados para
+  `s3://static.bahia.ba/_resguardo-vps/` em 26/08, então a terminação já não perde mídia. Nenhum
+  deles é referenciado em matéria: 101 são arquivos de trabalho órfãos, 1 é variante de edição
+  cujo arquivo servido já está no S3.
+- **Runner de CI ocioso**: há um GitHub Actions self-hosted registrado para `zurctrebla/portal-noticias`,
+  mas os dois workflows do repo usam `ubuntu-latest`. Terminar a VPS remove um runner sem uso;
+  nenhum workflow quebra. Resta desregistrá-lo (Settings → Actions → Runners), cosmético.
+- **`aws.bahia.ba`** ainda serve o 301 pela VPS (Varnish) — repontar antes de desligar.
+- O MariaDB **local** da VPS não tem dados de WordPress; o WP sempre usou o RDS.
+
+Detalhe da sessão em `VPS-SESSAO-SSH.md`.
+
 ### (c) "O fallback de offload não a referencia mais" — **VERDADEIRO, verificado em runtime**
 
 Como pedido, no runtime de produção e não no código:
@@ -749,3 +769,203 @@ O que os números mostram:
    economiza nada; deixar passar essa data custa 111,69 USD/mês.
 5. **`aws.bahia.ba` ainda aponta para a VPS**, então a premissa de que nada aponta para ela
    não se sustenta — e o inventário de uploads continua por fazer.
+
+---
+
+# CHECKLIST DE DESLIGAMENTO DA VPS — para executar pelo console
+
+Consolidado em 26/08/2026. IDs conferidos na AWS nesta data. **Executar na ordem.** Cada passo
+diz onde no console, como identificar por **ID** (nunca por nome — ver o aviso abaixo), e o que
+conferir depois.
+
+> ⚠️ **A instância a desligar chama-se "PRODUÇÃO".** É a VPS antiga. Confira SEMPRE pelo ID
+> **`i-067a9df3e888a90f6`**. As instâncias que realmente servem o site (nós do EKS) não têm nome.
+
+## O que NÃO é tocado por esta lista — ler antes
+
+- **O RDS `rds-bahiaba-2023` FICA.** É ele que serve o EKS de produção. Nenhum passo aqui o toca.
+  Ele vive no ENI `eni-07b2a97c5bd5c34bf` (IP 172.31.70.197), no VPC default. O passo 7 mexe num
+  SG que ele compartilha — por isso o SG é **desanexado da instância, não apagado**.
+- **Quando a economia começa:** só em **01/10/2026**, quando vence a RI `c6a.xlarge`. A RI é
+  cobrada exista ou não a instância, então **parar antes de outubro não rende nada.** O que importa
+  é **não renovar a RI** e ter a instância **terminada até 01/10**. Depois dessa data, instância
+  ligada volta a custar 111,69 USD/mês sob demanda.
+
+---
+
+## Passo 1 — Desregistrar o runner de CI
+
+- **O que é:** um GitHub Actions self-hosted registrado para `zurctrebla/portal-noticias`. Está
+  **ocioso** (os dois workflows do repo usam `ubuntu-latest`); desligar a VPS não quebra CI. Isto
+  é só para ele não ficar listado como *offline* para sempre.
+- **Onde:** GitHub → repositório `zurctrebla/portal-noticias` → **Settings → Actions → Runners**.
+- **Identificar:** o runner `ip-172-31-0-178` (ou o único self-hosted da lista).
+- **Ação:** botão **Remove** (ou **⋯ → Remove**), confirmar.
+- **Conferir depois:** a lista de Runners não mostra mais o self-hosted.
+- **Reversível?** Sim — reinstala-se o runner na máquina a qualquer momento. Cosmético.
+
+## Passo 2 — Remover `aws.bahia.ba` no Route 53 (ANTES do ALB)
+
+- **Por que antes do ALB:** hoje `aws.bahia.ba` → `54.243.117.103` (a VPS). Se o ALB for apagado
+  antes e o subdomínio for repontado para ele, apontaria para um balanceador inexistente. Removendo
+  o registro primeiro, nada fica pendurado.
+- **Onde:** Route 53 → **Hosted zones → `bahia.ba`** (zona `Z1893FF3C31FZC`).
+- **Identificar com certeza:** registro **`aws.bahia.ba`**, tipo **A**, valor **`54.243.117.103`**,
+  TTL 300. É o único A com esse valor na zona.
+- **Ação:** selecionar o registro → **Delete record** → confirmar. (Se quiser preservar o
+  redirecionamento que ele fazia, criar antes um registro novo apontando para outra origem; se não,
+  apagar resolve — é só um 301 de baixo tráfego.)
+- **Conferir depois:** `dig aws.bahia.ba +short` deixa de retornar `54.243.117.103` (após o TTL de
+  5 min); `curl -I http://aws.bahia.ba/` passa a falhar em DNS.
+
+## Passo 3 — Criar a AMI da instância (ANTES de parar)
+
+- **Por que agora:** terminar a instância **apaga o volume raiz** — confirmado
+  `vol-06c7441a163797b82` (64 GB, /dev/xvda) com **DeleteOnTermination = true**. A AMI é a única
+  volta.
+- **Onde:** EC2 → **Instances** → selecionar **`i-067a9df3e888a90f6`** → **Actions → Image and
+  templates → Create image**.
+- **Identificar:** confira o ID `i-067a9df3e888a90f6` no topo do painel de detalhes antes de
+  clicar. (Nome "PRODUÇÃO" — é a VPS, é esta mesmo.)
+- **Ação:** nome sugerido `vps-swarm-final-20260826`. Deixar *No reboot* **desmarcado** para a
+  imagem sair consistente (a instância reinicia; aceitável, ela não serve nada crítico).
+- **Conferir depois:** EC2 → **AMIs** → a imagem aparece e fica **`available`** (leva alguns
+  minutos). Só prosseguir quando estiver `available`.
+- **Custo:** ~64 GB de snapshot ≈ 3,20 USD/mês enquanto a AMI existir. É o seguro mais barato da
+  operação.
+
+## Passo 4 — Parar a instância e observar
+
+- **Onde:** EC2 → Instances → **`i-067a9df3e888a90f6`** → **Instance state → Stop instance**.
+- **Confirmação da AWS:** avisa que dados em *instance store* se perdem — o volume raiz é **EBS**
+  (`vol-06c7441a163797b82`) e **sobrevive**.
+- **Manter o Elastic IP alocado** durante a observação (passo 6 só depois).
+- **Observar por alguns dias:** `bahia.ba` normal (não depende da VPS), imagens antigas carregando,
+  e qualquer reclamação sobre `aws.bahia.ba` ou integração externa que só apareça com a máquina fora.
+- **Custo parada:** a RI cobre o compute de qualquer jeito até 01/10; o EBS de 64 GB segue (~5 USD/mês)
+  e o EIP passa a ser cobrado como ocioso (3,65 USD/mês) até o passo 6. **Parar não economiza — o
+  objetivo aqui é observar antes de terminar.**
+
+## Passo 5 — Terminar a instância
+
+- **Só após:** a AMI estar `available` (passo 3) e a observação (passo 4) sem incidente. E, sobre
+  a data: idealmente **até 01/10**, para não renovar a RI com a máquina ainda de pé.
+- **Onde:** EC2 → Instances → **`i-067a9df3e888a90f6`** → **Instance state → Terminate instance**.
+- **Confirmar:** o ID de novo, e que o volume `vol-06c7441a163797b82` some junto (esperado).
+- **Conferir depois:** a instância vai a `terminated`; o volume desaparece de **Volumes**.
+
+## Passo 6 — Liberar o Elastic IP
+
+- **O que é:** o IP público da VPS, que passa a ser cobrado como ocioso assim que a instância sai.
+- **Onde:** EC2 → **Network & Security → Elastic IPs**.
+- **Identificar com certeza:** IP **`54.243.117.103`**, alocação **`eipalloc-0e6f8adf7907e7a62`**.
+  (Após a terminação, a coluna *Associated instance* fica vazia.)
+- **Ação:** selecionar → **Actions → Release Elastic IP addresses** → **Release**.
+- **Conferir depois:** o IP some da lista. **Irreversível** — o IP volta ao pool da AWS.
+
+## Passo 7 — Desanexar o SG `AcessoRestrito` da instância — NÃO APAGAR
+
+- **O ponto mais delicado da lista.** O SG **`AcessoRestrito` (`sg-0e96076df475b4843`)** está na
+  VPS **e** no ENI do RDS de produção (`eni-07b2a97c5bd5c34bf`, confirmado). **Apagá-lo derruba o
+  RDS.** Com a instância terminada, o vínculo do SG com ela já deixou de existir — não há o que
+  desanexar manualmente. O que **não** se faz é ir aos SGs da VPS e apagar `AcessoRestrito`.
+- **Onde (se quiser confirmar):** EC2 → **Security Groups** → `sg-0e96076df475b4843`.
+- **Ação:** **nenhuma exclusão.** Deixá-lo existir. Idem para o SG `EC2` (`sg-0614f9d2cf0b6c697`),
+  que é a origem nomeada na regra 3306 do SG `MySQL`.
+- **Conferir depois:** `sg-0e96076df475b4843` continua listado e anexado a `eni-07b2a97c5bd5c34bf`
+  (o RDS). Se em algum momento a intenção for limpar a regra `0.0.0.0/0` de SSH/9000 desse SG, é o
+  **item de segurança à parte** — não faz parte deste desligamento.
+
+## Passo 8 — Apagar o ALB antigo e o target group
+
+- **Só depois** de o Route 53 (passo 2) já não apontar para lá, e da VPS terminada.
+- **Onde:** EC2 → **Load Balancing → Load balancers**.
+- **Identificar com certeza:** **`load-balancer-bahiaba-2023`**, criado em 2023-01-06, VPC
+  `vpc-4c49202b` (o default). **Não confundir** com os dois `k8s-bahiawor-bahiaing-…`, que servem
+  o site — esses ficam.
+- **Ação:** selecionar `load-balancer-bahiaba-2023` → **Actions → Delete load balancer** → digitar
+  `confirm`.
+- **Depois, o target group:** EC2 → **Target Groups** → apagar **`target-group-http-bahiaba`**
+  (ficava ligado a este ALB) e, se ainda não foi no Grupo 1, **`target-group-https-bahiaba`** (órfão).
+- **Efeito colateral bom:** os IPv4 do ALB antigo são liberados junto (~22 USD/mês).
+- **Conferir depois:** só os dois ALBs `k8s-…` permanecem; `bahia.ba` e as editorias continuam 200.
+
+---
+
+## Depois de tudo — encerramento
+
+- **Prefixo `s3://static.bahia.ba/_resguardo-vps/`** (8,33 MB, 102 objetos): guarda os originais
+  que só existiam na VPS. **Pode ser apagado quando você confirmar que o assunto está encerrado** —
+  `aws s3 rm s3://static.bahia.ba/_resguardo-vps/ --recursive`. Não antes.
+- **AMI `vps-swarm-final-20260826`**: manter enquanto houver qualquer dúvida; é o único retrato da
+  máquina. Quando decidir que não volta, apagar a AMI e o snapshot dela encerra o custo de ~3 USD/mês.
+- **As duas imagens apagadas** (RD Congo, leilão): tratadas à parte, pela redação. O
+  `REDACAO-2-imagens.md` fica arquivado, sem encaminhamento agora.
+
+---
+
+# Security groups — inventário de 27/08/2026, para o levantamento de EC2 adiado
+
+Levantado ao desenhar o isolamento da instância de teste do upgrade, e depois de o Albert remover
+as quatro regras de entrada do `AcessoRestrito`. **Nada foi apagado.**
+
+## O que existe hoje, e o que está anexado a quê
+
+| Security group | ID | Entrada | Anexado a |
+|---|---|---|---|
+| `MySQL` | `sg-0234245542eb43738` | 1 regra: `3306 ← 10.1.0.0/16, 10.2.0.0/16, sg-0614f9d2cf0b6c697` | **ENI dos dois RDS** (`172.31.70.197` e `172.31.50.61`) |
+| `AcessoRestrito` | `sg-0e96076df475b4843` | **0 regras** | **ENI do RDS de prod** (`172.31.70.197`) |
+| `rds-ec2-1` | `sg-06a8e5bcd98765b27` | 1 regra | **nenhum ENI — órfão** |
+| `ec2-rds-1` | `sg-05713cea6b755e67b` | 0 regras | **nenhum ENI — órfão** |
+| `mysql-bahiaba-2023` | `sg-0bb13629c7fd663f8` | 1 regra | **nenhum ENI — órfão** |
+
+Mais três grupos `default`, um por VPC (`sg-5bdf2021`, `sg-0ed6a2885344114d4`,
+`sg-090d94591e6f93e20`) — são criados pela AWS junto com a VPC e não são resíduo.
+
+## Os três órfãos, e por que dois deles são certeza
+
+As descrições dizem o que são:
+
+```
+rds-ec2-1   "Security group attached to rds-bahiaba-restore-temp to allow EC2 instances
+             with specific security groups attached to connect to the database."
+ec2-rds-1   "Security group attached to instances to securely connect to
+             rds-bahiaba-restore-temp."
+```
+
+São o par que o console da AWS cria sozinho quando alguém usa o assistente "conectar EC2 ao RDS".
+Foram feitos para uma instância chamada **`rds-bahiaba-restore-temp`**.
+
+**Essa instância não existe.** Conferido: as únicas instâncias RDS da conta são `rds-bahiaba-2023`
+e `rds-bahiaba-hml`. Os dois grupos referenciam um recurso apagado, não estão em nenhum ENI, e não
+protegem nada.
+
+O terceiro, `mysql-bahiaba-2023`, tem nome de quando o banco de produção foi criado (2023) e
+também não está anexado a nada — **candidato, mas conferir antes**: nome parecido com o do banco
+não é prova de que seja resto.
+
+## O `AcessoRestrito` sai quando o banco tiver grupo próprio
+
+Com **zero regras de entrada**, ele não faz mais nada. **Só continua existindo porque está
+anexado ao ENI do RDS de produção** — e um security group anexado não pode ser apagado.
+
+Quando o banco de produção ganhar um grupo próprio e enxuto (o que faz sentido fazer junto com a
+subida para o MySQL 8.4, que já vai mexer na instância), o `AcessoRestrito` fica desanexado e pode
+ser removido.
+
+## Um a conferir que não estava na lista
+
+`sg-0614f9d2cf0b6c697` — **é referenciado pela regra do grupo `MySQL`** e não foi inspecionado.
+Vale saber o que é antes de mexer no grupo `MySQL`: se for um grupo de EC2 que já não existe, a
+referência é resíduo; se for algo em uso, não é.
+
+## O padrão que estes cinco casos repetem
+
+Todos os órfãos vieram de recurso **desligado sem limpar a volta**: as três regras removidas do
+`AcessoRestrito` apontavam para serviços da VPS terminada na véspera (SSH, Portainer,
+OpenLiteSpeed), e os dois `*-rds-1` apontam para uma instância que não existe mais.
+
+**Configuração órfã não avisa que ficou órfã** — ela continua parecendo intencional, e é por isso
+que uma regra de firewall para o IP de assinante de alguém sobreviveu cerca de um ano sem que
+ninguém soubesse de quem era.
+

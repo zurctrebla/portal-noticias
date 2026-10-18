@@ -24,27 +24,24 @@ if (!class_exists("nxs_snapClassBG")) { class nxs_snapClassBG extends nxs_snapCl
   //#### Show Unit  Settings  
   function checkIfSetupFinished($options) { return !empty($options['accessToken']) || !empty($options['uPass']); }
   public function doAuth() { $ntInfo = $this->ntInfo; global $nxs_snapSetPgURL;     
-    if ( isset($_GET['code']) && $_GET['code']!='' && isset($_GET['state']) && substr($_GET['state'], 0, 7) == 'nxs-bg-'){
-      $at = sanitize_text_field($_GET['code']);  $ii = sanitize_text_field(str_replace('nxs-bg-','',sanitize_text_field($_GET['state'])));
+    if (isset($_GET['code']) && $_GET['code']!='' && isset($_GET['state']) && strpos(wp_unslash($_GET['state']), 'nxs-bg-') === 0){
+      if (!nxs_snap_user_can_access() || !nxs_oauth_state_validate(wp_unslash($_GET['state']), 'bg', $ii) || !isset($this->nt[$ii])) wp_die(esc_html__('Invalid or expired Blogger authorization state.', 'social-networks-auto-poster-facebook-twitter-g'), '', array('response'=>403));
+      $at = sanitize_text_field(wp_unslash($_GET['code']));
       echo "----=={ oAuth 2.0 Wordflow }==----<br/>-= This is normal technical authorization info that will dissapear (Unless you get some errors) =- <br/><br/><br/>"; 
-      $gGet = $_GET; unset($gGet['code']); unset($gGet['state']); unset($gGet['scope']); unset($gGet['post_type']); unset($gGet['post']); //prr($nxs_snapSetPgURL);
-      $sturl = explode('?',$nxs_snapSetPgURL); $nxs_snapSetPgURL = $sturl[0].((!empty($gGet))?'?'.http_build_query($gGet):'');
-      $options = $this->nt[$ii]; $wprg = array();  $wprg['sslverify'] = false;
-      if (isset($options['appKey'])){ echo "-="; prr($options);// die();
-        $tknURL = 'https://www.googleapis.com/oauth2/v3/token?code='.$at.'&redirect_uri='.urlencode($nxs_snapSetPgURL).'&scope=&client_id='.nxs_gak($options['appKey']).'&client_secret='.nxs_gas($options['appSec']).'&grant_type=authorization_code';
-        $response  = nxs_remote_post($tknURL, $wprg); prr($tknURL);      
-        if((is_object($response)&&(isset($response->errors)))){ prr($response); die(); }
-        if (is_array($response)&& stripos($response['body'],'"error":')!==false){ prr($response['body']); prr(json_decode($response['body'],true)); die(); }
-        $resp = json_decode($response['body'], true); prr($resp); if (!is_array($resp) || empty($resp['access_token'])) { prr($resp); die(); }
+      $nxs_snapSetPgURL = nxs_get_admin_url('admin.php?page=nxssnap'); $options = $this->nt[$ii]; $wprg = array('sslverify'=>true);
+      if (isset($options['appKey'])){
+        $response = nxs_remote_post('https://oauth2.googleapis.com/token', array('body'=>array('code'=>$at,'redirect_uri'=>$nxs_snapSetPgURL,'client_id'=>nxs_gak($options['appKey']),'client_secret'=>nxs_gas($options['appSec']),'grant_type'=>'authorization_code')));
+        if (is_nxs_error($response) || !is_array($response) || empty($response['body'])) die(esc_html__('Blogger token exchange failed.', 'social-networks-auto-poster-facebook-twitter-g'));
+        $resp = json_decode($response['body'], true); if (!is_array($resp) || empty($resp['access_token'])) { echo esc_html(isset($resp['error_description'])?$resp['error_description']:__('Blogger did not return an access token.', 'social-networks-auto-poster-facebook-twitter-g')); die(); }
         if (function_exists('get_option')) $currTime = time() + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS ); else  $currTime = time();
         $options['accessToken'] = $resp['access_token']; $options['accessTokenSec'] = 'No Need for oAuth V2';
-        $options['accessTokenExp'] = $currTime + $resp['expires_in'];  $options['refreshToken'] = $resp['refresh_token'];  echo "<br/>----=={ Expires: ".date('Y-m-d H:i:s', $options['accessTokenExp'])." }==---- <br/>";
+        $options['accessTokenExp'] = $currTime + $resp['expires_in']; if (!empty($resp['refresh_token'])) $options['refreshToken'] = $resp['refresh_token']; echo "<br/>----=={ Expires: ".esc_html(date('Y-m-d H:i:s', $options['accessTokenExp']))." }==---- <br/>";
         
         if (!empty($options['blogID'])){
-          if (substr($options['blogID'], 0, 4)=='http') $tknURL = 'https://www.googleapis.com/blogger/v3/blogs/byurl/?url='.$options['blogID'].'?access_token='.$options['accessToken'];  
-            else $tknURL = 'https://www.googleapis.com/blogger/v3/blogs/'.$options['blogID'].'?access_token='.$options['accessToken']; 
+          if (substr($options['blogID'], 0, 4)=='http') $tknURL = 'https://www.googleapis.com/blogger/v3/blogs/byurl/?url='.rawurlencode($options['blogID']);
+            else $tknURL = 'https://www.googleapis.com/blogger/v3/blogs/'.rawurlencode($options['blogID']);
         }        
-        $response  = nxs_remote_get($tknURL, $wprg); prr($tknURL); prr($response);  $user = json_decode($response['body'], true); prr($user);       
+        $wprg['headers'] = array('Authorization'=>'Bearer '.$options['accessToken']); $response = nxs_remote_get($tknURL, $wprg); if (is_nxs_error($response)) die(esc_html__('Unable to retrieve Blogger account details.', 'social-networks-auto-poster-facebook-twitter-g')); $user = json_decode($response['body'], true);
         if (!empty($user['url'])) { $options['blogURL'] = $user['url']; $options['blogID'] = $user['id']; $options['blogInfo'] = $user['name']." [".$user['id']."] (".$user['url'].")"; nxs_save_glbNtwrks($ntInfo['lcode'],$ii,$options,'*');                      
           ?><script type="text/javascript">window.location = "<?php echo $nxs_snapSetPgURL; ?>"</script>      
         <?php }        
@@ -53,7 +50,7 @@ if (!class_exists("nxs_snapClassBG")) { class nxs_snapClassBG extends nxs_snapCl
     } 
   }    
   
-  function accTab($ii, $options, $isNew=false){ global $nxs_snapSetPgURL; $ntInfo = $this->ntInfo; $nt = $ntInfo['lcode']; if (empty($options['sid'])) $options['sid']=''; if (empty($options['ssid'])) $options['ssid']=''; if (empty($options['nid'])) $options['nid']=''; if (empty($options['hsid'])) $options['hsid']='';?>
+  function accTab($ii, $options, $isNew=false){ global $nxs_snapSetPgURL; $ntInfo = $this->ntInfo; $nt = $ntInfo['lcode']; $oauth_state = nxs_oauth_state_create('bg', $ii); if (empty($options['sid'])) $options['sid']=''; if (empty($options['ssid'])) $options['ssid']=''; if (empty($options['nid'])) $options['nid']=''; if (empty($options['hsid'])) $options['hsid']='';?>
     <div style="width:100%;"><strong><?php _e('Blogger Blog ID', 'social-networks-auto-poster-facebook-twitter-g'); ?>:</strong><i><?php _e('Log to your Blogger management panel and look at the URL of your blog: http://www.blogger.com/blogger.g?blogID=8959085979163812093#allposts. Your Blog ID will be: 8959085979163812093', 'social-networks-auto-poster-facebook-twitter-g'); ?></i></div><input name="<?php echo esc_attr($nt); ?>[<?php echo esc_attr($ii); ?>][blogID]" style="width: 30%;" value="<?php _e(apply_filters('format_to_edit', htmlentities($options['blogID'], ENT_COMPAT, "UTF-8")), 'social-networks-auto-poster-facebook-twitter-g') ?>" /><br/><br/>     
     <div style="display: <?php echo (empty($options['apiToUse']))?"block":"none"; ?>;">    
       <div style="width:100%; text-align: center; color:#005800; font-weight: bold; font-size: 14px;">You can choose what API you would like to use. </div>          
@@ -72,7 +69,7 @@ if (!class_exists("nxs_snapClassBG")) { class nxs_snapClassBG extends nxs_snapCl
       } else { if(!empty($options['accessToken']) && !empty($options['accessTokenSec'])) { 
         _e('Your '.$ntInfo['name'].' Account has been authorized.', 'social-networks-auto-poster-facebook-twitter-g'); ?> <br/>Blog ID: <?php _e(apply_filters('format_to_edit', htmlentities($options['blogInfo'], ENT_COMPAT, "UTF-8")), 'social-networks-auto-poster-facebook-twitter-g'); ?>.
         <?php _e('You can', 'social-networks-auto-poster-facebook-twitter-g'); ?> Re- <?php } ?>            
-        <a  href="https://accounts.google.com/o/oauth2/auth?redirect_uri=<?php echo trim(urlencode($nxs_snapSetPgURL));?>&response_type=code&client_id=<?php echo trim(nxs_gak($options['appKey']));?>&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fblogger&approval_prompt=force&access_type=offline&state=<?php echo 'nxs-bg-'.$ii; ?>">Authorize Your Blogger Account</a>        
+        <a href="<?php echo esc_url('https://accounts.google.com/o/oauth2/v2/auth?'.http_build_query(array('redirect_uri'=>$nxs_snapSetPgURL,'response_type'=>'code','client_id'=>nxs_gak($options['appKey']),'scope'=>'https://www.googleapis.com/auth/blogger','prompt'=>'consent','access_type'=>'offline','state'=>$oauth_state), '', '&')); ?>">Authorize Your Blogger Account</a>
         <?php if (empty($options['accessToken'])) { ?> <div class="blnkg">&lt;=== <?php _e('Authorize your account', 'social-networks-auto-poster-facebook-twitter-g'); ?> ===</div> <?php } 
       } ?><br/><br/>
       </div>

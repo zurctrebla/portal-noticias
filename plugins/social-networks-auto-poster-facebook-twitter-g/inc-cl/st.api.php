@@ -26,7 +26,7 @@ if (!class_exists('nxsAPI_ST')){class nxsAPI_ST{ var $ck = array();  var $debug 
         $hdrsArr['Accept-Language']='en-US,en;q=0.8'; return $hdrsArr;
     }
     function makeSlug($str){ $str = strtolower($str); $str = preg_replace('/[^a-zA-Z0-9]/i',' ', $str); $str = trim($str); $str = preg_replace('/\s+/', ' ', $str); $str = preg_replace('/\s+/', '-', $str); return $str;}
-    function check(){ $ck = $this->ck; $sslverify = false; if (!empty($ck) && is_array($ck)) { $hdrsArr = $this->headers('https://sett.com'); if ($this->debug) echo "[ST] Checking....;<br/>\r\n";
+    function check(){ $ck = $this->ck; $sslverify = true; if (!empty($ck) && is_array($ck)) { $hdrsArr = $this->headers('https://sett.com'); if ($this->debug) echo "[ST] Checking....;<br/>\r\n";
         $rep = nxs_remote_get('http://sett.com/', array('headers' => $hdrsArr, 'httpversion' => '1.1', 'cookies' => $ck, 'sslverify'=>$sslverify));
         if (is_nxs_error($rep)) return false; $ck = $rep['cookies']; $contents = $rep['body']; //if ($this->debug) prr($contents);
         return stripos($contents, 'data-url="')!==false;
@@ -34,7 +34,7 @@ if (!class_exists('nxsAPI_ST')){class nxsAPI_ST{ var $ck = array();  var $debug 
     }
     function connect($u,$p){ $badOut = 'Error: ';
         //## Check if alrady IN
-        if (!$this->check()){ if ($this->debug) echo "[ST] NO Saved Data;<br/>\r\n"; $sslverify = false;  $llURL = 'https://sett.com/login.php?email='.urlencode($u).'&pw='.urlencode($p).'&remember=on&undefined=Log+in';
+        if (!$this->check()){ if ($this->debug) echo "[ST] NO Saved Data;<br/>\r\n"; $sslverify = true;  $llURL = 'https://sett.com/login.php?email='.urlencode($u).'&pw='.urlencode($p).'&remember=on&undefined=Log+in';
             $hdrsArr = $this->headers('http://sett.com/'); $rep = nxs_remote_get('http://sett.com/', array('headers' => $hdrsArr, 'httpversion' => '1.1', 'sslverify'=>$sslverify));
             if (is_nxs_error($rep)) {  $badOut = "ERROR (Login Form): ".print_r($rep, true); return $badOut; } if ($rep['response']['code']!='200') { $badOut = "ERROR (Login Form): ".print_r($rep, true); return $badOut; }
             $ck = $rep['cookies'];  $rep = nxs_remote_get($llURL, array('headers' => $hdrsArr, 'cookies' => $ck, 'httpversion' => '1.1', 'sslverify'=>$sslverify));
@@ -45,7 +45,7 @@ if (!class_exists('nxsAPI_ST')){class nxsAPI_ST{ var $ck = array();  var $debug 
             } return "ERROR (Login): ".$badOut.print_r($rep, true);
         } else { if ($this->debug) echo "[TH] Saved Data is OK;<br/>\r\n"; return false; }
     }
-    function post($post){ $ck = $this->ck; $sslverify = false; $oneTime = '0R4qFyHCMAYYclyZQFNYrOkq4uy4mN5'; $enText = nxs_AesCtr::encrypt($post['text'], $oneTime, 256); $blogID = '';
+    function post($post){ $ck = $this->ck; $sslverify = true; $oneTime = '0R4qFyHCMAYYclyZQFNYrOkq4uy4mN5'; $enText = nxs_AesCtr::encrypt($post['text'], $oneTime, 256); $blogID = '';
         $hdrsArr = $this->headers('http://sett.com/'); $rep = nxs_remote_get('http://sett.com/'.$post['toURL'], array('headers' => $hdrsArr, 'timeout' => 45, 'cookies' => $ck, 'httpversion' => '1.1', 'sslverify'=>$sslverify));
         if (is_nxs_error($rep)) {  $badOut = "ERROR (Blog URL): ".print_r($rep, true); return $badOut; } $content = $rep['body'];
         if (stripos($content, 'window.site_id =')!==false) $blogID = trim(CutFromTo($content, 'window.site_id =', ';')); if (empty($blogID)) return "ERROR (NO Blog ID found): ";

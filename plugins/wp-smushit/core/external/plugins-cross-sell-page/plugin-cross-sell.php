@@ -72,7 +72,7 @@ if ( ! class_exists( 'WPMUDEV\Modules\Plugin_Cross_Sell' ) ) {
 		 *
 		 * @return void
 		 */
-		public function __construct( array $props = array() ) {
+		public function __construct( $props = array() ) {
 			// Prepare the translation directory.
 			$dir                      = ! empty( $props['translation_dir'] ) ? realpath( $props['translation_dir'] ) : false;
 			$props['translation_dir'] = $dir ? wp_normalize_path( $dir ) : WPMUDEV_MODULE_PLUGIN_CROSS_SELL_DIR . 'languages/';
@@ -88,7 +88,7 @@ if ( ! class_exists( 'WPMUDEV\Modules\Plugin_Cross_Sell' ) ) {
 		/**
 		 * Class initializer.
 		 */
-		public function load(): void {
+		public function load() {
 			$submenu_params  = $this->container->get( 'submenu_data' );
 			$translation_dir = ! empty( $submenu_params['translation_dir'] ) ? $submenu_params['translation_dir'] : WPMUDEV_MODULE_PLUGIN_CROSS_SELL_DIR . 'languages/';
 

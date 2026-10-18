@@ -1,5 +1,9 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Get the FooGallery plugin instance.
  *
@@ -116,14 +120,15 @@ $premium_count = count( array_filter( $extensions, function ( $extension ) {
 </style>
 <div class="wrap foogallery-features">
 	<h2>
-		<?php printf( __( '%s Features', 'foogallery' ), foogallery_plugin_name() ); ?>
+		<?php /* translators: %s: Value inserted at runtime. */ ?>
+		<?php printf( esc_html__( '%s Features', 'foogallery' ), esc_html( foogallery_plugin_name() ) ); ?>
 		<span class="spinner"></span>
 	</h2>
 
 	<?php
 	if ( isset( $result ) ) { ?>
-		<div class="foogallery-message-<?php echo $result['type']; ?>">
-			<p><?php echo $result['message']; ?></p>
+		<div class="foogallery-message-<?php echo esc_attr( $result['type'] ); ?>">
+			<p><?php echo wp_kses_post( $result['message'] ); ?></p>
 		</div>
 	<?php } ?>
 	<hr />
@@ -144,15 +149,15 @@ $premium_count = count( array_filter( $extensions, function ( $extension ) {
 			$text_color = $is_current ? 'color: black;' : 'color: blue;';
 			$status_url = add_query_arg( array( 'status' => $status_key ), foogallery_admin_features_url() );
 
-			echo "<a href='{$status_url}' class='foogallery-status-tab {$is_current}' style='text-decoration: none; {$text_color}'>{$status_label} (";
+			echo "<a href='" . esc_url( $status_url ) . "' class='foogallery-status-tab " . esc_attr( $is_current ) . "' style='text-decoration: none; " . esc_attr( $text_color ) . "'>" . esc_html( $status_label ) . " (";
 			if ( $status_key === 'all' ) {
-				echo $total_count;
+				echo absint( $total_count );
 			} elseif ( $status_key === 'active' ) {
-				echo $active_count;
+				echo absint( $active_count );
 			} elseif ( $status_key === 'inactive' ) {
-				echo $inactive_count;
+				echo absint( $inactive_count );
 			} elseif ( $status_key === 'premium' ) {
-				echo $premium_count;
+				echo absint( $premium_count );
 			}
 			echo ")</a>";
 			if ( $status_key !== 'premium' ) {
@@ -168,9 +173,9 @@ $premium_count = count( array_filter( $extensions, function ( $extension ) {
 		<div style="display:flex; justify-content:space-evenly; align-items:center;">
 
 			<p>
-				<label for="tag-filter"><?php _e( 'Filter by Tag:', 'foogallery' ); ?></label>
+				<label for="tag-filter"><?php esc_html_e( 'Filter by Tag:', 'foogallery' ); ?></label>
 				<select id="tag-filter" name="tag">
-					<option value="all"><?php _e( 'All Tags', 'foogallery' ); ?></option>
+					<option value="all"><?php esc_html_e( 'All Tags', 'foogallery' ); ?></option>
 					<?php
 					// Get all unique tags from extensions data.
 					$all_tags = array();
@@ -187,7 +192,7 @@ $premium_count = count( array_filter( $extensions, function ( $extension ) {
 					// Output options for each tag.
 					foreach ( $all_tags as $tag ) {
 						$selected = isset( $_GET['tag'] ) && $_GET['tag'] === $tag ? 'selected' : '';
-						echo '<option value="' . esc_attr( $tag ) . '" ' . $selected . '>' . esc_html( $tag ) . '</option>';
+						echo '<option value="' . esc_attr( $tag ) . '" " . esc_attr( $selected ) . ">' . esc_html( $tag ) . '</option>';
 					}
 					?>
 				</select>
@@ -195,7 +200,7 @@ $premium_count = count( array_filter( $extensions, function ( $extension ) {
 
 			<p class="search-box">
 				<label class="screen-reader-text" for="extension-search-input">
-					<?php _e( 'Search Extensions', 'foogallery' ); ?>:</label>
+					<?php esc_html_e( 'Search Extensions', 'foogallery' ); ?>:</label>
 				<input type="search" id="extension-search-input" placeholder="Search features..."
 					name="s" value="<?php echo esc_attr( isset( $_REQUEST['s'] ) ? $_REQUEST['s'] : '' ); ?>" />
 			</p>
@@ -316,12 +321,16 @@ public function column_default( $item, $column_name ) {
     switch ( $column_name ) {
         case 'name':
 			$upgrade 	 = isset( $item['source'] ) && 'upgrade' === $item['source'];
+			$addon       = isset( $item['source'] ) && 'addon' === $item['source'];
             $downloaded  = isset( $item['downloaded'] ) && true === $item['downloaded'];
             $is_active   = isset( $item['is_active'] ) && true === $item['is_active'];
             $has_errors  = isset( $item['has_errors'] ) && true === $item['has_errors'];
             $actions     = '';
 			if ( array_key_exists( 'actions_disabled', $item ) && $item['actions_disabled'] === true ) {
 				//Do nothing - there should be no actions.
+			} elseif ( $addon ) {
+				$addon_url = isset( $item['addon_link_url'] ) ? $item['addon_link_url'] : foogallery_admin_addon_url();
+				$actions  .= '<a href="' . esc_url( $addon_url ) . '">' . esc_html__( 'View Addon', 'foogallery' ) . '</a>';
             } elseif ( $upgrade ) {
 				$actions     .= '<a href="' . esc_url( foogallery_fs()->checkout_url( WP_FS__PERIOD_ANNUALLY, true ) ) . '">' . __( 'Start FREE Trial', 'foogallery' ) . '</a>';
 			} elseif ( !$downloaded ) {

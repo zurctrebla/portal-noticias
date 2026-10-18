@@ -155,7 +155,7 @@ if (!class_exists("nxs_snapClassGMB")) { class nxs_snapClassGMB extends nxs_snap
           <div id="<?php echo esc_attr($nt.$ii); ?>PostTypeESub"  style="margin-left: 15px;">
             
             
-          Event Title:<input name="<?php echo esc_attr($nt); ?>[<?php echo esc_attr($ii); ?>][eTtlFormat]" style="width: 95%;max-width: 610px;" value="<?php echo $ntOpt['eTtlFormat']; ?>" class="nxsEdElem" data-ii="<?php echo esc_attr($ii); ?>" data-nt="<?php echo esc_attr($nt); ?>" />  <br/>
+      Event Title:<input name="<?php echo esc_attr($nt); ?>[<?php echo esc_attr($ii); ?>][eTtlFormat]" style="width: 95%;max-width: 610px;" value="<?php echo esc_attr($ntOpt['eTtlFormat']); ?>" class="nxsEdElem" data-ii="<?php echo esc_attr($ii); ?>" data-nt="<?php echo esc_attr($nt); ?>" />  <br/>
           Event Start Date:<input name="<?php echo esc_attr($nt); ?>[<?php echo esc_attr($ii); ?>][evStDate]" style="width: 95%;max-width: 610px;" value="<?php echo date("F j, Y, g:i a", strtotime('+10 min'));  ?>" class="nxsEdElem" data-ii="<?php echo esc_attr($ii); ?>" data-nt="<?php echo esc_attr($nt); ?>" /><br/>
           Event End Date:<input name="<?php echo esc_attr($nt); ?>[<?php echo esc_attr($ii); ?>][evEndDate]" style="width: 95%;max-width: 610px;" value="<?php echo date("F j, Y, g:i a", strtotime('+1 day')); ?>" class="nxsEdElem" data-ii="<?php echo esc_attr($ii); ?>" data-nt="<?php echo esc_attr($nt); ?>" /><br/>
             

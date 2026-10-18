@@ -36,6 +36,9 @@ $title_lists                = (array)PP_Capabilities_Admin_Features::elementLayo
 $section_actions            = (array)PP_Capabilities_Admin_Features::elementLayoutItemActions();
 
 $active_tab_slug = (!empty($_REQUEST['pp_caps_tab'])) ? sanitize_key($_REQUEST['pp_caps_tab']) : 'admintoolbar';
+
+$admin_menu_settings = (array) get_option('ppc_admin_features_settings', []);
+$hide_submenu        = !empty($admin_menu_settings['hide_submenu']);
 ?>
 
     <div class="wrap publishpress-caps-manage pressshack-admin-wrapper pp-capability-menus-wrapper admin-features">
@@ -61,6 +64,7 @@ $active_tab_slug = (!empty($_REQUEST['pp_caps_tab'])) ? sanitize_key($_REQUEST['
                                                     value="<?php esc_attr_e('Save Changes');?>"
                                                     class="button-primary ppc-admin-features-submit" />
                                             </div>
+                                            <div class="clear"></div>
 
                                             <select name="ppc-admin-features-role" class="ppc-admin-features-role">
                                                 <?php
@@ -88,7 +92,7 @@ $active_tab_slug = (!empty($_REQUEST['pp_caps_tab'])) ? sanitize_key($_REQUEST['
 
                                                     <div id="ppc-capabilities-wrapper" class="postbox">
                                                         <div class="ppc-capabilities-tabs">
-                                                            <ul>
+                                                            <ul style="min-width: 220px;">
                                                                 <?php
                                                                     $sn = 0;
                                                                     foreach ($admin_features_elements as $section_title => $section_elements) {
@@ -107,7 +111,6 @@ $active_tab_slug = (!empty($_REQUEST['pp_caps_tab'])) ? sanitize_key($_REQUEST['
 
                                                                         $disabled_count  = count(PP_Capabilities_Admin_Features::adminFeaturesRestrictedElements($disabled_admin_items, $feature_action));
 
-                                                                        $count_html = ($disabled_count > 0) ? '('. $disabled_count .')' : '';
                                                                         $pro_icon = '';
                                                                         if (! defined('PUBLISHPRESS_CAPS_PRO_VERSION') &&
                                                                             in_array($section_slug, ['hidecsselement', 'blockedbyurl'])
@@ -124,9 +127,11 @@ $active_tab_slug = (!empty($_REQUEST['pp_caps_tab'])) ? sanitize_key($_REQUEST['
                                                                             <div>
                                                                                 <?php echo $pro_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> <?php echo esc_html($translated_title); ?>
                                                                             </div>
-                                                                            <div style="color:#a00;">
-                                                                                <?php echo esc_html($count_html); ?>
-                                                                            </div>
+                                                                            <?php if ($disabled_count > 0) : ?>
+                                                                                <div class="pp-capabilities-count-indicator">
+                                                                                    <?php echo esc_html($disabled_count); ?>
+                                                                                </div>
+                                                                            <?php endif; ?>
                                                                         </li>
                                                                         <?php
                                                                     }
@@ -196,8 +201,19 @@ $active_tab_slug = (!empty($_REQUEST['pp_caps_tab'])) ? sanitize_key($_REQUEST['
                                                                                 } else {
                                                                                     $additional_class = '';
                                                                                 }
+
+                                                                                if ((isset($section_array['step']) && $section_array['step'] > 0) && isset($section_array['parent']) && !empty($section_array['parent'])) {
+                                                                                    if ($hide_submenu) {
+                                                                                        $tr_style = 'display: none;';
+                                                                                    } else {
+                                                                                        $tr_style = '';
+                                                                                    }
+                                                                                    $additional_class .= ' child-subitem';
+                                                                                } else {
+                                                                                    $tr_style = '';
+                                                                                }
                                                                                 ?>
-                                                                                <tr class="ppc-menu-row child-menu <?php echo esc_attr($section_slug); ?> <?php echo esc_attr($additional_class); ?>">
+                                                                                <tr class="ppc-menu-row child-menu <?php echo esc_attr($section_slug); ?> <?php echo esc_attr($additional_class); ?>" style="<?php echo esc_attr($tr_style);?>">
                                                                                     <td class="restrict-column ppc-menu-checkbox">
                                                                                         <input
                                                                                             id="check-item-<?php echo (int) $sn; ?>"
@@ -230,6 +246,14 @@ $active_tab_slug = (!empty($_REQUEST['pp_caps_tab'])) ? sanitize_key($_REQUEST['
                                                                                                                 }
                                                                                                                 ?>
                                                                                                                 <?php echo esc_html($section_array['element_label']); ?>
+                                                                                                                <?php if ($section_slug === 'blockedbyurl' && !empty($section_array['wildcard'])) : ?>
+                                                                                                                    <span class="ppc-wildcard-badge"><?php esc_html_e('Wildcard enabled', 'capability-manager-enhanced'); ?></span>
+                                                                                                                <?php elseif ($section_slug === 'hidecsselement' && isset($section_array['target_urls']) && trim((string) $section_array['target_urls']) !== '') : ?>
+                                                                                                                    <span class="ppc-url-target-badge"><?php esc_html_e('URL targeted', 'capability-manager-enhanced'); ?></span>
+                                                                                                                    <?php if (!empty($section_array['url_wildcard'])) : ?>
+                                                                                                                        <span class="ppc-wildcard-badge"><?php esc_html_e('URL wildcard', 'capability-manager-enhanced'); ?></span>
+                                                                                                                    <?php endif; ?>
+                                                                                                                <?php endif; ?>
                                                                                                                 </strong>
                                                                                                             </span>
                                                                                                         </label>
@@ -246,6 +270,9 @@ $active_tab_slug = (!empty($_REQUEST['pp_caps_tab'])) ? sanitize_key($_REQUEST['
                                                                                                             data-section="<?php echo esc_attr($section_slug); ?>"
                                                                                                             data-label="<?php echo esc_attr($section_array['label']); ?>"
                                                                                                             data-element="<?php echo esc_attr($section_array['element_items']); ?>"
+                                                                                                            data-wildcard="<?php echo !empty($section_array['wildcard']) ? '1' : '0'; ?>"
+                                                                                                            data-target-urls="<?php echo isset($section_array['target_urls']) ? esc_attr($section_array['target_urls']) : ''; ?>"
+                                                                                                            data-url-wildcard="<?php echo !empty($section_array['url_wildcard']) ? '1' : '0'; ?>"
                                                                                                             data-id="<?php echo esc_attr($section_array['button_data_id']); ?>">
                                                                                                             <?php esc_html_e('Edit', 'capability-manager-enhanced'); ?>
                                                                                                         </div>
@@ -317,12 +344,24 @@ $active_tab_slug = (!empty($_REQUEST['pp_caps_tab'])) ? sanitize_key($_REQUEST['
                 $banner_messages = ['<p>'];
                 $banner_messages[] = esc_html__('Admin Features allows you to remove elements from the admin area and toolbar.', 'capability-manager-enhanced');
                 $banner_messages[] = '</p><p>';
-                $banner_messages[] = sprintf(esc_html__('%1$s = No change', 'capability-manager-enhanced'), '<input type="checkbox" title="'. esc_attr__('usage key', 'capability-manager-enhanced') .'" disabled>') . ' <br />';
-                $banner_messages[] = sprintf(esc_html__('%1$s = This feature is denied', 'capability-manager-enhanced'), '<input type="checkbox" title="'. esc_attr__('usage key', 'capability-manager-enhanced') .'" checked disabled>') . ' <br />';
+                $banner_messages[] = '<input type="checkbox" title="'. esc_attr__('usage key', 'capability-manager-enhanced') .'" disabled> = '
+                    . esc_html__('No change', 'capability-manager-enhanced') . ' <br />';
+                $banner_messages[] = '<input type="checkbox" title="'. esc_attr__('usage key', 'capability-manager-enhanced') .'" checked disabled> = '
+                    . esc_html__('This feature is denied', 'capability-manager-enhanced') . ' <br />';
                 $banner_messages[] = '</p>';
                 $banner_messages[] = '<p><a class="button ppc-checkboxes-documentation-link" href="https://publishpress.com/knowledge-base/admin-features-screen/"target="blank">' . esc_html__('View Documentation', 'capability-manager-enhanced') . '</a></p>';
                 $banner_title  = __('How to use Admin Features', 'capability-manager-enhanced');
                 pp_capabilities_sidebox_banner($banner_title, $banner_messages);
+                ?>
+                <?php
+                $banner_title  = __('Admin Features Settings', 'capability-manager-enhanced');
+                $banner_messages = ['<p>'];
+                $banner_messages[] = '<input type="checkbox" class="admin-features-setting-field hide-submenu" ' . checked($hide_submenu, true, false) . '> '
+                    . esc_html__('Hide Submenus', 'capability-manager-enhanced') . ' <br />';
+                $banner_messages[] = '</p>';
+                pp_capabilities_sidebox_banner($banner_title, $banner_messages);
+                ?>
+                <?php
                 // add promo sidebar
                 pp_capabilities_pro_sidebox();
                 ?>
@@ -391,7 +430,7 @@ $active_tab_slug = (!empty($_REQUEST['pp_caps_tab'])) ? sanitize_key($_REQUEST['
                 //   reload page for instant reflection if user is updating own role
                 // -------------------------------------------------------------
                 <?php if(isset($ppc_page_reload) && !empty($ppc_page_reload) && (int)$ppc_page_reload === 1){ ?>
-                window.location = '<?php echo esc_url_raw(admin_url('admin.php?page=pp-capabilities-admin-features&role=' . $default_role . '')); ?>'
+                window.location = '<?php echo esc_url_raw(admin_url('admin.php?page=pp-capabilities-admin-features&role=' . $default_role . '&pp_caps_tab=' . $active_tab_slug . '')); ?>'
                 <?php } ?>
 
                 // -------------------------------------------------------------

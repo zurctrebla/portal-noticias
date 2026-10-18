@@ -54,7 +54,7 @@ if (!class_exists("nxs_snapClassWP")) { class nxs_snapClassWP extends nxs_snapCl
     function setNTSettings($post, $options){
         foreach ($post as $ii => $pval){
             if (!empty($pval['uPass']) && !empty($pval['uPass'])){ if (!isset($options[$ii])) $options[$ii] = array(); $options[$ii] = $this->saveCommonNTSettings($pval,$options[$ii]);
-                if (isset($pval['wpURL']))  $options[$ii]['wpURL'] = trim($pval['wpURL']); if (substr($options[$ii]['wpURL'], 0, 4)!=='http') $options[$ii]['wpURL'] = 'http://'.$options[$ii]['wpURL']; // prr($options[$ii]['wpURL']);
+                if (isset($pval['wpURL']))  $options[$ii]['wpURL'] = esc_url_raw(trim($pval['wpURL']), array('https')); if ($options[$ii]['wpURL'] && stripos($options[$ii]['wpURL'], 'https://')!==0) $options[$ii]['wpURL'] = ''; // prr($options[$ii]['wpURL']);
                 if (isset($pval['pt']))  $options[$ii]['pt'] = trim($pval['pt']);
                 if (isset($pval['exactCopy']))  $options[$ii]['exactCopy'] = true; else $options[$ii]['exactCopy'] = false;
                 if (!empty($pval['keepDate']))  $options[$ii]['keepDate'] = true; else $options[$ii]['keepDate'] = false;

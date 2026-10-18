@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2014-2018 ServMask Inc.
+ * Copyright (C) 2014-2025 ServMask Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
+ * Attribution: This code is part of the All-in-One WP Migration plugin, developed by
+ *
  * ███████╗███████╗██████╗ ██╗   ██╗███╗   ███╗ █████╗ ███████╗██╗  ██╗
  * ██╔════╝██╔════╝██╔══██╗██║   ██║████╗ ████║██╔══██╗██╔════╝██║ ██╔╝
  * ███████╗█████╗  ██████╔╝██║   ██║██╔████╔██║███████║███████╗█████╔╝
@@ -23,13 +25,17 @@
  * ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	die( 'Kangaroos cannot jump here' );
+}
+
 class Ai1wm_Log {
 
-	public static function export( $params ) {
+	public static function error( $nonce, $params ) {
 		$data = array();
 
 		// Add date
-		$data[] = date( 'M d Y H:i:s' );
+		$data[] = gmdate( 'M d Y H:i:s', time() );
 
 		// Add params
 		$data[] = json_encode( $params );
@@ -38,45 +44,7 @@ class Ai1wm_Log {
 		$data[] = PHP_EOL;
 
 		// Write log data
-		if ( $handle = ai1wm_open( ai1wm_export_path( $params ), 'a' ) ) {
-			ai1wm_write( $handle, implode( PHP_EOL, $data ) );
-			ai1wm_close( $handle );
-		}
-	}
-
-	public static function import( $params ) {
-		$data = array();
-
-		// Add date
-		$data[] = date( 'M d Y H:i:s' );
-
-		// Add params
-		$data[] = json_encode( $params );
-
-		// Add empty line
-		$data[] = PHP_EOL;
-
-		// Write log data
-		if ( $handle = ai1wm_open( ai1wm_import_path( $params ), 'a' ) ) {
-			ai1wm_write( $handle, implode( PHP_EOL, $data ) );
-			ai1wm_close( $handle );
-		}
-	}
-
-	public static function error( $params ) {
-		$data = array();
-
-		// Add date
-		$data[] = date( 'M d Y H:i:s' );
-
-		// Add params
-		$data[] = json_encode( $params );
-
-		// Add empty line
-		$data[] = PHP_EOL;
-
-		// Write log data
-		if ( $handle = ai1wm_open( ai1wm_error_path(), 'a' ) ) {
+		if ( $handle = ai1wm_open( ai1wm_error_path( $nonce ), 'a' ) ) {
 			ai1wm_write( $handle, implode( PHP_EOL, $data ) );
 			ai1wm_close( $handle );
 		}

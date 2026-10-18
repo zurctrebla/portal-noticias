@@ -12,8 +12,8 @@ class tagdiv_global {
 	 * @var array
 	 */
 	private static $td_plugins = array(
-		'TD_COMPOSER'       => array( 'version' => '24bdf165210ee140fe39121d607795ed',         'class' => 'tdc_version_check' ),
-		'TD_CLOUD_LIBRARY'  => array( 'version' => '8280ce6b395b9467b91f1ab93b09b985',    'class' => 'tdb_version_check' ),
+		'TD_COMPOSER'       => array( 'version' => 'dc42461e47c7cd66a8b827afd1756c1c',         'class' => 'tdc_version_check' ),
+		'TD_CLOUD_LIBRARY'  => array( 'version' => '43473a7fc489321d36f8d15a34d1be14',    'class' => 'tdb_version_check' ),
 		'TD_SOCIAL_COUNTER' => array( 'version' => '4626807ca04012231cedf8a7ef70c951',   'class' => 'td_social_counter_plugin' ),
 		'TD_NEWSLETTER'     => array( 'version' => '795e74d53223156068c4e29e39e0ed3e',       'class' => 'td_newsletter_version_check' ),
 		'TD_SUBSCRIPTION'   => array( 'version' => '___td-subscription___',     'class' => 'tds_version_check' ),

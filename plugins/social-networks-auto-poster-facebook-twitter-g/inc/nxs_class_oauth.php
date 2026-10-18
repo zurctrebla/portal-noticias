@@ -72,7 +72,7 @@ if (!class_exists('nxssc_SigMethod_HMAC_SHA1')) { class nxssc_SigMethod_HMAC_SHA
 	}
 }}
 if (!class_exists('nxs_OAuthBaseCl')) { class nxs_OAuthBaseCl{
-	public $baseURL = 'http://www.scoop.it';
+	public $baseURL = 'https://www.scoop.it';
 	public $request_token_path = '/oauth/request';
 	public $access_token_path = '/oauth/access';
 	public $http_code;
@@ -136,9 +136,8 @@ if (!class_exists('nxs_OAuthBaseCl')) { class nxs_OAuthBaseCl{
 	  $args['oauth_signature'] = $this->sign_method->sign2($req, $this->consumer_secret, $token);      
 	  $cbu = nxssc_SigMethod_HMAC_SHA1::urlencode_rfc3986($cbu);  
 	  $url = $this->baseURL.$this->request_token_path.'?oauth_nonce='.$args['oauth_nonce'].'&oauth_timestamp='.$args['oauth_timestamp'].'&oauth_consumer_key='.$this->consumer_key.'&oauth_signature_method='.$args['oauth_signature_method'].'&oauth_version='.$args['oauth_version'].'&oauth_callback='.$cbu.'&oauth_signature='.$args['oauth_signature'];      
-	  echo "<br/>REQ Token URL: ".esc_url($url)."<br/>";
 	  $hdrsArr = $this->makeHTTPHeaders($url); $ckArr = '';   
-	  $response = wp_remote_get($url, array( 'method' => 'GET', 'timeout' => 45, 'redirection' => 0,  'headers' => $hdrsArr, 'cookies' => $ckArr));  
+	  $response = wp_safe_remote_get($url, array( 'method' => 'GET', 'timeout' => 45, 'redirection' => 0, 'sslverify'=>true, 'reject_unsafe_urls'=>true, 'headers' => $hdrsArr, 'cookies' => $ckArr));  
 	  if ( is_wp_error($response) ) return print_r($response, true);
 	  $this->http_code = $response['response']['code']; //  prr($response);
 	  if (stripos($response['body'],'oauth_token_secret=')===false) echo 'Bad oAuth Login:'.esc_html($response['body']); else return $this->oAuthRespToArr($response['body']);
@@ -146,7 +145,6 @@ if (!class_exists('nxs_OAuthBaseCl')) { class nxs_OAuthBaseCl{
 	function getAccToken($verifier){
 	  $args = array (
 		'oauth_token' => $this->access_token,
-		'oauth_token_secret' => $this->access_secret,
 		'oauth_timestamp' => time(),
 		'oauth_nonce' => $this->genRndString(),
 		'oauth_version' => $this->version,
@@ -157,10 +155,9 @@ if (!class_exists('nxs_OAuthBaseCl')) { class nxs_OAuthBaseCl{
 	  $req = array();  $req['method'] = 'GET';  $req['normalized_url'] = $this->baseURL.$this->access_token_path; // echo "ARGS:"; prr($args); 
 	  $req['normalized_parameters'] = $this->get_normalized_parameters($args);
 	  $args['oauth_signature'] = $this->sign_method->sign2($req, $this->consumer_secret, $this->access_secret); 
-	  $url = $this->baseURL.$this->access_token_path.'?oauth_nonce='.$args['oauth_nonce'].'&oauth_timestamp='.$args['oauth_timestamp'].'&oauth_token_secret='.$this->access_secret.'&oauth_signature_method='.$args['oauth_signature_method'].'&oauth_consumer_key='.$this->consumer_key.'&oauth_verifier='.$verifier.'&oauth_version='.$args['oauth_version'].'&oauth_token='.$this->access_token.'&oauth_signature='.$args['oauth_signature'];
-	  echo "<br/>REQ Token URL: ".esc_url($url)."<br/>";
+	  $url = $this->baseURL.$this->access_token_path.'?oauth_nonce='.$args['oauth_nonce'].'&oauth_timestamp='.$args['oauth_timestamp'].'&oauth_signature_method='.$args['oauth_signature_method'].'&oauth_consumer_key='.$this->consumer_key.'&oauth_verifier='.rawurlencode($verifier).'&oauth_version='.$args['oauth_version'].'&oauth_token='.rawurlencode($this->access_token).'&oauth_signature='.rawurlencode($args['oauth_signature']);
 	  $hdrsArr = $this->makeHTTPHeaders($url); $ckArr = '';   
-	  $response = wp_remote_get($url, array( 'method' => 'GET', 'timeout' => 45, 'redirection' => 0,  'headers' => $hdrsArr, 'cookies' => $ckArr));  
+	  $response = wp_safe_remote_get($url, array( 'method' => 'GET', 'timeout' => 45, 'redirection' => 0, 'sslverify'=>true, 'reject_unsafe_urls'=>true, 'headers' => $hdrsArr, 'cookies' => $ckArr));  
 	  if ( is_wp_error($response) ) return $response;
 	  $this->http_code = $response['response']['code']; 
 	  if (stripos($response['body'],'oauth_token_secret=')===false) echo 'Bad oAuth Login:'.esc_html($response['body']); else return $this->oAuthRespToArr($response['body']);
@@ -188,12 +185,12 @@ if (!class_exists('nxs_OAuthBaseCl')) { class nxs_OAuthBaseCl{
 	  
 	   
 	  if ( $type=='GET') {  $url .= '?'.$argsStr;  $hdrsArr = $this->makeHTTPHeaders($url);  $ckArr = ''; // prr($url);
-		  $response = wp_remote_get($url, array( 'method' => 'GET', 'timeout' => 45, 'redirection' => 0,  'headers' => $hdrsArr)); //prr($response);
+		  $response = wp_safe_remote_get($url, array( 'method' => 'GET', 'timeout' => 45, 'redirection' => 0, 'sslverify'=>true, 'reject_unsafe_urls'=>true, 'headers' => $hdrsArr)); //prr($response);
 	  } else { $hdrsArr = $this->makeHTTPHeaders($url, true); if (!empty($argsAddStr)) $argsStr .= $argsAddStr; //prr($url);  prr($hdrsArr); prr($argsStr);  prr($argsT);
-		  $response = wp_remote_post($url, array( 'timeout' => 45, 'redirection' => 0, 'body'=>$argsStr,  'headers' => $hdrsArr));// prr($argsStr); prr($argsT);   prr($response);
+		  $response = wp_safe_remote_post($url, array( 'timeout' => 45, 'redirection' => 0, 'sslverify'=>true, 'reject_unsafe_urls'=>true, 'body'=>$argsStr, 'headers' => $hdrsArr));// prr($argsStr); prr($argsT);   prr($response);
 	  }
 	  if ( is_wp_error($response) ) return $response;
-	  $this->http_code = $response['response']['code']; $body = $response['body']; $body = maybe_unserialize($body); if (is_array($body)) return $body; else  return json_decode($body, true);   
+	  $this->http_code = $response['response']['code']; $body = json_decode($response['body'], true); return is_array($body) ? $body : array();
 	}
 	
 	private function joinParameters($parameters){ $keys = array_keys($parameters); sort($keys, SORT_STRING); $keyValuePairs = array();

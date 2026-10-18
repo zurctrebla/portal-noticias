@@ -13,12 +13,7 @@ class Options
         if (static::$is_initialized == \true) {
             return;
         }
-        $pool->internalAddGeneratedFile('
-é
-google/iam/v1/options.protogoogle.iam.v1"4
-GetPolicyOptions 
-requested_policy_version (B}
-com.google.iam.v1BOptionsProtoPZ)cloud.google.com/go/iam/apiv1/iampb;iampbøªGoogle.Cloud.Iam.V1ÊGoogle\\Cloud\\Iam\\V1bproto3', \true);
+        $pool->internalAddGeneratedFile("\n\xe9\x01\n\x1bgoogle/iam/v1/options.proto\x12\rgoogle.iam.v1\"4\n\x10GetPolicyOptions\x12 \n\x18requested_policy_version\x18\x01 \x01(\x05B}\n\x11com.google.iam.v1B\fOptionsProtoP\x01Z)cloud.google.com/go/iam/apiv1/iampb;iampb\xf8\x01\x01\xaa\x02\x13Google.Cloud.Iam.V1\xca\x02\x13Google\\Cloud\\Iam\\V1b\x06proto3", \true);
         static::$is_initialized = \true;
     }
 }

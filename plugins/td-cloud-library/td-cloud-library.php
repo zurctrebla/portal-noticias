@@ -2,9 +2,9 @@
 /*
 Plugin Name: tagDiv Cloud Library
 Plugin URI: http://tagdiv.com
-Description: Access a huge collection of pre-made templates you can import on your website and customize on the frontend using the tagDiv Composer plugin. Built on 05.05.2026 9:08
+Description: Access a huge collection of pre-made templates you can import on your website and customize on the frontend using the tagDiv Composer plugin. Built on 21.07.2026 11:28
 Author: tagDiv
-Version: 3.9.5
+Version: 3.9.6
 Author URI: http://tagdiv.com
 */
 
@@ -78,7 +78,7 @@ if ( tdb_version_check::is_dependent_plugin_active() === false ) {
 define('TDB_CLOUD_LOCATION', 'live');
 
 //hash
-define('TD_CLOUD_LIBRARY', '8280ce6b395b9467b91f1ab93b09b985');
+define('TD_CLOUD_LIBRARY', '43473a7fc489321d36f8d15a34d1be14');
 
 // the deploy mode: dev or deploy  - it's set to deploy automatically on deploy
 define('TDB_DEPLOY_MODE', 'deploy');

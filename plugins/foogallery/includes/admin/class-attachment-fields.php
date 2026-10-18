@@ -1,4 +1,9 @@
 <?php
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * class FooGallery_Attachment_Fields
  *
@@ -31,6 +36,13 @@ if (!class_exists('FooGallery_Attachment_Fields')) {
 				    'helps'       => __( 'Set a custom target for your attachment', 'foogallery' ),
 				    'exclusions'  => array( 'audio', 'video' ),
 				    'options'     => $target_options
+			    ),
+
+			    'foogallery_custom_rel' => array(
+				    'label'       => __( 'Custom Rel', 'foogallery' ),
+				    'input'       => 'text',
+				    'helps'       => __( 'Set rel values for custom URL links (for example: nofollow sponsored).', 'foogallery' ),
+				    'exclusions'  => array( 'audio', 'video' ),
 			    )
 		    );
 
@@ -190,7 +202,15 @@ if (!class_exists('FooGallery_Attachment_Fields')) {
 
 		    // If our fields array is not empty
 		    if ( ! empty( $custom_fields ) ) {
-			    // We browse our set of options
+
+				$post_id = absint( $post['ID'] );
+
+				// get out early if we don't have a post id or we don't have permission to edit it.
+				if ( $post_id === 0 || !current_user_can( 'edit_post', $post_id ) ) {
+					return $post;
+				}
+
+				// We browse our set of options
 			    foreach ( $custom_fields as $field => $values ) {
 				    switch ( $values['input'] ) {
 					    case 'text':
@@ -200,18 +220,30 @@ if (!class_exists('FooGallery_Attachment_Fields')) {
 					    case 'checkbox':
 						    // If this field has been submitted (is present in the $attachment variable)
 						    if ( isset( $attachment[$field] ) ) {
+							    $value = wp_unslash( $attachment[ $field ] );
+
+							    if ( 'foogallery_custom_url' === $field ) {
+								    $value = foogallery_sanitize_attachment_custom_url( $value );
+							    } elseif ( 'foogallery_custom_target' === $field ) {
+								    $value = foogallery_sanitize_attachment_custom_target( $value );
+							    } elseif ( 'foogallery_custom_rel' === $field ) {
+								    $value = foogallery_sanitize_attachment_custom_rel( $value );
+							    } else {
+									$value = sanitize_text_field( $value );
+								}
+
 							    // If submitted field is empty
 							    // We add errors to the post object with the "error_text" parameter if set in the options
-							    if ( strlen( trim( $attachment[$field] ) ) == 0 && isset( $values['error_text'] ) ) {
+							    if ( strlen( trim( $value ) ) == 0 && isset( $values['error_text'] ) ) {
 								    $post['errors'][ $field ]['errors'][] = __( $values['error_text'] );
 								    // Otherwise we update the custom field
 							    } else {
-								    update_post_meta( $post['ID'], '_' . $field, $attachment[ $field ] );
+								    update_post_meta( $post_id, '_' . $field, $value );
 							    }
 						    }
 						    // Otherwise, we delete it if it already existed
 						    else {
-							    delete_post_meta( $post['ID'], $field );
+							    delete_post_meta( $post_id, '_' . $field );
 						    }
 					        break;
 

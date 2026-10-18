@@ -23,35 +23,35 @@ if (!class_exists("nxs_snapClassSC")) { class nxs_snapClassSC extends nxs_snapCl
   //#### Show Unit  Settings  
   function checkIfSetupFinished($options) { return (!empty($options['appAppUserID']) && !empty($options['accessToken'])) || !empty($options['uPass']); }
   public function doAuth() { $ntInfo = $this->ntInfo; global $nxs_snapSetPgURL;
-    if (isset($_GET['acc'])) { $acc = sanitize_text_field($_GET['acc']); $options = $this->nt[$acc];
+    if (isset($_GET['acc'])) { $acc = absint($_GET['acc']); if (!nxs_snap_user_can_access() || !isset($this->nt[$acc])) return; $options = $this->nt[$acc];
         if ( isset($_GET['auth']) && $_GET['auth']==$ntInfo['lcode']){ require_once('apis/scOAuth.php');
               $consumer_key = nxs_gak($options['appKey']); $consumer_secret = nxs_gas($options['appSec']);
-              $callback_url = $nxs_snapSetPgURL."&auth=".$ntInfo['lcode']."a&acc=".$acc;
+              $callback_url = add_query_arg(array('auth'=>$ntInfo['lcode'].'a','acc'=>$acc,'nxs_state'=>nxs_oauth_state_create('sc', $acc)), $nxs_snapSetPgURL);
               $tum_oauth = new wpScoopITOAuth($consumer_key, $consumer_secret);
               $request_token = $tum_oauth->getReqToken($callback_url);
               $options['oAuthToken'] = $request_token['oauth_token'];
               $options['oAuthTokenSecret'] = $request_token['oauth_token_secret'];
               //prr($tum_oauth); prr($options); die();
-              switch ($tum_oauth->http_code) { case 200: $url = 'http://www.scoop.it/oauth/authorize?oauth_token='.$options['oAuthToken'];
-                $optionsG = get_option('nxsSNAPNetworks'); $optionsG[$ntInfo['lcode']][$acc] = $options;  update_option('nxsSNAPNetworks', $optionsG, false);
-                echo '<br/><br/>All good?! Redirecting ..... <script type="text/javascript">window.location = "'.$url.'"</script>'; break;
+              switch ($tum_oauth->http_code) { case 200: $url = 'https://www.scoop.it/oauth/authorize?oauth_token='.$options['oAuthToken'];
+                nxs_save_glbNtwrks($ntInfo['lcode'],$acc,$options,'*');
+                echo '<br/><br/>All good. Redirecting ..... <script type="text/javascript">window.location = "'.esc_url($url).'"</script>'; break;
                 default: echo '<br/><b style="color:red">Could not connect to ScoopIT. Refresh the page or try again later.</b>'; die();
               }
               die();
             }
-        if ( isset($_GET['auth']) && $_GET['auth']==$ntInfo['lcode'].'a'){ require_once('apis/scOAuth.php');
+        if ( isset($_GET['auth']) && $_GET['auth']==$ntInfo['lcode'].'a'){ if (empty($_GET['nxs_state']) || !nxs_oauth_state_validate(wp_unslash($_GET['nxs_state']), 'sc', $state_account) || absint($state_account)!==$acc) wp_die(esc_html__('Invalid or expired Scoop.it authorization state.', 'social-networks-auto-poster-facebook-twitter-g'), '', array('response'=>403)); require_once('apis/scOAuth.php');
               $consumer_key = nxs_gak($options['appKey']); $consumer_secret = nxs_gas($options['appSec']);
               $tum_oauth = new wpScoopITOAuth($consumer_key, $consumer_secret, $options['oAuthToken'], $options['oAuthTokenSecret']); //prr($tum_oauth);
-              $access_token = $tum_oauth->getAccToken($_GET['oauth_verifier']); prr($access_token);
+              $access_token = $tum_oauth->getAccToken(sanitize_text_field(wp_unslash($_GET['oauth_verifier'])));
               $options['accessToken'] = $access_token['oauth_token'];  $options['accessTokenSec'] = $access_token['oauth_token_secret'];
-              $optionsG = get_option('nxsSNAPNetworks'); $optionsG[$ntInfo['lcode']][$acc] = $options;  update_option('nxsSNAPNetworks', $optionsG, false);
+              nxs_save_glbNtwrks($ntInfo['lcode'],$acc,$options,'*');
               $tum_oauth = new wpScoopITOAuth($consumer_key, $consumer_secret, $options['accessToken'], $options['accessTokenSec']);
-              $uinfo = $tum_oauth->makeReq('http://www.scoop.it/api/1/profile', '');
+              $uinfo = $tum_oauth->makeReq('https://www.scoop.it/api/1/profile', '');
               if (is_array($uinfo) && isset($uinfo['user'])) { $options['appAppUserName'] = $uinfo['user']['name']."(".$uinfo['user']['shortName'].")";
-                $options['appAppUserID'] = $uinfo['user']['id']; $optionsG = get_option('nxsSNAPNetworks'); $optionsG[$ntInfo['lcode']][$acc] = $options;  update_option('nxsSNAPNetworks', $optionsG, false);
+                $options['appAppUserID'] = $uinfo['user']['id']; nxs_save_glbNtwrks($ntInfo['lcode'],$acc,$options,'*');
               } //die();
-              if (!empty($options['appAppUserID'])) {  echo '<br/><br/>All good?! Redirecting ..... <script type="text/javascript">window.location = "'.$nxs_snapSetPgURL.'"</script>'; die();}
-                else die("<span style='color:red;'>ERROR: Authorization Error: <span style='color:darkred; font-weight: bold;'>".print_r($uinfo, true)."</span></span>");
+              if (!empty($options['appAppUserID'])) { echo '<br/><br/>All good. Redirecting ..... <script type="text/javascript">window.location = "'.esc_url($nxs_snapSetPgURL).'"</script>'; die();}
+                else die(esc_html__('Scoop.it authorization failed.', 'social-networks-auto-poster-facebook-twitter-g'));
         }
     }
   }    

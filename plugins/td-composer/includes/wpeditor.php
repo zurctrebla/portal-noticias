@@ -30,6 +30,25 @@ require_once (ABSPATH . "wp-admin/includes/screen.php");
 			wp_enqueue_style( 'common' );
 			wp_enqueue_style( 'forms' );
 
+			// This page bypasses the normal wp-admin bootstrap, so 'admin_init'
+			// (which registers the admin color schemes) never fires, and 'wp-admin'
+			// (whose 'wp-base-styles' dependency defines the --wp-admin-theme-color
+			// custom properties, scoped to body.admin-color-{scheme}) is never enqueued.
+			// Without them, forms.css can't render :checked states (e.g. the "Open link
+			// in a new tab" checkbox in the Insert/edit link dialog looks unchecked
+			// even though it works).
+			register_admin_color_schemes();
+			global $_wp_admin_css_colors;
+			$td_admin_color = get_user_option( 'admin_color' );
+			if ( empty( $td_admin_color ) || ! isset( $_wp_admin_css_colors[ $td_admin_color ] ) ) {
+				$td_admin_color = 'modern';
+			}
+			$td_admin_color_scheme = $_wp_admin_css_colors[ $td_admin_color ];
+			if ( ! empty( $td_admin_color_scheme->url ) ) {
+				wp_enqueue_style( 'colors', $td_admin_color_scheme->url, array(), TD_THEME_VERSION );
+			}
+			wp_enqueue_style( 'wp-base-styles' );
+
 			wp_enqueue_style(
                     'td-wp-admin-td-panel-2',
                     TDC_URL_LEGACY_COMMON . '/wp_booster/wp-admin/css/wp-admin.css',
@@ -333,7 +352,7 @@ require_once (ABSPATH . "wp-admin/includes/screen.php");
 		</script>
 
 	</head>
-	<body onload="loadIframe()">
+	<body onload="loadIframe()" class="admin-color-<?php echo esc_attr( $td_admin_color ); ?>">
 
 		<div class="tdc-wpeditor">
 
