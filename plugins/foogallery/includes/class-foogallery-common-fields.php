@@ -24,8 +24,10 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 
 			//add common data options
 			add_filter( 'foogallery_build_container_data_options', array( $this, 'add_caption_data_options' ), 10, 3 );
+			add_filter( 'foogallery_build_container_mobile_data_options', array( $this, 'add_common_mobile_data_options' ), 10, 3 );
 
 			add_filter( 'foogallery_build_container_attributes', array( $this, 'add_common_fields_attributes' ), 10, 2 );
+			add_filter( 'foogallery_template_style_block', array( $this, 'add_common_mobile_css' ), 10, 3 );
 
             //add common fields to the templates that support it
             add_filter( 'foogallery_override_gallery_template_fields', array( $this, 'add_common_fields' ), 10, 2 );
@@ -93,10 +95,10 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
                             if ( !array_key_exists( 'desc', $field ) ) {
                                 $field['desc'] = __( 'Choose which lightbox you want to use. The lightbox will generally only work if you set the thumbnail link to "Full Size Image".', 'foogallery' );
                             }
-                            if ( !array_key_exists( 'section', $field ) ) {
-                                $field['section'] = __( 'Lightbox', 'foogallery' );
-                            }
-                            $field['subsection'] = array( 'lightbox-general' => __( 'General', 'foogallery' ) );
+	                            if ( !array_key_exists( 'section_id', $field ) && ! array_key_exists( 'section', $field ) ) {
+	                                $field['section_id'] = 'lightbox';
+	                            }
+	                            $field['subsection_id'] = 'lightbox-general';
                             $field['default'] = 'foogallery';
 
 							if ( !isset( $field['row_data'] ) ) {
@@ -133,7 +135,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 				$fields[] = array(
 					'id'      => 'theme_custom_help',
 					'desc'    => __( 'If you choose to use the Custom theme, then you will need to provide your own Custom CSS in order to style the gallery to suit your needs.', 'foogallery' ),
-					'section' => __( 'Appearance', 'foogallery' ),
+					'section_id' => 'appearance',
 					'type'    => 'help',
 					'row_data' => array(
 						'data-foogallery-hidden' 				   => true,
@@ -146,7 +148,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'       => 'theme',
 					'title'    => __( 'Theme', 'foogallery' ),
 					'desc'     => __( 'The overall appearance of the items in the gallery, affecting the border, background, font and shadow colors.', 'foogallery' ),
-					'section'  => __( 'Appearance', 'foogallery' ),
+					'section_id' => 'appearance',
 					'type'     => 'radio',
 					'default'  => 'fg-light',
 					'choices'  => array(
@@ -165,7 +167,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'       => 'border_size',
 					'title'    => __( 'Border Size', 'foogallery' ),
 					'desc'     => __( 'The border size applied to each thumbnail', 'foogallery' ),
-					'section'  => __( 'Appearance', 'foogallery' ),
+					'section_id' => 'appearance',
 					'type'     => 'radio',
 					'default'  => 'fg-border-thin',
 					'choices'  => array(
@@ -184,7 +186,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'       => 'rounded_corners',
 					'title'    => __( 'Rounded Corners', 'foogallery' ),
 					'desc'     => __( 'The border radius, or rounded corners applied to each thumbnail', 'foogallery' ),
-					'section'  => __( 'Appearance', 'foogallery' ),
+					'section_id' => 'appearance',
 					'type'     => 'radio',
 					'default'  => '',
 					'choices'  => array(
@@ -204,7 +206,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'       => 'drop_shadow',
 					'title'    => __( 'Drop Shadow', 'foogallery' ),
 					'desc'     => __( 'The outer or drop shadow applied to each thumbnail', 'foogallery' ),
-					'section'  => __( 'Appearance', 'foogallery' ),
+					'section_id' => 'appearance',
 					'type'     => 'radio',
 					'default'  => 'fg-shadow-outline',
 					'choices'  => array(
@@ -224,7 +226,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'       => 'inner_shadow',
 					'title'    => __( 'Inner Shadow', 'foogallery' ),
 					'desc'     => __( 'The inner shadow applied to each thumbnail', 'foogallery' ),
-					'section'  => __( 'Appearance', 'foogallery' ),
+					'section_id' => 'appearance',
 					'type'     => 'radio',
 					'default'  => '',
 					'choices'  => array(
@@ -244,7 +246,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'       => 'loading_icon',
 					'title'    => __( 'Loading Icon', 'foogallery' ),
 					'desc'     => __( 'An animated loading icon can be shown while the thumbnails are busy loading.', 'foogallery' ),
-					'section'  => __( 'Appearance', 'foogallery' ),
+					'section_id' => 'appearance',
 					'default'  => 'fg-loading-default',
 					'type'     => 'htmlicon',
 					'choices'  => apply_filters(
@@ -269,7 +271,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'       => 'loaded_effect',
 					'title'    => __( 'Loaded Effect', 'foogallery' ),
 					'desc'     => __( 'The animation effect used to display the thumbnail, once it has loaded.', 'foogallery' ),
-					'section'  => __( 'Appearance', 'foogallery' ),
+					'section_id' => 'appearance',
 					'default'  => 'fg-loaded-fade-in',
 					'type'     => 'radio',
 					'choices'  => apply_filters(
@@ -300,7 +302,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 				$fields[] = array(
 					'id'       => 'hover_effect_type',
 					'title'    => __( 'Hover Effect Type', 'foogallery' ),
-					'section'  => __( 'Hover Effects', 'foogallery' ),
+					'section_id' => 'hover-effects',
 					'default'  => 'normal',
 					'type'     => 'radio',
 					'choices'  => apply_filters(
@@ -320,6 +322,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 						)
 					),
 					'desc'     => __( 'What type of hover effect do you want to show for your thumbnails?', 'foogallery' ),
+					'mobile'   => true,
 					'row_data' => array(
 						'data-foogallery-change-selector' => 'input:radio',
 						'data-foogallery-value-selector'  => 'input:checked',
@@ -331,7 +334,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 				$fields[] = array(
 					'id'       => 'hover_effect_preset',
 					'title'    => __( 'Preset', 'foogallery' ),
-					'section'  => __( 'Hover Effects', 'foogallery' ),
+					'section_id' => 'hover-effects',
 					'default'  => 'fg-preset fg-brad',
 					'type'     => 'radio',
 					'choices'  => apply_filters(
@@ -354,17 +357,19 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 				$fields[] = array(
 					'id'       => 'hover_effect_preset_size',
 					'title'    => __( 'Preset Size', 'foogallery' ),
-					'section'  => __( 'Hover Effects', 'foogallery' ),
+					'section_id' => 'hover-effects',
 					'default'  => 'fg-preset-small',
 					'type'     => 'radio',
 					'choices'  => apply_filters(
 						'foogallery_gallery_template_common_thumbnail_fields_hover_effect_preset_size_choices', array(
-							'fg-preset-small'  => __( 'Small', 'foogallery' ),
-							'fg-preset-medium' => __( 'Medium', 'foogallery' ),
-							'fg-preset-large'  => __( 'Large', 'foogallery' ),
+							'fg-preset-smallest' => __( 'Smallest', 'foogallery' ),
+							'fg-preset-small'    => __( 'Small', 'foogallery' ),
+							'fg-preset-medium'   => __( 'Medium', 'foogallery' ),
+							'fg-preset-large'    => __( 'Large', 'foogallery' ),
 						)
 					),
-					'desc'     => __( 'Choose an appropriate size for the preset hover effects, based on the size of your thumbs. Choose small for thumbs 150-200 wide, medium for thumbs 200-400 wide, and large for thumbs over 400 wide.', 'foogallery' ),
+					'mobile'   => true,
+					'desc'     => __( 'Choose an appropriate size for the preset hover effects, based on the size of your thumbs. Choose smallest for thumbs under 150 wide, small for thumbs 150-200 wide, medium for thumbs 200-400 wide, and large for thumbs over 400 wide.', 'foogallery' ),
 					'row_data' => array(
 						'data-foogallery-change-selector'          => 'input:radio',
 						'data-foogallery-hidden'                   => true,
@@ -378,10 +383,11 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'       => 'caption_invert_color',
 					'title'    => __( 'Theme', 'foogallery' ),
 					'desc'     => __( 'Choose a color theme that will be used for the hover effect.', 'foogallery' ),
-					'section'  => __( 'Hover Effects', 'foogallery' ),
+					'section_id' => 'hover-effects',
 					'alias'    => 'hover_effect_theme',
 					'type'     => 'radio',
 					'default'  => '',
+					'mobile'   => true,
 					'choices'  => apply_filters( 'foogallery_gallery_template_common_thumbnail_fields_caption_invert_color_choices', array(
 						'' => array(
 							'label'   => __( 'Dark',   'foogallery' ),
@@ -408,9 +414,10 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 				$fields[] = array(
 					'id'       => 'hover_effect_color',
 					'title'    => __( 'Color Effect', 'foogallery' ),
-					'section'  => __( 'Hover Effects', 'foogallery' ),
+					'section_id' => 'hover-effects',
 					'default'  => '',
 					'type'     => 'radio',
+					'mobile'   => true,
 					'choices'  => apply_filters(
 						'foogallery_gallery_template_common_thumbnail_fields_hover_effect_color_choices', array(
 						''                   => __( 'None', 'foogallery' ),
@@ -431,9 +438,10 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 				$fields[] = array(
 					'id'       => 'hover_effect_scale',
 					'title'    => __( 'Scaling Effect', 'foogallery' ),
-					'section'  => __( 'Hover Effects', 'foogallery' ),
+					'section_id' => 'hover-effects',
 					'default'  => '',
 					'type'     => 'radio',
+					'mobile'   => true,
 					'choices'  => apply_filters(
 						'foogallery_gallery_template_common_thumbnail_fields_hover_effect_scale_choices', array(
 							''               => __( 'None', 'foogallery' ),
@@ -455,9 +463,10 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 				$fields[] = array(
 					'id'       => 'hover_effect_transition',
 					'title'    => __( 'Transition', 'foogallery' ),
-					'section'  => __( 'Hover Effects', 'foogallery' ),
+					'section_id' => 'hover-effects',
 					'default'  => 'fg-hover-fade',
 					'type'     => 'radio',
+					'mobile'   => true,
 					'choices'  => apply_filters( 'foogallery_gallery_template_common_thumbnail_fields_hover_effect_transition_choices', array(
 						'fg-hover-instant'     => __( 'Instant', 'foogallery' ),
 						'fg-hover-fade'        => __( 'Fade', 'foogallery' ),
@@ -482,9 +491,10 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'       => 'hover_effect_icon',
 					'title'    => __( 'Icon', 'foogallery' ),
 					'desc'     => __( 'Choose which icon is shown when you hover over a thumbnail', 'foogallery' ),
-					'section'  => __( 'Hover Effects', 'foogallery' ),
+					'section_id' => 'hover-effects',
 					'type'     => 'htmlicon',
 					'default'  => 'fg-hover-zoom',
+					'mobile'   => true,
 					'choices'  => apply_filters( 'foogallery_gallery_template_common_thumbnail_fields_hover_effect_icon_choices', array(
 							''                     => array( 'label' => __( 'None', 'foogallery' ), 'html' => '<div class="foogallery-setting-caption_icon"></div>' ),
 							'fg-hover-zoom'        => array( 'label' => __( 'Zoom', 'foogallery' ), 'html' => '<div class="foogallery-setting-caption_icon fg-hover-zoom"></div>' ),
@@ -516,9 +526,10 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'       => 'hover_effect_icon_size',
 					'title'    => __( 'Icon Size', 'foogallery' ),
 					'desc'     => __( 'Choose the size of the icon that is displayed when you hover over a thumbnail.', 'foogallery' ),
-					'section'  => __( 'Hover Effects', 'foogallery' ),
+					'section_id' => 'hover-effects',
 					'type'     => 'radio',
 					'default'  => '',
+					'mobile'   => true,
 					'choices'  => array(
 							''   => __( 'Default', 'foogallery' ),
 							'48' => __( '1.5x', 'foogallery' ),
@@ -541,10 +552,11 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 				$fields[] = array(
 					'id'       => 'hover_effect_caption_visibility',
 					'title'    => __( 'Caption Visibility', 'foogallery' ),
-					'section'  => __( 'Captions', 'foogallery' ),
+					'section_id' => 'captions',
 					'alias'    => 'caption_visibility',
 					'default'  => 'fg-caption-hover',
 					'type'     => 'radio',
+					'mobile'   => true,
 					'choices'  => apply_filters(
 						'foogallery_gallery_template_common_thumbnail_fields_hover_effect_caption_visibility_choices', array(
 							''                  => __( 'Not shown', 'foogallery' ),
@@ -565,7 +577,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 				$fields[] = array(
 					'id'       => 'caption_visibility_no_hover_effect',
 					'title'    => __( 'Caption Visibility', 'foogallery' ),
-					'section'  => __( 'Captions', 'foogallery' ),
+					'section_id' => 'captions',
 					'default'  => '',
 					'type'     => 'radio',
 					'choices'  => apply_filters(
@@ -588,7 +600,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'       => 'caption_color_no_hover_effect',
 					'title'    => __( 'Caption Theme', 'foogallery' ),
 					'desc'     => __( 'Choose the color theme for the captions.', 'foogallery' ),
-					'section'  => __( 'Captions', 'foogallery' ),
+					'section_id' => 'captions',
 					'type'     => 'radio',
 					'default'  => '',
 					'choices'  => apply_filters( 'foogallery_gallery_template_common_thumbnail_fields_caption_color_no_hover_effect_choices', array(
@@ -618,7 +630,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'       => 'caption_alignment',
 					'title'    => __( 'Caption Alignment', 'foogallery' ),
 					'desc'     => __( 'Change the horizontal alignment of the thumbnail captions', 'foogallery' ),
-					'section'  => __( 'Captions', 'foogallery' ),
+					'section_id' => 'captions',
 					'type'     => 'radio',
 					'default'  => '',
 					'choices'  => array(
@@ -628,6 +640,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 						'fg-c-r' => __( 'Right', 'foogallery' ),
 						'fg-c-j' => __( 'Justify', 'foogallery' ),
 					),
+					'mobile'   => true,
 					'row_data' => array(
 						'data-foogallery-change-selector'       => 'input:radio',
 						'data-foogallery-preview'               => 'shortcode'
@@ -639,19 +652,23 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 				$fields[] = array(
 					'id'       => 'caption_title_source',
 					'title'    => __( 'Title', 'foogallery' ),
-					'desc'     => __( 'Decide where caption titles are pulled from. By default, what is saved under general settings will be used, but it can be overridden per gallery', 'foogallery' ),
-					'section'  => __( 'Captions', 'foogallery' ),
+					'desc'     => __( 'Decide where caption titles are pulled from. By default, what is saved under general settings will be used, but it can be overridden per gallery', 'foogallery' ) . ' ' . __( 'Mobile overrides change thumbnail captions only. Lightbox captions use the desktop settings.', 'foogallery' ),
+					'section_id' => 'captions',
 					'type'     => 'radio',
 					'class'    => 'foogallery-radios-stacked',
 					'default'  => '',
 					'choices'  => array(
 						'none'    => __( 'None', 'foogallery' ),
 						/* translators: %s: Value inserted at runtime. */
-						''        => sprintf( __( 'Default (as per %s)', 'foogallery' ), $settings_link ),
+						''        => sprintf( __( 'Global default (as per %s)', 'foogallery' ), $settings_link ),
 						'title'   => foogallery_get_attachment_field_friendly_name( 'title' ),
 						'caption' => foogallery_get_attachment_field_friendly_name( 'caption' ),
 						'alt'     => foogallery_get_attachment_field_friendly_name( 'alt' ),
 						'desc'    => foogallery_get_attachment_field_friendly_name( 'desc' ),
+					),
+					'mobile'   => array(
+						'default' => '',
+						'inherit_choice' => __( 'Same as desktop', 'foogallery' ),
 					),
 					'row_data' => array(
 						'data-foogallery-change-selector'       => 'input:radio',
@@ -662,19 +679,23 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 				$fields[] = array(
 					'id'       => 'caption_desc_source',
 					'title'    => __( 'Description', 'foogallery' ),
-					'desc'     => __( 'Decide where captions descriptions are pulled from. By default, the general settings are used, but it can be overridden per gallery', 'foogallery' ),
-					'section'  => __( 'Captions', 'foogallery' ),
+					'desc'     => __( 'Decide where captions descriptions are pulled from. By default, the general settings are used, but it can be overridden per gallery', 'foogallery' ) . ' ' . __( 'Mobile overrides change thumbnail captions only. Lightbox captions use the desktop settings.', 'foogallery' ),
+					'section_id' => 'captions',
 					'type'     => 'radio',
 					'class'    => 'foogallery-radios-stacked',
 					'default'  => '',
 					'choices'  => array(
 						'none'    => __( 'None', 'foogallery' ),
 						/* translators: %s: Value inserted at runtime. */
-						''        => sprintf( __( 'Default (as per %s)', 'foogallery' ), $settings_link ),
+						''        => sprintf( __( 'Global default (as per %s)', 'foogallery' ), $settings_link ),
 						'title'   => foogallery_get_attachment_field_friendly_name( 'title' ),
 						'caption' => foogallery_get_attachment_field_friendly_name( 'caption' ),
 						'alt'     => foogallery_get_attachment_field_friendly_name( 'alt' ),
 						'desc'    => foogallery_get_attachment_field_friendly_name( 'desc' ),
+					),
+					'mobile'   => array(
+						'default' => '',
+						'inherit_choice' => __( 'Same as desktop', 'foogallery' ),
 					),
 					'row_data' => array(
 						'data-foogallery-change-selector'       => 'input:radio',
@@ -686,7 +707,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'      => 'captions_limit_length',
 					'title'   => __( 'Limit Caption Length', 'foogallery' ),
 					'desc'    => __( 'You can limit the length of caption title and descriptions in the thumbnails. This will NOT limit the length of captions from within the lightbox.', 'foogallery' ),
-					'section' => __( 'Captions', 'foogallery' ),
+					'section_id' => 'captions',
 					'default' => 'clamp',
 					'type'    => 'radio',
 					'class'    => 'foogallery-radios-stacked',
@@ -712,7 +733,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'      => 'caption_title_length',
 					'title'   => __( 'Max Title Length', 'foogallery' ),
 					'desc'	  => __( 'A max length of zero will not apply a limit.', 'foogallery' ),
-					'section' => __( 'Captions', 'foogallery' ),
+					'section_id' => 'captions',
 					'type'    => 'number',
 					'class'   => 'small-text',
 					'default' => 0,
@@ -731,7 +752,7 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'      => 'caption_desc_length',
 					'title'   => __( 'Max Desc Length', 'foogallery' ),
 					'desc'	  => __( 'A max length of zero will not apply a limit.', 'foogallery' ),
-					'section' => __( 'Captions', 'foogallery' ),
+					'section_id' => 'captions',
 					'type'    => 'number',
 					'class'   => 'small-text',
 					'default' => 0,
@@ -750,12 +771,13 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'      => 'caption_title_clamp',
 					'title'   => __( 'Max Title Lines', 'foogallery' ),
 					'desc'	  => __( 'A max number of lines of text to display. A value of zero will not apply a limit.', 'foogallery' ),
-					'section' => __( 'Captions', 'foogallery' ),
+					'section_id' => 'captions',
 					'type'    => 'number',
 					'class'   => 'small-text',
 					'default' => 1,
 					'step'    => '1',
 					'min'     => '0',
+					'mobile'  => true,
 					'row_data' => array(
 						'data-foogallery-change-selector'       => 'input',
 						'data-foogallery-hidden'                => true,
@@ -769,12 +791,13 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 					'id'      => 'caption_desc_clamp',
 					'title'   => __( 'Max Desc Lines', 'foogallery' ),
 					'desc'	  => __( 'A max number of lines of text to display. A value of zero will not apply a limit.', 'foogallery' ),
-					'section' => __( 'Captions', 'foogallery' ),
+					'section_id' => 'captions',
 					'type'    => 'number',
 					'class'   => 'small-text',
 					'default' => 2,
 					'step'    => '1',
 					'min'     => '0',
+					'mobile'  => true,
 					'row_data' => array(
 						'data-foogallery-change-selector'       => 'input',
 						'data-foogallery-hidden'                => true,
@@ -787,6 +810,119 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 
 			}
 			return $fields;
+		}
+
+		/**
+		 * Return the effective common fields indexed by setting ID.
+		 *
+		 * @return array
+		 */
+		function get_common_fields_by_id() {
+			global $current_foogallery_template;
+
+			$fields_by_id = array();
+			foreach ( foogallery_get_fields_for_template( $current_foogallery_template ) as $field ) {
+				if ( is_array( $field ) && ! empty( $field['id'] ) ) {
+					$fields_by_id[ $field['id'] ] = $field;
+				}
+			}
+
+			return $fields_by_id;
+		}
+
+		/**
+		 * Resolve a common field's effective choices.
+		 *
+		 * @param string $field_id Field ID.
+		 * @return array
+		 */
+		function get_common_field_choices( $field_id ) {
+			$fields_by_id = $this->get_common_fields_by_id();
+
+			return isset( $fields_by_id[ $field_id ]['choices'] ) && is_array( $fields_by_id[ $field_id ]['choices'] ) ? $fields_by_id[ $field_id ]['choices'] : array();
+		}
+
+		/**
+		 * Resolve the effective mobile hover type from filtered choices.
+		 *
+		 * @param mixed $desktop_type Desktop hover type.
+		 * @return string
+		 */
+		function get_common_mobile_hover_type( $desktop_type ) {
+			$desktop_type = is_scalar( $desktop_type ) ? (string) $desktop_type : '';
+			$type_choices = $this->get_common_field_choices( 'hover_effect_type' );
+			$valid_types  = ! empty( $type_choices ) ? array_keys( $type_choices ) : array( 'none', 'normal', 'preset' );
+			$mobile_type  = foogallery_gallery_template_mobile_setting( 'mobile_hover_effect_type', null );
+
+			return is_scalar( $mobile_type ) && in_array( (string) $mobile_type, $valid_types, true ) ? (string) $mobile_type : $desktop_type;
+		}
+
+		/**
+		 * Resolve the class tokens used by a common hover branch.
+		 *
+		 * @param string $type   Hover branch.
+		 * @param bool   $mobile Whether to read the responsive setting variants.
+		 * @return array
+		 */
+		function get_common_hover_classes( $type, $mobile = false ) {
+			$branch_settings = array(
+				'normal' => array(
+					'caption_invert_color'            => array( '', 'mobile_caption_invert_color' ),
+					'hover_effect_color'              => array( '', 'mobile_hover_effect_color' ),
+					'hover_effect_scale'              => array( '', 'mobile_hover_effect_scale' ),
+					'hover_effect_caption_visibility' => array( 'fg-caption-hover', 'mobile_hover_effect_caption_visibility' ),
+					'hover_effect_transition'         => array( 'fg-hover-fade', 'mobile_hover_effect_transition' ),
+					'hover_effect_icon'               => array( 'fg-hover-zoom', 'mobile_hover_effect_icon' ),
+				),
+				'none' => array(
+					'caption_visibility_no_hover_effect' => array( '', '' ),
+					'caption_color_no_hover_effect'      => array( '', '' ),
+				),
+				'preset' => array(
+					'hover_effect_preset'      => array( 'fg-preset fg-brad', 'mobile_hover_effect_preset' ),
+					'hover_effect_preset_size' => array( 'fg-preset-small', 'mobile_hover_effect_preset_size' ),
+				),
+			);
+			if ( ! is_scalar( $type ) || ! isset( $branch_settings[ (string) $type ] ) ) {
+				return array();
+			}
+			$type = (string) $type;
+
+			$choices_by_id = array();
+			$fields_by_id  = array();
+			if ( $mobile ) {
+				$fields_by_id = $this->get_common_fields_by_id();
+				foreach ( $fields_by_id as $field_id => $field ) {
+					if ( isset( $field['choices'] ) && is_array( $field['choices'] ) ) {
+						$choices_by_id[ $field_id ] = $field['choices'];
+					}
+				}
+			}
+
+			$classes = array();
+			foreach ( $branch_settings[ $type ] as $setting_id => $setting ) {
+				$desktop_value = foogallery_gallery_template_setting( $setting_id, $setting[0] );
+				$value         = $desktop_value;
+				$mobile_id     = $setting[1];
+				if ( $mobile && '' !== $mobile_id ) {
+					$inherit_value = '__foogallery_mobile_inherit__';
+					$mobile_value  = foogallery_gallery_template_mobile_setting( $mobile_id, $inherit_value );
+					$field_id = str_replace( 'mobile_', '', $mobile_id );
+					if ( $inherit_value !== $mobile_value && null !== $mobile_value && ( ! isset( $choices_by_id[ $field_id ] ) || ( is_scalar( $mobile_value ) && array_key_exists( (string) $mobile_value, $choices_by_id[ $field_id ] ) ) ) ) {
+						$value = $mobile_value;
+					}
+				}
+
+				if ( ! is_scalar( $value ) || '' === trim( (string) $value ) ) {
+					continue;
+				}
+				$tokens = preg_split( '/\s+/', trim( (string) $value ) );
+				if ( is_array( $tokens ) ) {
+					$classes = array_merge( $classes, $tokens );
+				}
+			}
+
+			return array_values( array_unique( $classes ) );
 		}
 
 		/**
@@ -816,28 +952,9 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 				$classes[] = foogallery_gallery_template_setting( 'loaded_effect', 'fg-loaded-fade-in' );
 
 				$hover_effect_type = foogallery_gallery_template_setting( 'hover_effect_type', '' );
-
-				if ( 'normal' === $hover_effect_type ) {
-					$classes[] = foogallery_gallery_template_setting( 'hover_effect_color', '' );
-					$classes[] = foogallery_gallery_template_setting( 'hover_effect_scale', '' );
-					$classes[] = foogallery_gallery_template_setting( 'hover_effect_caption_visibility', 'fg-caption-hover' );
-					$classes[] = foogallery_gallery_template_setting( 'hover_effect_transition', 'fg-hover-fade' );
-					$classes[] = foogallery_gallery_template_setting( 'hover_effect_icon', 'fg-hover-zoom' );
-					$classes[] = foogallery_gallery_template_setting( 'caption_invert_color', '' );
-				} else if ( 'none' === $hover_effect_type ) {
-					$classes[] = foogallery_gallery_template_setting( 'caption_visibility_no_hover_effect', '' );
-					$classes[] = foogallery_gallery_template_setting( 'caption_color_no_hover_effect', '' );
-				} else if ( 'preset' === $hover_effect_type ) {
-					$classes[] = foogallery_gallery_template_setting( 'hover_effect_preset', 'fg-preset fg-brad' );
-					$classes[] = foogallery_gallery_template_setting( 'hover_effect_preset_size', 'fg-preset-small' );
-				}
+				$classes           = array_merge( $classes, $this->get_common_hover_classes( $hover_effect_type ) );
 
 				$classes[] = foogallery_gallery_template_setting( 'caption_alignment', '' );
-
-				if ( 'preset' === foogallery_gallery_template_setting( 'hover_effect_type', '' ) ) {
-					$classes[] = foogallery_gallery_template_setting( 'hover_effect_preset', 'fg-preset fg-brad' );
-					$classes[] = foogallery_gallery_template_setting( 'hover_effect_preset_size', 'fg-preset-small' );
-				}
 			}
 
 			return $classes;
@@ -875,6 +992,60 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 			return $options;
 		}
 
+		/**
+		 * Add mobile class replacements for common fields backed by container classes.
+		 *
+		 * @param array      $options    Mobile client options.
+		 * @param FooGallery $_gallery   Gallery instance (unused).
+		 * @param array      $_attributes Gallery container attributes (unused).
+		 *
+		 * @return array
+		 */
+		function add_common_mobile_data_options( $options, $_gallery, $_attributes ) {
+			if ( ! foogallery_current_gallery_check_template_has_supported_feature( 'common_fields_support' ) ) {
+				return $options;
+			}
+
+			// Keep the mobile caption mode at the top level so it does not get
+			// shallow-merged into the desktop item options.
+			if ( ! empty( foogallery_get_mobile_caption_sources() ) ) {
+				$options['mobileCaptions'] = true;
+			}
+
+			$desktop_type = foogallery_gallery_template_setting( 'hover_effect_type', '' );
+			$desktop_type = is_scalar( $desktop_type ) ? (string) $desktop_type : '';
+			$mobile_type  = $this->get_common_mobile_hover_type( $desktop_type );
+
+			$class_tokens = function ( $value ) {
+				if ( ! is_scalar( $value ) || '' === trim( (string) $value ) ) {
+					return array();
+				}
+				$tokens = preg_split( '/\s+/', trim( (string) $value ) );
+				return is_array( $tokens ) ? $tokens : array();
+			};
+
+			$remove_classes = $this->get_common_hover_classes( $desktop_type );
+			$add_classes    = $this->get_common_hover_classes( (string) $mobile_type, true );
+			if ( empty( array_diff( $remove_classes, $add_classes ) ) && empty( array_diff( $add_classes, $remove_classes ) ) ) {
+				return $options;
+			}
+			$desktop_classes = $remove_classes;
+			$remove_classes  = array_diff( $desktop_classes, $add_classes );
+			$add_classes     = array_diff( $add_classes, $desktop_classes );
+			if ( 'preset' === $desktop_type || 'preset' === $mobile_type ) {
+				$preset_sizes   = array( 'fg-preset-smallest', 'fg-preset-small', 'fg-preset-medium', 'fg-preset-large' );
+				$remove_classes = array_merge( $preset_sizes, $remove_classes );
+				$add_classes    = array_merge( $add_classes, array_intersect( $this->get_common_hover_classes( $mobile_type, true ), $preset_sizes ) );
+			}
+
+			$existing_responsive = isset( $options['responsiveClasses'] ) && is_array( $options['responsiveClasses'] ) ? $options['responsiveClasses'] : array();
+			$remove_classes       = array_values( array_unique( array_merge( $remove_classes, $class_tokens( $existing_responsive['remove'] ?? '' ) ) ) );
+			$add_classes          = array_values( array_unique( array_merge( $add_classes, $class_tokens( $existing_responsive['add'] ?? '' ) ) ) );
+			$options['responsiveClasses'] = array( 'remove' => implode( ' ', $remove_classes ), 'add' => implode( ' ', $add_classes ) );
+
+			return $options;
+		}
+
 		function add_common_fields_attributes($attributes, $gallery) {
 			//check the template supports common fields
 			if ( foogallery_current_gallery_check_template_has_supported_feature('common_fields_support' ) ) {
@@ -895,6 +1066,90 @@ if ( ! class_exists( 'FooGallery_Common_Fields' ) ) {
 			}
 
 			return $attributes;
+		}
+
+		/**
+		 * Add responsive CSS for mobile-friendly common fields.
+		 *
+		 * @param array      $css      CSS rules.
+		 * @param FooGallery $gallery  Gallery instance.
+		 * @param string     $_template Template slug (unused).
+		 *
+		 * @return array
+		 */
+		function add_common_mobile_css( $css, $gallery, $_template ) {
+			if ( ! foogallery_current_gallery_check_template_has_supported_feature( 'common_fields_support' ) ) {
+				return $css;
+			}
+
+			$id = $gallery->container_id();
+
+			if ( 'clamp' === foogallery_gallery_template_setting( 'captions_limit_length', 'clamp' ) ) {
+				$mobile_title_clamp = foogallery_gallery_template_mobile_setting( 'mobile_caption_title_clamp', null );
+				if ( is_scalar( $mobile_title_clamp ) && is_numeric( trim( (string) $mobile_title_clamp ) ) ) {
+					$mobile_title_clamp = max( 0, intval( $mobile_title_clamp ) );
+					$mobile_rule        = '#' . $id . ' { --fg-title-line-clamp: ' . $mobile_title_clamp . ' !important; }';
+					$css[]              = '@media only screen and (max-width: ' . foogallery_get_mobile_size() . 'px) { ' . $mobile_rule . ' }';
+					$css[]              = '.foogallery-preview-wrapper.viewport-mobile ' . $mobile_rule;
+				}
+
+				$mobile_desc_clamp = foogallery_gallery_template_mobile_setting( 'mobile_caption_desc_clamp', null );
+				if ( is_scalar( $mobile_desc_clamp ) && is_numeric( trim( (string) $mobile_desc_clamp ) ) ) {
+					$mobile_desc_clamp = max( 0, intval( $mobile_desc_clamp ) );
+					$mobile_rule       = '#' . $id . ' { --fg-description-line-clamp: ' . $mobile_desc_clamp . ' !important; }';
+					$css[]             = '@media only screen and (max-width: ' . foogallery_get_mobile_size() . 'px) { ' . $mobile_rule . ' }';
+					$css[]             = '.foogallery-preview-wrapper.viewport-mobile ' . $mobile_rule;
+				}
+			}
+
+			$desktop_hover_type = foogallery_gallery_template_setting( 'hover_effect_type', '' );
+			$mobile_hover_type  = $this->get_common_mobile_hover_type( $desktop_hover_type );
+			$desktop_icon_size  = foogallery_gallery_template_setting( 'hover_effect_icon_size', '0' );
+			$desktop_icon_size  = is_scalar( $desktop_icon_size ) ? $desktop_icon_size : '0';
+			$common_fields      = $this->get_common_fields_by_id();
+			$icon_choices       = $this->get_common_field_choices( 'hover_effect_icon_size' );
+			$inherit_value      = '__foogallery_mobile_inherit__';
+			$mobile_icon_size   = foogallery_gallery_template_mobile_setting( 'mobile_hover_effect_icon_size', $inherit_value );
+			if ( $inherit_value === $mobile_icon_size || null === $mobile_icon_size || ! is_scalar( $mobile_icon_size ) || ( ! empty( $icon_choices ) && ! array_key_exists( (string) $mobile_icon_size, $icon_choices ) ) ) {
+				$mobile_icon_size = $desktop_icon_size;
+			}
+			if ( isset( $common_fields['hover_effect_icon_size'] ) && 'normal' === (string) $mobile_hover_type && is_scalar( $mobile_icon_size ) && trim( (string) $mobile_icon_size ) !== trim( (string) $desktop_icon_size ) ) {
+				$mobile_icon_size = trim( (string) $mobile_icon_size );
+				if ( '' === $mobile_icon_size && is_numeric( $desktop_icon_size ) && intval( $desktop_icon_size ) > 0 ) {
+					$mobile_icon_size = '32';
+				}
+				if ( is_numeric( $mobile_icon_size ) && intval( $mobile_icon_size ) > 0 ) {
+					$mobile_icon_size = max( 1, min( 96, intval( $mobile_icon_size ) ) );
+					$mobile_rule      = '#' . $id . ' { --fg-icon-size: ' . $mobile_icon_size . 'px !important; }';
+					$css[]            = '@media only screen and (max-width: ' . foogallery_get_mobile_size() . 'px) { ' . $mobile_rule . ' }';
+					$css[]            = '.foogallery-preview-wrapper.viewport-mobile ' . $mobile_rule;
+				}
+			}
+
+			$mobile_alignment = foogallery_gallery_template_mobile_setting( 'mobile_caption_alignment', null );
+			$alignments       = array(
+				''       => array( 'center', 'center', 'initial' ),
+				'fg-c-l' => array( 'left', 'flex-start', 'initial' ),
+				'fg-c-c' => array( 'center', 'center', 'initial' ),
+				'fg-c-r' => array( 'right', 'flex-end', 'initial' ),
+				'fg-c-j' => array( 'justify', 'stretch', '1' ),
+			);
+			if ( is_scalar( $mobile_alignment ) && array_key_exists( (string) $mobile_alignment, $alignments ) ) {
+				$alignment      = $alignments[ (string) $mobile_alignment ];
+				$mobile_rules   = array(
+					'#' . $id . ' .fg-caption { text-align: ' . $alignment[0] . '; }',
+					'#' . $id . ' .fg-caption-buttons { justify-content: ' . $alignment[1] . '; }',
+					'#' . $id . ' .fg-caption-buttons > a { flex: ' . $alignment[2] . '; }',
+				);
+				$preview_rules  = array();
+				foreach ( $mobile_rules as $mobile_rule ) {
+					$preview_rules[] = '.foogallery-preview-wrapper.viewport-mobile ' . $mobile_rule;
+				}
+				$css[] = '@media only screen and (max-width: ' . foogallery_get_mobile_size() . 'px) { ' . implode( ' ', $mobile_rules ) . ' }';
+				$css[] = implode( ' ', $preview_rules );
+			}
+
+			return $css;
 		}
 
 		/**

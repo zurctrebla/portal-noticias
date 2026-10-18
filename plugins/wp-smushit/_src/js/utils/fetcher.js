@@ -190,11 +190,13 @@ function SmushFetcher() {
 			/**
 			 * Dismiss Notice.
 			 *
-			 * @param {string} dismissId Notification id.
+			 * @param {string}  dismissId    Notification id.
+			 * @param {boolean} useUserMeta Store the dismissal for the current user.
 			 */
-			dismissNotice: ( dismissId ) => {
+			dismissNotice: ( dismissId, useUserMeta = false ) => {
 				return request( 'smush_dismiss_notice', {
-					key: dismissId
+					key:       dismissId,
+					user_meta: useUserMeta ? 1 : 0,
 				} );
 			},
 
@@ -255,9 +257,6 @@ function SmushFetcher() {
 		},
 
 		webp: {
-			switchMethod: ( method ) => {
-				return request( 'webp_switch_method', { method } );
-			},
 			recheckStatus: () => {
 				return request( 'smush_webp_get_status' );
 			},

@@ -341,7 +341,7 @@ if ( ! class_exists( 'FooGallery_Import_Export' ) ) {
 					FOOGALLERY_META_SORT       => isset( $gallery['sorting'] ) ? $gallery['sorting'] : array(),
 					FOOGALLERY_META_DATASOURCE => $datasource_name,
 					FOOGALLERY_META_RETINA     => isset( $gallery['retina'] ) ? $gallery['retina'] : '',
-					FOOGALLERY_META_CUSTOM_CSS => isset( $gallery['custom_css'] ) ? $gallery['custom_css'] : '',
+					FOOGALLERY_META_CUSTOM_CSS => isset( $gallery['custom_css'] ) ? foogallery_sanitize_full( $gallery['custom_css'] ) : '',
 				),
 			);
 
@@ -369,6 +369,10 @@ if ( ! class_exists( 'FooGallery_Import_Export' ) ) {
 					/* translators: 1: Gallery name, 2: Error message. */
 					'message'  => sprintf( __( 'Error creating gallery "%1$s": %2$s', 'foogallery' ), $name, $new_gallery_id->get_error_message() ),
 				);
+			}
+
+			if ( $new_gallery_id > 0 ) {
+				do_action( 'foogallery_import_succeeded' );
 			}
 
 			return array(
@@ -483,9 +487,16 @@ if ( ! class_exists( 'FooGallery_Import_Export' ) ) {
 					), 403 );
 				}
 
-				if ( isset( $_POST['galleries'] ) ) {
-					$galleries = array_map( 'sanitize_text_field', wp_unslash( $_POST['galleries'] ) );
-					echo foogallery_generate_export_json( $galleries ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON output
+				if ( isset( $_POST['galleries'] ) && is_array( $_POST['galleries'] ) ) {
+					$galleries = array_filter( array_map( 'sanitize_text_field', wp_unslash( $_POST['galleries'] ) ), function ( $id ) {
+						return FOOGALLERY_CPT_GALLERY === get_post_type( $id );
+					} );
+					$json = foogallery_generate_export_json( $galleries );
+					$exported = json_decode( $json, true );
+					if ( is_array( $exported ) && ! empty( $exported ) ) {
+						do_action( 'foogallery_export_succeeded' );
+					}
+					echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON output
 				}
 			}
 			wp_die( '', '', array( 'response' => null ) );

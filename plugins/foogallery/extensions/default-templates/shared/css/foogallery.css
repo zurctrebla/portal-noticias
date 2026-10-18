@@ -1540,6 +1540,13 @@
 }
 
 /* Preset Sizes */
+.fg-preset.fg-preset-smallest .fg-caption-title {
+	font-size: 12px;
+}
+.fg-preset.fg-preset-smallest .fg-caption-desc {
+	font-size: 10px;
+}
+
 .fg-preset.fg-preset-small .fg-caption-title {
 	font-size: 16px;
 }
@@ -1560,6 +1567,7 @@
 .fg-preset.fg-preset-large .fg-caption-desc {
 	font-size: 14px;
 }
+
 
 .foogallery.fg-preset.fg-brad .fg-caption {
     padding: 15px;
@@ -1616,6 +1624,26 @@
     padding: 0 10px 10px;
 }
 
+/* Preset Sizes */
+.foogallery.fg-preset.fg-preset-smallest.fg-brad .fg-caption {
+	padding: 5px;
+}
+.foogallery.fg-preset.fg-preset-smallest.fg-brad .fg-caption-inner {
+	top: 5px;
+	right: 5px;
+	bottom: 5px;
+	left: 5px;
+	width: calc(100% - 10px);
+	height: calc(100% - 10px);
+}
+.foogallery.fg-preset.fg-preset-smallest.fg-brad .fg-caption-title,
+.foogallery.fg-preset.fg-preset-smallest.fg-brad .fg-caption-desc {
+	padding: 5px;
+}
+.foogallery.fg-preset.fg-preset-smallest.fg-brad .fg-caption-buttons {
+	padding: 0 5px 5px;
+}
+
 /* Text Align */
 .foogallery.fg-preset.fg-brad.fg-c-l .fg-caption-inner {
     align-items: flex-start;
@@ -1623,6 +1651,7 @@
 .foogallery.fg-preset.fg-brad.fg-c-r .fg-caption-inner {
     align-items: flex-end;
 }
+
 /* Transitions */
 .foogallery.fg-caption-hover.fg-hover-instant .fg-loaded .fg-caption,
 .foogallery.fg-caption-hover.fg-hover-fade .fg-loaded .fg-caption,
@@ -4452,6 +4481,8 @@ body.rtl :is(.fg-media-caption-exif-partial,.fg-media-caption-exif-full,.fg-pane
 .fg-masonry .fg-column-width,
 .fg-masonry .fg-gutter-width {
 	position: absolute;
+	top: 0;
+	left: 0;
 	height: 0;
 	visibility: hidden;
 	opacity: 0;
@@ -5204,9 +5235,6 @@ body.rtl :is(.fg-media-caption-exif-partial,.fg-media-caption-exif-full,.fg-pane
 .foogallery.fg-preset.fg-polaroid .fg-caption-title {
 	text-align: center;
 }
-.foogallery.fg-preset.fg-polaroid .fg-caption-desc {
-	display: none;
-}
 
 /* Themes */
 .foogallery.fg-preset.fg-polaroid .fg-caption-title,
@@ -5303,6 +5331,11 @@ body.rtl :is(.fg-media-caption-exif-partial,.fg-media-caption-exif-full,.fg-pane
 }
 .fg-image-viewer .fiv-inner .fiv-inner-container .fg-item:first-of-type {
 	position: relative;
+}
+/* Only the first item occupies the visible frame while the gallery initializes. */
+.fg-image-viewer .fiv-inner .fiv-inner-container .fg-item:not(:first-of-type) .fg-loader {
+	visibility: hidden;
+	opacity: 0;
 }
 .fg-image-viewer .fiv-inner .fiv-inner-container .fg-item .fg-thumb img {
 	display: block;
@@ -5684,6 +5717,27 @@ body.rtl :is(.fg-media-caption-exif-partial,.fg-media-caption-exif-full,.fg-pane
 .fg-image-viewer.fg-overlay-controls .fiv-inner .fiv-ctrls .fiv-next {
     right: 20px;
 }
+
+/*
+ * Spotlight uses inline SVG arrows. Reset the complete icon layout so theme
+ * rules and the legacy image-viewer control padding cannot offset the SVG.
+ */
+.foogallery.fg-spotlight .fiv-inner .fiv-ctrls .fiv-prev,
+.foogallery.fg-spotlight .fiv-inner .fiv-ctrls .fiv-next {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 0;
+}
+.foogallery.fg-spotlight .fiv-inner .fiv-ctrls .fiv-prev > svg,
+.foogallery.fg-spotlight .fiv-inner .fiv-ctrls .fiv-next > svg {
+    display: block;
+    flex: none;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
 .fg-image-viewer.fg-overlay-controls .fiv-inner:hover .fiv-ctrls .fiv-prev,
 .fg-image-viewer.fg-overlay-controls .fiv-inner:hover .fiv-ctrls .fiv-next {
     opacity: 0.6;
@@ -5785,6 +5839,7 @@ body.rtl :is(.fg-media-caption-exif-partial,.fg-media-caption-exif-full,.fg-pane
 .fg-image-viewer.fg-overlay-controls .fiv-inner .fg-paging-container .fg-dots:is(:hover,:focus-within) {
     opacity: 1;
 }
+
 .foogallery.fg-thumbnail,
 .foogallery.fg-thumbnail.fg-center {
 	text-align: center;

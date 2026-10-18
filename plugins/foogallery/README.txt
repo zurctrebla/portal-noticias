@@ -1,33 +1,32 @@
-=== Gallery : FooGallery ===
+=== FooGallery Photo Gallery : Image, Video & Masonry Galleries ===
 Contributors: fooplugins, bradvin, steveush
 Donate link: https://fooplugins.com
-Tags: gallery, image-gallery, photo-gallery, responsive-gallery, wordpress-gallery-plugin
-Requires at least: 5.3
-Requires PHP: 7.0
+Tags: gallery plugin, photo gallery, image gallery, masonry gallery, wordpress gallery plugin
+Requires at least: 6.8
+Requires PHP: 7.2
 Tested up to: 7.1
-Stable tag: 3.2.6
+Stable tag: 3.3.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-FooGallery is a fast, responsive photo gallery and image gallery plugin with 7 gallery layouts, built-in lightbox, albums, and SEO optimization.
+Create responsive photo, image and masonry galleries in WordPress with FooGallery, plus carousel, lightbox, albums, SEO and video gallery support.
 
 == Description ==
 
-= Photo & Image Gallery =
+= WordPress Gallery Plugin for Photo, Image & Masonry Galleries =
 
-FooGallery makes it easy to create stunning photo and image galleries using drag and drop in minutes. It’s responsive, retina-ready, SEO-friendly, and optimized for performance. With beautiful gallery layouts, live gallery previews, a built-in lightbox, and deep customization options, FooGallery is a complete gallery solution for modern WordPress websites.
-
+FooGallery helps you create fast, responsive WordPress photo galleries, image galleries, masonry galleries, portfolio galleries, albums, and lightbox galleries using a drag-and-drop gallery builder. It is built for site owners, photographers, designers, bloggers, and agencies who need attractive galleries without custom code.
 https://www.youtube.com/watch?v=WNM6b1HUdog
+
+[FooGallery Home](https://fooplugins.com/foogallery-wordpress-gallery-plugin/)
+
+[Live Gallery Demos](https://fooplugins.com/foogallery-wordpress-gallery-plugin/demos/)
+
+Design galleries with live previews, a visual layout selector, mobile controls, the WordPress block editor, and shortcodes. FooGallery includes seven free gallery layouts including Responsive, Image Viewer, Masonry, Portfolio, Justified, Single Thumbnail, and Carousel. FooGallery Pro adds video galleries, filtering, dynamic galleries, advanced pagination, WooCommerce selling tools, watermarking, mobile settings, and image protection.
 
 [Launch Your Own FooGallery Demo (Backend included)](https://app.instawp.io/launch?t=foogallery-free&d=v2)
 
-FooGallery gives you live previews as you design your galleries, includes a visual gallery layout selector, and integrates seamlessly with the WordPress block editor and shortcodes. It’s developer-friendly, performance-focused, and fully extendable.
-
-[Visit the FooGallery Homepage](https://fooplugins.com/foogallery-wordpress-gallery-plugin/)
-
-[All FooGallery Demos](https://fooplugins.com/foogallery-wordpress-gallery-plugin/demos/)
-
-= Key Features =
+= Photo Gallery, Image Gallery, Masonry Gallery and Lightbox Features =
 
 *	7 Beautiful Free Gallery layouts:
 	*	Responsive Gallery - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/responsive-image-gallery/)
@@ -62,6 +61,32 @@ FooGallery gives you live previews as you design your galleries, includes a visu
 *	Multisite Support
 *	Password protected image galleries
 
+= Create a Masonry Gallery =
+
+FooGallery Free includes the Masonry Gallery layout for arranging portrait and landscape images together in a responsive, staggered grid without cropping them to one shape. Choose the thumbnail width and spacing to suit your photos. [View the Masonry Gallery demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/masonry-gallery/).
+
+= Create a Video Gallery =
+
+FooGallery PRO Expert and PRO Commerce let you mix images and videos in the same gallery. Import videos from YouTube, YouTube Shorts, Vimeo, or use self-hosted videos from your Media Library. [View video gallery demos](https://fooplugins.com/foogallery-wordpress-gallery-plugin/video-gallery/).
+
+= Add Image Watermarking and Protection =
+
+FooGallery PRO Commerce includes image watermarking and per-gallery right-click protection. Add built-in repeating watermarks or your own custom watermark image to help identify and protect gallery images. [View the watermarking demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/photo-watermark/).
+
+= Build WooCommerce Galleries and Sell Images =
+
+FooGallery PRO Commerce connects FooGallery galleries with WooCommerce. Build galleries from WooCommerce products, link gallery images to individual products, or use one master product with variations for every image in a gallery, including add-to-cart and purchased-image download workflows. [Explore the WooCommerce integration](https://fooplugins.com/foogallery-wordpress-gallery-plugin/woocommerce-integration/).
+
+= Media Audit: Find Image Issues Before Your Visitors Do =
+
+As your image library grows, it becomes harder to spot missing files, large source images, and accessibility issues one gallery at a time. FooGallery's built-in Media Audit brings these checks into one report so you can see what needs attention and decide what to fix first.
+
+Open FooGallery > Media Audit to scan your galleries and media library. The scan runs in the background and shows progress as it works. Results include practical guidance and links to affected images and galleries, helping you investigate issues without searching through your library manually.
+
+Use Media Audit to identify missing image files, review large source images that take up storage, and find images whose alternative text may need attention. Each report shows what was checked and any limitations, so incomplete checks are clear. You can download the report and run another scan after making improvements.
+
+It is enabled by default and can be turned off for the whole plugin from FooGallery > Features.
+
 = PRO Features =
 
 FooGallery PRO adds professional-level features and integrations for photographers, agencies, and eCommerce users.
@@ -73,12 +98,14 @@ Our PRO Starter plan is our most affordable plan and includes features that take
 [View PRO Starter Details](https://fooplugins.com/foogallery-wordpress-gallery-plugin/pro-starter) 
 
 *   4 additional gallery layouts:
-    *   Polaroid - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/polaroid-gallery/)
-    *   Grid - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/grid-gallery/)
+    *   Polaroid Gallery - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/polaroid-gallery/)
+    *   Grid Gallery - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/grid-gallery/)
     *	Slider - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/slider-gallery/)
-    *   Spotlight - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/spotlight-gallery/)
+    *   Spotlight Gallery - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/spotlight-gallery/)
 *   11 hover effect presets - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/hover-presets/)
 *   12 CSS thumbnail effects (Instagram-style) - [demo](https://fooplugins.com/foogallery-wordpress-gallery-plugin/filter-effects/)
+*   Mobile Gallery Settings:
+    Tailor supported layouts for smaller screens while using the live mobile preview. Set mobile-specific columns, gaps, Masonry layout and thumbnail width, Justified row size, Carousel items and controls, pagination, caption alignment, and caption line limits. PRO Starter layouts also include mobile controls for Slider aspect ratio, Spotlight autoplay and pagination position, Grid columns and panels, and PRO Portfolio spacing. Settings automatically fall back to their desktop values when no mobile override is set.
 *   Colors and color sorting:
     Extract dominant colors from images, sort galleries by color, and apply opaque or tinted backgrounds for a more art-directed look.
 
@@ -138,9 +165,7 @@ We also have a collection of powerful add-ons available to enhance your gallery 
 *   Whitelabel:
     Allow power users to rename or rebrand "FooGallery", modify the shortcode, menu, and disable features. [more info](https://fooplugins.com/foogallery-wordpress-gallery-plugin/whitelabel/)
 *   Client Proofing:
-    Create a private proofing page where your clients can select or reject images in the galleries. (Coming soon!)
-*   3D Splat Viewer:
-    Create emmersive 3D walk-throughs for showcasing products or real-estate. (Coming soon!)
+    Create a private proofing page where your clients can select or reject images in the galleries. [more info](https://fooplugins.com/foogallery-wordpress-gallery-plugin/client-proofing/)
 
 [See More Demos](https://fooplugins.com/foogallery-wordpress-gallery-plugin/demos/)
 
@@ -157,7 +182,7 @@ We also have a collection of powerful add-ons available to enhance your gallery 
 *	Works seamlessly in the Block Editor / Gutenberg.
 *	WooCommerce integration to sell photos online.
 *	Lightbox plugins : FooBox, dFactory.
-*	Page builders : Elementor.
+*	Page builders : Elementor, Divi.
 *	SEO Plugins: Yoast, Rank Math, AIOSEO.
 *	Caching Plugins: WP Rocket, W3 Total Cache, Autoptimize, WPOptimize.
 *	Media Tools: ShortPixel, Imagify, Real Media Library, and [Infinite Uploads](https://infiniteuploads.com/?via=fooplugins).
@@ -288,7 +313,13 @@ If you are getting annoyed with our upsell admin messages, and they do not seem 
 
 = Is FooGallery GDPR Compliant? =
 
-Yes. FooGallery does not collect visitor data, and admin tracking is optional.
+FooGallery's optional Improve FooGallery reporting does not collect visitor activity or gallery content. Sharing is off by default and requires separate consent. Site administrators can preview what would be shared, pause reporting, or request deletion under FooGallery Settings -> Improve FooGallery.
+
+= What does optional Improve FooGallery reporting send? =
+
+If you choose to enable Improve FooGallery, it sends a summary of the FooGallery features and add-ons used on your site, along with basic information such as the FooGallery and WordPress versions. It does not send personal information, gallery content, media URLs, visitor activity, customer details, or license information.
+
+You can preview the report and view all collection, privacy, and deletion details under FooGallery Settings -> Improve FooGallery. See the [FooPlugins privacy policy](https://fooplugins.com/privacy-policy/) and [terms](https://fooplugins.com/terms-and-conditions/).
 
 = Does FooGallery Support WordPress Abilities? =
 
@@ -304,7 +335,8 @@ Yes. FooGallery registers the following abilities:
 
 = Where do I report security bugs found in this plugin? =
 
-Please report security bugs found in the source code of the FooGallery plugin through the [Patchstack Vulnerability Disclosure Program](https://patchstack.com/database/vdp/11375ddc-f925-4200-883e-282cda64fec4). The Patchstack team will assist you with verification, CVE assignment, and notify the developers of this plugin.
+Please report security bugs found in the source code of the FooGallery plugin through the [Patchstack Vulnerability Disclosure Program](https://patchstack.com/database/vdp/11375ddc-f925-4200-883e-282cda64fec4).
+The Patchstack team will assist you with verification, CVE assignment, and notify the developers of this plugin.
 
 == Screenshots ==
 
@@ -324,6 +356,53 @@ Please report security bugs found in the source code of the FooGallery plugin th
 Please update in order for FooGallery to work effectively.
 
 == Changelog ==
+
+= 3.3.8 =
+
+* Date Updated : 2 Oct 2026
+* Fix : Prevented a startup fatal when an invalid Action Scheduler logger class is supplied; valid custom loggers still work (PR #417).
+* Fix : Improved HTML cache performance for large and paginated galleries by caching complete gallery output, including pagination data and noscript markup (PR #425).
+* Fix : Preserved quotes and backslashes in cached captions and gallery data, and kept repeated gallery embeds working correctly.
+* Fix : Refreshed gallery caches after plugin, extension, and theme changes, while keeping Social interactions and User Uploads forms current.
+
+= 3.3.7 =
+
+* Date Updated : 21 Sep 2026
+* New : Added Media Audit to scan galleries and the media library for image issues, with background progress, practical fix guidance, links to affected items, and downloadable reports.
+* New : Added optional usage reporting under FooGallery Settings > Improve FooGallery, with report previews, pause and resume controls, deletion requests, weekly collection, and environment identification.
+* Fix : Restored Smart caption titles and caption overrides for FooBox Free and PRO without changing image Alt Text, while preserving saved settings across FooGallery edition changes.
+* Fix : Improved frontend rendering for captions, gallery items, filtering with unlimited paging, and offscreen Image Viewer and Spotlight loaders, with stronger validation for developer-only Custom Settings.
+* Fix : Improved gallery editor stability and responsiveness by grouping Portfolio lightbox controls correctly, preventing preview scroll jumps, and reducing media-library lag and memory growth.
+
+= 3.3.3 =
+
+* Date Updated : 3 Sep 2026
+* Fix : Restored gallery images in the block editor when Polylang Media translations are enabled.
+* Fix : Improved handling of custom gallery item data by cleaning captions and descriptions before display and preventing shortcode overrides of developer-only Custom Settings.
+
+= 3.3.1 =
+
+* Date Updated : 27 Aug 2026
+
+= 3.3.0 =
+
+* Date Updated : 25 Aug 2026
+* New : Added Divi Builder compatibility with automatic FooGallery asset loading for shortcodes and a gallery-selection module.
+* Fix : Sanitized imported gallery custom CSS before saving it to prevent unsafe markup from being persisted.
+* Fix : Enforced WordPress plugin-management permissions for FooGallery extension downloads, activation, deactivation, and error cleanup.
+* New : Added mobile-specific gallery settings with live mobile preview support, allowing layouts to be tuned independently for smaller screens.
+* New : Added mobile controls for Responsive gallery columns and gaps; Justified gallery row sizing and gaps; Masonry layout, thumbnail width, and gaps; Simple Portfolio gaps; and Thumbnail gallery positioning.
+* New : Added mobile controls for Carousel maximum visible items, thumbnail gaps, navigation arrows, and pagination dots.
+* New : Added mobile page-size and compact numbered-pagination controls shared by supported gallery layouts.
+* New : Added mobile caption alignment plus separate title and description line limits across supported gallery layouts.
+* New : Added extra-small hover preset sizing and a dedicated mobile hover preset size.
+* Update : Improved the gallery editor's mobile preview so responsive option changes and template-specific CSS classes update immediately and safely.
+* Fix : Preserved mobile caption line-limit overrides and handled gallery templates without registered mobile option mappings.
+* Fix : Centered Spotlight navigation SVGs within their circular controls and isolated their layout from theme CSS.
+* Fix : Corrected gallery admin mobile previews so Responsive gallery layouts honor the configured one-, two-, or three-column mobile setting.
+* Update : Added a thumbnail visibility fallback so gallery images remain visible until gallery scripts initialize, with an Advanced setting to disable the fallback when needed.
+* Update : Reorganized global Advanced settings into consistent, predictable groups and clarified their descriptions.
+* Update : Standardized Portfolio naming and gallery layout terminology throughout user-facing settings, help text, and documentation.
 
 = 3.2.6 =
 

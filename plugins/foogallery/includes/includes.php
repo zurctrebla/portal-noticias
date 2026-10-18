@@ -13,6 +13,7 @@ require_once FOOGALLERY_PATH . 'includes/class-thumbnails.php';
 require_once FOOGALLERY_PATH . 'includes/extensions/class-extension.php';
 require_once FOOGALLERY_PATH . 'includes/extensions/class-extensions-api.php';
 require_once FOOGALLERY_PATH . 'includes/extensions/class-extensions-loader.php';
+require_once FOOGALLERY_PATH . 'includes/class-foogallery-whitelabelling-compatibility.php';
 require_once FOOGALLERY_PATH . 'includes/class-attachment-filters.php';
 require_once FOOGALLERY_PATH . 'includes/class-retina.php';
 require_once FOOGALLERY_PATH . 'includes/class-foogallery-widget.php';
@@ -52,6 +53,7 @@ require_once FOOGALLERY_PATH . 'includes/class-foogallery-animated-gif-support.p
 require_once FOOGALLERY_PATH . 'includes/class-foogallery-cache.php';
 require_once FOOGALLERY_PATH . 'includes/class-thumbnail-dimensions.php';
 require_once FOOGALLERY_PATH . 'includes/class-foogallery-common-fields.php';
+require_once FOOGALLERY_PATH . 'includes/class-foogallery-no-javascript-fallback.php';
 require_once FOOGALLERY_PATH . 'includes/class-foogallery-lazyload.php';
 require_once FOOGALLERY_PATH . 'includes/class-foogallery-paging.php';
 require_once FOOGALLERY_PATH . 'includes/class-foogallery-license-constant-handler.php';
@@ -66,6 +68,12 @@ require_once FOOGALLERY_PATH . 'includes/class-previews.php';
 
 // Datasource includes.
 require_once FOOGALLERY_PATH . 'includes/class-foogallery-datasource-media_library.php';
+
+// Register Media Audit as a bundled feature; its runtime loads only while enabled.
+require_once FOOGALLERY_PATH . 'includes/media-audit/class-foogallery-media-audit-extension.php';
+
+// Improve services also support cron; loading them never starts a collection.
+require_once FOOGALLERY_PATH . 'includes/usage/usage.php';
 
 if ( is_admin() ) {
 
@@ -84,6 +92,7 @@ if ( is_admin() ) {
 	require_once FOOGALLERY_PATH . 'includes/admin/class-columns.php';
 	require_once FOOGALLERY_PATH . 'includes/admin/class-attachment-fields.php';
 	require_once FOOGALLERY_PATH . 'includes/admin/class-admin-notices.php';
+	require_once FOOGALLERY_PATH . 'includes/admin/class-foogallery-whitelabelling-notice.php';
 	require_once FOOGALLERY_PATH . 'includes/admin/class-admin-notice-custom-css.php';
 	require_once FOOGALLERY_PATH . 'includes/admin/class-gallery-datasources.php';
 	require_once FOOGALLERY_PATH . 'includes/admin/class-pro-promotion.php';

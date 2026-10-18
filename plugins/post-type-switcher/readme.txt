@@ -8,15 +8,15 @@ License:           GPLv2 or later
 Contributors:      johnjamesjacoby, beatpanda, norcross
 Tags:              post, page, type, types, post type
 Requires PHP:      8.0
-Requires at least: 6.2
-Tested up to:      6.9
-Stable tag:        4.0.1
+Requires at least: 6.6
+Tested up to:      7.1
+Stable tag:        4.1.1
 
 A simple way to change a post's type in WordPress
 
 == Description ==
 
-This plugin adds a simple post-type drop-down to the post editor interface, allowing you to reassign any post to a new post type. It allows you to switch post's type while editing your post.
+This plugin adds a simple post-type drop-down to the post editor interface, allowing you to reassign any post to a new post type. It allows you to switch a post's type while editing your post.
 
 = Supported Types =
 
@@ -37,11 +37,10 @@ With bulk editing (thanks to Matthew Gerring) you can select all the posts in a 
 
 = Block Editor =
 
-With block-editor (aka Gutenberg) support (thanks to Daniel Bachhuber) you can switch between post-types that use either the Block Editor and the Classic one, without losing any of your embedded content.
+With Block Editor support (thanks to Daniel Bachhuber) you can switch between post types that use either the Block Editor or Classic Editor without losing any of your embedded content.
 
 == Installation ==
 
-= Installation =
 1. In your WordPress Dashboard go to "Plugins" -> "Add Plugin".
 2. Search for "Post Type Switcher".
 3. Install the plugin by pressing the "Install" button.
@@ -50,8 +49,8 @@ With block-editor (aka Gutenberg) support (thanks to Daniel Bachhuber) you can s
 6. Change post types as needed.
 
 = Minimum Requirements =
-* WordPress version 5.0 or greater.
-* PHP version 7.0.0 or greater.
+* WordPress version 6.6 or greater.
+* PHP version 8.0 or greater.
 * MySQL version 5.7 or greater.
 
 = Recommended Requirements =
@@ -62,7 +61,7 @@ With block-editor (aka Gutenberg) support (thanks to Daniel Bachhuber) you can s
 == Frequently Asked Questions ==
 
 = Why would I need this? =
-You need to selectively change a posts type from one to another.
+You need to selectively change a post's type from one to another.
 
 = Does this ruin my taxonomy associations? =
 It should not. This plugin only changes the 'post_type' property of a post.
@@ -79,12 +78,30 @@ If you're worried, backup your database and deactivate all other plugins before 
 
 If you're still worried, ask for help in the WordPress.org support forums.
 
+= Where can I get support? =
+
+Use the [WordPress.org support forum](https://wordpress.org/support/plugin/post-type-switcher/) for installation and usage questions.
+
+= Where can I discuss development? =
+
+Use [GitHub Discussions](https://github.com/JJJ/post-type-switcher/discussions) for broader development conversations. Report reproducible defects through GitHub Issues.
+
 == Screenshots ==
-1. "Type" column in "Posts" screen.
-2. "Post Type" interface in "Quick Edit".
-3. "Post Type" interface in "Edit Post" screen.
+1. "Type" column in the Posts screen.
+2. "Post Type" interface in Quick Edit.
+3. "Post Type" chooser in the Block Editor.
 
 == Changelog ==
+
+= 4.1.1 =
+* Restore the Block Editor interface by declaring all required WordPress script dependencies
+
+= 4.1.0 =
+* Require WordPress 6.6 and test through WordPress 7.1
+* Load Block Editor assets from their generated dependency metadata
+* Normalize request data before nonce and AJAX routing checks
+* Rely on WordPress core for plugin translation loading
+* Add maintained compatibility, quality, and release automation
 
 = 4.0.1 =
 * Prevent Authors & Contributors from changing types on posts of Editors & Admins

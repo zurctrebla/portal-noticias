@@ -63,9 +63,9 @@ function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "functi
 
 /*!
 * FooGallery.utils - Contains common utility methods and classes used in our plugins.
-* @version 1.0.0
+* @version 1.0.1
 * @link https://github.com/steveush/foo-utils#readme
-* @copyright Steve Usher 2021
+* @copyright Steve Usher 2026
 * @license Released under the GPL-3.0 license.
 */
 
@@ -127,7 +127,7 @@ function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "functi
        * @name version
        * @type {string}
        */
-      version: '1.0.0'
+      version: '1.0.1'
     };
   } // at this point there will always be a FooGallery.utils namespace registered to the global scope.
 
@@ -135,7 +135,7 @@ function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "functi
 
 (function ($, _) {
   // only register methods if this version is the current version
-  if (_.version !== '1.0.0') return;
+  if (_.version !== '1.0.1') return;
   /**
    * @summary Contains common type checking utility methods.
    * @memberof FooGallery.utils.
@@ -499,7 +499,7 @@ FooGallery.utils.$, FooGallery.utils);
 
 (function ($, _, _is) {
   // only register methods if this version is the current version
-  if (_.version !== '1.0.0') return;
+  if (_.version !== '1.0.1') return;
   /**
    * @memberof FooGallery.utils.
    * @namespace fn
@@ -960,7 +960,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is);
 
 (function (_, _is) {
   // only register methods if this version is the current version
-  if (_.version !== '1.0.0') return;
+  if (_.version !== '1.0.1') return;
   /**
    * @summary Contains common url utility methods.
    * @memberof FooGallery.utils.
@@ -1112,7 +1112,7 @@ FooGallery.utils, FooGallery.utils.is);
 
 (function (_, _is, _fn) {
   // only register methods if this version is the current version
-  if (_.version !== '1.0.0') return;
+  if (_.version !== '1.0.1') return;
   /**
    * @summary Contains common string utility methods.
    * @memberof FooGallery.utils.
@@ -1488,7 +1488,7 @@ FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 
 (function ($, _, _is, _fn, _str) {
   // only register methods if this version is the current version
-  if (_.version !== '1.0.0') return;
+  if (_.version !== '1.0.1') return;
   /**
    * @summary Contains common object utility methods.
    * @memberof FooGallery.utils.
@@ -1832,7 +1832,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn, 
 
 (function ($, _, _is) {
   // only register methods if this version is the current version
-  if (_.version !== '1.0.0') return; // any methods that have dependencies but don't fall into a specific subset or namespace can be added here
+  if (_.version !== '1.0.1') return; // any methods that have dependencies but don't fall into a specific subset or namespace can be added here
 
   /**
    * @summary The callback for the {@link FooGallery.utils.ready} method.
@@ -1862,7 +1862,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn, 
       }
     }
 
-    if (Function('/*@cc_on return true@*/')() ? document.readyState === "complete" : document.readyState !== "loading") onready();else document.addEventListener('DOMContentLoaded', onready, false);
+    if (document.readyState !== "loading") onready();else document.addEventListener('DOMContentLoaded', onready, false);
   };
   /**
    * @summary Executed once for each array index or object property until it returns a truthy value.
@@ -2079,7 +2079,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is);
 
 (function ($, _, _is, _obj, _fn) {
   // only register methods if this version is the current version
-  if (_.version !== '1.0.0') return;
+  if (_.version !== '1.0.1') return;
   /**
    * @summary A base class providing some helper methods for prototypal inheritance.
    * @memberof FooGallery.utils.
@@ -2578,7 +2578,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.obj,
 
 (function (_, _is, _str) {
   // only register methods if this version is the current version
-  if (_.version !== '1.0.0') return; // noinspection JSUnusedGlobalSymbols
+  if (_.version !== '1.0.1') return; // noinspection JSUnusedGlobalSymbols
 
   /**
    * @summary A base event class providing just a type and defaultPrevented properties.
@@ -2962,7 +2962,7 @@ FooGallery.utils, FooGallery.utils.is, FooGallery.utils.str);
 
 (function ($, _, _is, _fn, _obj) {
   // only register methods if this version is the current version
-  if (_.version !== '1.0.0') return;
+  if (_.version !== '1.0.1') return;
   /**
    * @summary A simple timer that triggers events.
    * @memberof FooGallery.utils.
@@ -3298,7 +3298,7 @@ FooGallery.utils, FooGallery.utils.is, FooGallery.utils.str);
 
 (function ($, _, _fn) {
   // only register methods if this version is the current version
-  if (_.version !== '1.0.0') return; // noinspection JSUnusedGlobalSymbols
+  if (_.version !== '1.0.1') return; // noinspection JSUnusedGlobalSymbols
 
   /**
    * @summary A wrapper around the fullscreen API to ensure cross browser compatibility.
@@ -3564,7 +3564,7 @@ FooGallery.utils, FooGallery.utils.is, FooGallery.utils.str);
 
 (function ($, _, _is, _fn) {
   // only register methods if this version is the current version
-  if (_.version !== '1.0.0') return;
+  if (_.version !== '1.0.1') return;
   /**
    * @summary Contains common utility methods and members for the CSS transition property.
    * @memberof FooGallery.utils.
@@ -3808,6 +3808,10 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			var current = element.data(_.DATA_TEMPLATE);
 			if (current instanceof _.Template) {
 				return current.destroy(true).then(function(){
+					var replacement = element.data(_.DATA_TEMPLATE);
+					if (replacement instanceof _.Template) {
+						return replacement.initialize();
+					}
 					var tmpl = _.template.make(options, element);
 					return tmpl instanceof _.Template ? tmpl.initialize() : _fn.rejected;
 				});
@@ -3898,13 +3902,6 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 	 * 	// Called after each template is initialized on the matched elements
 	 * });
 	 */
-
-    var mobileSize = globalThis?.FooGallery_mobileSize ?? '782px';
-    /**
-     * A very simple screen size based check for mobile sized screens.
-     */
-    _.isMobile = !!(globalThis.matchMedia && globalThis.matchMedia( `(max-width: ${ mobileSize })` ).matches);
-
 	/**
 	 * @summary Checks if the supplied image src is cached by the browser.
 	 * @param {string} src - The image src to check.
@@ -4317,11 +4314,11 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 
 ( function( _ ) {
     const GlobalAttributes = new globalThis.Set( [ "accesskey", "autocapitalize", "autofocus", "class", "contenteditable", "data-", "dir", "draggable", "enterkeyhint", "exportparts", "hidden", "id", "inert", "inputmode", "is", "itemid", "itemprop", "itemref", "itemscope", "itemtype", "lang", "nonce", "part", "popover", "role", "slot", "spellcheck", "style", "tabindex", "title", "translate" ] );
-    const ElementsAttributesMap = new globalThis.Map( [ [ "html", [ "xmlns" ] ], [ "base", [ "href", "target" ] ], [ "head", [] ], [ "link", [ "as", "crossorigin", "disabled", "fetchpriority", "href", "hreflang", "imagesizes", "imagesrcset", "integrity", "media", "referrerpolicy", "rel", "sizes", "type" ] ], [ "meta", [ "charset", "content", "http-equiv", "name" ] ], [ "style", [ "media" ] ], [ "title", [] ], [ "body", [ "onafterprint", "onbeforeprint", "onbeforeunload", "onblur", "onerror", "onfocus", "onhashchange", "onlanguagechange", "onload", "onmessage", "onoffline", "ononline", "onpopstate", "onresize", "onstorage", "onunload" ] ], [ "address", [] ], [ "article", [] ], [ "aside", [] ], [ "footer", [] ], [ "header", [] ], [ "h1", [] ], [ "h2", [] ], [ "h3", [] ], [ "h4", [] ], [ "h5", [] ], [ "h6", [] ], [ "hgroup", [] ], [ "main", [] ], [ "nav", [] ], [ "section", [] ], [ "search", [] ], [ "blockquote", [ "cite" ] ], [ "dd", [] ], [ "div", [] ], [ "dl", [] ], [ "dt", [] ], [ "figcaption", [] ], [ "figure", [] ], [ "hr", [] ], [ "li", [ "value" ] ], [ "menu", [] ], [ "ol", [ "reversed", "start", "type" ] ], [ "p", [] ], [ "pre", [] ], [ "ul", [] ], [ "a", [ "download", "href", "hreflang", "ping", "referrerpolicy", "rel", "target", "type" ] ], [ "abbr", [] ], [ "b", [] ], [ "bdi", [] ], [ "bdo", [] ], [ "br", [] ], [ "cite", [] ], [ "code", [] ], [ "data", [ "value" ] ], [ "dfn", [] ], [ "em", [] ], [ "i", [] ], [ "kbd", [] ], [ "mark", [] ], [ "q", [ "cite" ] ], [ "rp", [] ], [ "rt", [] ], [ "ruby", [] ], [ "s", [] ], [ "samp", [] ], [ "small", [] ], [ "span", [] ], [ "strong", [] ], [ "sub", [] ], [ "sup", [] ], [ "time", [ "datetime" ] ], [ "u", [] ], [ "var", [] ], [ "wbr", [] ], [ "area", [ "alt", "coords", "download", "href", "ping", "referrerpolicy", "rel", "shape", "target" ] ], [ "audio", [ "autoplay", "controls", "controlslist", "crossorigin", "disableremoteplayback", "loop", "muted", "preload", "src" ] ], [ "img", [ "alt", "crossorigin", "decoding", "elementtiming", "fetchpriority", "height", "ismap", "loading", "referrerpolicy", "sizes", "src", "srcset", "usemap", "width" ] ], [ "map", [ "name" ] ], [ "track", [ "default", "kind", "label", "src", "srclang" ] ], [ "video", [ "autoplay", "controls", "controlslist", "crossorigin", "disablepictureinpicture", "disableremoteplayback", "height", "loop", "muted", "playsinline", "poster", "preload", "src", "width" ] ], [ "embed", [ "height", "src", "type", "width" ] ], [ "iframe", [ "allow", "allowfullscreen", "height", "loading", "name", "referrerpolicy", "sandbox", "src", "srcdoc", "width" ] ], [ "object", [ "data", "form", "height", "name", "type", "width" ] ], [ "picture", [] ], [ "portal", [ "referrerpolicy", "src" ] ], [ "source", [ "height", "media", "sizes", "src", "srcset", "type", "width" ] ], [ "svg", [ "height", "preserveaspectratio", "viewbox", "width", "x", "y" ] ], [ "canvas", [ "height", "width" ] ], [ "noscript", [] ], [ "script", [ "async", "crossorigin", "defer", "fetchpriority", "integrity", "nomodule", "referrerpolicy", "src", "type" ] ], [ "del", [ "cite", "datetime" ] ], [ "ins", [ "cite", "datetime" ] ], [ "caption", [] ], [ "col", [ "span" ] ], [ "colgroup", [ "span" ] ], [ "table", [] ], [ "tbody", [] ], [ "td", [ "colspan", "headers", "rowspan" ] ], [ "tfoot", [] ], [ "th", [ "abbr", "colspan", "headers", "rowspan", "scope" ] ], [ "thead", [] ], [ "tr", [] ], [ "button", [ "disabled", "form", "formaction", "formenctype", "formmethod", "formnovalidate", "formtarget", "name", "popovertarget", "popovertargetaction", "type", "value" ] ], [ "datalist", [] ], [ "fieldset", [ "disabled", "form", "name" ] ], [ "form", [ "accept-charset", "autocomplete", "name", "rel" ] ], [ "input", [] ], [ "label", [ "for" ] ], [ "legend", [] ], [ "meter", [ "form", "high", "low", "max", "min", "optimum", "value" ] ], [ "optgroup", [ "disabled", "label" ] ], [ "option", [ "disabled", "label", "selected", "value" ] ], [ "output", [ "for", "form", "name" ] ], [ "progress", [ "max", "value" ] ], [ "select", [ "autocomplete", "disabled", "form", "multiple", "name", "required", "size" ] ], [ "textarea", [ "autocomplete", "cols", "dirname", "disabled", "form", "maxlength", "minlength", "name", "placeholder", "readonly", "required", "rows", "wrap" ] ], [ "details", [ "name", "open" ] ], [ "dialog", [ "open" ] ], [ "summary", [] ], [ "slot", [ "name" ] ], [ "template", [ "shadowrootclonable", "shadowrootdelegatesfocus", "shadowrootmode" ] ] ] );
+    const ElementsAttributesMap = new globalThis.Map( [ [ "html", [ "xmlns" ] ], [ "base", [ "href", "target" ] ], [ "head", [] ], [ "link", [ "as", "crossorigin", "disabled", "fetchpriority", "href", "hreflang", "imagesizes", "imagesrcset", "integrity", "media", "referrerpolicy", "rel", "sizes", "type" ] ], [ "meta", [ "charset", "content", "http-equiv", "name" ] ], [ "style", [ "media" ] ], [ "title", [] ], [ "body", [ "onafterprint", "onbeforeprint", "onbeforeunload", "onblur", "onerror", "onfocus", "onhashchange", "onlanguagechange", "onload", "onmessage", "onoffline", "ononline", "onpopstate", "onresize", "onstorage", "onunload" ] ], [ "address", [] ], [ "article", [] ], [ "aside", [] ], [ "footer", [] ], [ "header", [] ], [ "h1", [] ], [ "h2", [] ], [ "h3", [] ], [ "h4", [] ], [ "h5", [] ], [ "h6", [] ], [ "hgroup", [] ], [ "main", [] ], [ "nav", [] ], [ "section", [] ], [ "search", [] ], [ "blockquote", [ "cite" ] ], [ "dd", [] ], [ "div", [] ], [ "dl", [] ], [ "dt", [] ], [ "figcaption", [] ], [ "figure", [] ], [ "hr", [] ], [ "li", [ "value" ] ], [ "menu", [] ], [ "ol", [ "reversed", "start", "type" ] ], [ "p", [] ], [ "pre", [] ], [ "ul", [] ], [ "a", [ "download", "href", "hreflang", "ping", "referrerpolicy", "rel", "target", "type" ] ], [ "abbr", [] ], [ "b", [] ], [ "bdi", [] ], [ "bdo", [] ], [ "br", [] ], [ "cite", [] ], [ "code", [] ], [ "data", [ "value" ] ], [ "dfn", [] ], [ "em", [] ], [ "i", [] ], [ "kbd", [] ], [ "mark", [] ], [ "q", [ "cite" ] ], [ "rp", [] ], [ "rt", [] ], [ "ruby", [] ], [ "s", [] ], [ "samp", [] ], [ "small", [] ], [ "span", [] ], [ "strong", [] ], [ "sub", [] ], [ "sup", [] ], [ "time", [ "datetime" ] ], [ "u", [] ], [ "var", [] ], [ "wbr", [] ], [ "area", [ "alt", "coords", "download", "href", "ping", "referrerpolicy", "rel", "shape", "target" ] ], [ "audio", [ "autoplay", "controls", "controlslist", "crossorigin", "disableremoteplayback", "loop", "muted", "preload", "src" ] ], [ "img", [ "alt", "crossorigin", "decoding", "elementtiming", "fetchpriority", "height", "ismap", "loading", "referrerpolicy", "sizes", "src", "srcset", "usemap", "width" ] ], [ "map", [ "name" ] ], [ "track", [ "default", "kind", "label", "src", "srclang" ] ], [ "video", [ "autoplay", "controls", "controlslist", "crossorigin", "disablepictureinpicture", "disableremoteplayback", "height", "loop", "muted", "playsinline", "poster", "preload", "src", "width" ] ], [ "embed", [ "height", "src", "type", "width" ] ], [ "iframe", [ "allow", "allowfullscreen", "height", "loading", "name", "referrerpolicy", "sandbox", "src", "width" ] ], [ "object", [ "data", "form", "height", "name", "type", "width" ] ], [ "picture", [] ], [ "portal", [ "referrerpolicy", "src" ] ], [ "source", [ "height", "media", "sizes", "src", "srcset", "type", "width" ] ], [ "svg", [ "height", "preserveaspectratio", "viewbox", "width", "x", "y" ] ], [ "canvas", [ "height", "width" ] ], [ "noscript", [] ], [ "script", [ "async", "crossorigin", "defer", "fetchpriority", "integrity", "nomodule", "referrerpolicy", "src", "type" ] ], [ "del", [ "cite", "datetime" ] ], [ "ins", [ "cite", "datetime" ] ], [ "caption", [] ], [ "col", [ "span" ] ], [ "colgroup", [ "span" ] ], [ "table", [] ], [ "tbody", [] ], [ "td", [ "colspan", "headers", "rowspan" ] ], [ "tfoot", [] ], [ "th", [ "abbr", "colspan", "headers", "rowspan", "scope" ] ], [ "thead", [] ], [ "tr", [] ], [ "button", [ "disabled", "form", "formaction", "formenctype", "formmethod", "formnovalidate", "formtarget", "name", "popovertarget", "popovertargetaction", "type", "value" ] ], [ "datalist", [] ], [ "fieldset", [ "disabled", "form", "name" ] ], [ "form", [ "accept-charset", "autocomplete", "name", "rel" ] ], [ "input", [] ], [ "label", [ "for" ] ], [ "legend", [] ], [ "meter", [ "form", "high", "low", "max", "min", "optimum", "value" ] ], [ "optgroup", [ "disabled", "label" ] ], [ "option", [ "disabled", "label", "selected", "value" ] ], [ "output", [ "for", "form", "name" ] ], [ "progress", [ "max", "value" ] ], [ "select", [ "autocomplete", "disabled", "form", "multiple", "name", "required", "size" ] ], [ "textarea", [ "autocomplete", "cols", "dirname", "disabled", "form", "maxlength", "minlength", "name", "placeholder", "readonly", "required", "rows", "wrap" ] ], [ "details", [ "name", "open" ] ], [ "dialog", [ "open" ] ], [ "summary", [] ], [ "slot", [ "name" ] ], [ "template", [ "shadowrootclonable", "shadowrootdelegatesfocus", "shadowrootmode" ] ] ] );
     const UrlAttributes = new globalThis.Set( [ 'code', 'codebase', 'src', 'href', 'formaction', 'ping', 'cite', 'action', 'background', 'poster', 'profile', 'manifest', 'data' ] );
 
     // always remove these elements
-    [ 'script', 'embed', 'object' ].forEach( x => ElementsAttributesMap.delete( x ) );
+    [ 'script', 'embed', 'object', 'iframe', 'portal', 'base', 'link', 'meta', 'style', 'noscript', 'template', 'svg' ].forEach( x => ElementsAttributesMap.delete( x ) );
 
     const getNodeName = node => ( node instanceof globalThis.Node ? node.nodeName : typeof node === 'string' ? node : '' ).toLowerCase();
 
@@ -4374,7 +4371,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
     const isSafeElement = element => {
         if ( element instanceof globalThis.Element ) {
             const name = getNodeName( element );
-            if ( ElementsAttributesMap.has( name ) || isPossibleCustomElement( element ) ) {
+            if ( element.namespaceURI === 'http://www.w3.org/1999/xhtml' && ElementsAttributesMap.has( name ) ) {
                 for ( const attr of element.attributes ) {
                     if ( !isSafeAttribute( attr ) ) {
                         return false;
@@ -4425,7 +4422,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 
     const toHTML = nodes => nodes.map( node => {
         if ( node.nodeType === 1 ) return node.outerHTML;
-        if ( node.nodeType === 3 ) return node.nodeValue;
+        // Preserve text across the caller's subsequent innerHTML parse.
+        if ( node.nodeType === 3 ) return node.nodeValue.replace( /&/g, '&amp;' ).replace( /</g, '&lt;' ).replace( />/g, '&gt;' );
         return '';
     } ).join( '' );
 
@@ -5376,6 +5374,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			 * @private
 			 */
 			self._layoutWidths = [];
+			self._resizeWidth = null;
+			self._resizeFrame = null;
 			/**
 			 * @memberof FooGallery.Template#
 			 * @name lastWidth
@@ -5395,7 +5395,13 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			self.robserver = new ResizeObserver(_fn.throttle(function(entries) {
 				if (!self.destroying && !self.destroyed && entries.length === 1 && entries[0].target === self.el){
 					var size = _utils.getResizeObserverSize(entries[0]);
-					self.layout(size.width);
+					if (size.width === self._resizeWidth) return;
+					self._resizeWidth = size.width;
+					if (self._resizeFrame !== null) cancelAnimationFrame(self._resizeFrame);
+					self._resizeFrame = requestAnimationFrame(function(){
+						self._resizeFrame = null;
+						if (!self.destroying && !self.destroyed) self.layout(size.width);
+					});
 				}
 			}, 50));
 		},
@@ -5485,6 +5491,15 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			var selector = _utils.selectify(self.opt.classes);
 			if (selector != null && !self.$el.is(selector)) {
 				self.$el.addClass(self.opt.classes);
+			}
+			if (_is.hash(self.opt.responsiveClasses)) {
+				var responsiveClasses = self.opt.responsiveClasses;
+				if (_is.string(responsiveClasses.remove) && !_is.empty(responsiveClasses.remove)) {
+					self.$el.removeClass(responsiveClasses.remove);
+				}
+				if (_is.string(responsiveClasses.add) && !_is.empty(responsiveClasses.add)) {
+					self.$el.addClass(responsiveClasses.add);
+				}
 			}
 
 			// if the container currently has no children make them
@@ -5750,6 +5765,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
              * });
              */
             self.trigger("destroy");
+			if (self._resizeFrame !== null) cancelAnimationFrame(self._resizeFrame);
+			self._resizeFrame = null;
 			self.robserver.disconnect();
             $(window).off(self.namespace);
             self.state.destroy(preserveState);
@@ -5936,6 +5953,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 		id: null,
 		type: "core",
 		classes: "",
+		responsiveClasses: {},
 		on: {},
 		lazy: true,
 		items: [],
@@ -5971,6 +5989,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 	 * @property {?string} [id=null] - The id for the template. This is only required if creating a template without a pre-existing container element that has an `id` attribute.
 	 * @property {string} [type="core"] - The type of template to load. If no container element exists to parse the type from this must be supplied so the correct type of template is loaded.
 	 * @property {string} [classes=""] - A space delimited string of any additional CSS classes to append to the container element of the template.
+	 * @property {object} [responsiveClasses={}] - CSS classes to remove and add after the original container classes are recorded for restoration.
 	 * @property {object} [on={}] - An object containing any template events to bind to.
 	 * @property {boolean} [lazy=true] - Whether or not to enable lazy loading of images.
 	 * @property {boolean} [protected=false] - Whether or not to enable basic image protection.
@@ -6017,6 +6036,85 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 		FooGallery.utils.fn,
 		FooGallery.utils.str
 );
+
+(function($, _, global){
+	var refreshData = "__FooGalleryMobileRefresh__";
+
+	function removeListener(query, listener) {
+		if (!query || !listener) {
+			return;
+		}
+		if (query.removeEventListener) {
+			query.removeEventListener("change", listener);
+		} else if (query.removeListener) {
+			query.removeListener(listener);
+		}
+	}
+
+	function addListener(query, listener) {
+		if (query.addEventListener) {
+			query.addEventListener("change", listener);
+		} else if (query.addListener) {
+			query.addListener(listener);
+		}
+	}
+
+	function refreshGallery(element) {
+		var $element = $(element),
+			current = $element.data(_.DATA_TEMPLATE),
+			state = $element.data(refreshData);
+
+		if (state) {
+			state.requested = _.isMobile;
+			return;
+		}
+		if (!(current instanceof _.Template)) {
+			return;
+		}
+
+		state = { requested: _.isMobile };
+		$element.data(refreshData, state);
+
+		function run() {
+			var requested = state.requested;
+			_.init({}, $element).always(function(){
+				if (requested !== state.requested) {
+					run();
+					return;
+				}
+				$element.removeData(refreshData);
+			});
+		}
+
+		run();
+	}
+
+	function onChange(event) {
+		var isMobile = !!event.matches;
+		if (_.isMobile === isMobile) {
+			return;
+		}
+
+		_.isMobile = isMobile;
+		$(".foogallery").each(function(){
+			refreshGallery(this);
+		});
+	}
+
+	removeListener(_.mobileMediaQuery, _.mobileMediaQueryListener);
+
+	var mobileSize = global.FooGallery_mobileSize || "782px";
+	_.mobileMediaQuery = global.matchMedia
+		? global.matchMedia("(max-width: " + mobileSize + ")")
+		: null;
+	_.mobileMediaQueryListener = null;
+	_.isMobile = !!(_.mobileMediaQuery && _.mobileMediaQuery.matches);
+
+	if (_.mobileMediaQuery && global.FooGallery_autoMobileBreakpoint !== false) {
+		_.mobileMediaQueryListener = onChange;
+		addListener(_.mobileMediaQuery, onChange);
+	}
+})(FooGallery.$, FooGallery, globalThis);
 
 (function(_, _utils, _is){
 
@@ -7364,13 +7462,13 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			 * @name caption
 			 * @type {string}
 			 */
-			self.caption = self.opt.caption;
+			self.caption = _.safeParse(self.opt.caption);
 			/**
 			 * @memberof FooGallery.Item#
 			 * @name description
 			 * @type {string}
 			 */
-			self.description = self.opt.description;
+			self.description = _.safeParse(self.opt.description);
 			/**
 			 * @memberof FooGallery.Item#
 			 * @name attrItem
@@ -7417,6 +7515,11 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			 * @type {boolean}
 			 */
 			self.showCaptionDescription = self.opt.showCaptionDescription;
+			self.mobileCaptionOverrides = self.parseMobileCaptionOverrides(anchor["data-mobile-captions"]);
+			self.thumbnailCaption = self.caption;
+			self.thumbnailDescription = self.description;
+			self.thumbnailShowCaptionTitle = self.showCaptionTitle;
+			self.thumbnailShowCaptionDescription = self.showCaptionDescription;
 			/**
 			 * @memberof FooGallery.Item#
 			 * @name noLightbox
@@ -7477,8 +7580,116 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			self._undo = {
 				classes: "",
 				style: "",
-				placeholder: false
+				placeholder: false,
+				captionExists: false,
+				captionHTML: ""
 			};
+		},
+		/**
+		 * Parse the optional thumbnail-only mobile caption payload.
+		 * @param {*} value Serialized or parsed mobile caption overrides.
+		 * @returns {?Object}
+		 */
+		parseMobileCaptionOverrides: function (value) {
+			if (_is.string(value)) {
+				try {
+					value = JSON.parse(value);
+				} catch (e) {
+					return null;
+				}
+			}
+			if (!_is.hash(value)) return null;
+			var overrides = {};
+			["title", "description"].forEach(function (key) {
+				if (Object.prototype.hasOwnProperty.call(value, key) && _is.string(value[key])) {
+					overrides[key] = _.safeParse(value[key]);
+				}
+			});
+			return Object.keys(overrides).length > 0 ? overrides : null;
+		},
+		/**
+		 * Resolve the text and visibility used by the thumbnail caption.
+		 * Canonical caption properties are deliberately left unchanged for the
+		 * lightbox and other item consumers.
+		 */
+		updateThumbnailCaptionValues: function () {
+			var self = this,
+				overrides = self.mobileCaptionOverrides,
+				mobile = self.tmpl && self.tmpl.opt && self.tmpl.opt.mobileCaptions;
+			self.thumbnailCaption = self.caption;
+			self.thumbnailDescription = self.description;
+			self.thumbnailShowCaptionTitle = self.showCaptionTitle;
+			self.thumbnailShowCaptionDescription = self.showCaptionDescription;
+			if (!mobile || !_is.hash(overrides)) return;
+			if (Object.prototype.hasOwnProperty.call(overrides, "title")) {
+				self.thumbnailCaption = overrides.title;
+				self.thumbnailShowCaptionTitle = self.thumbnailCaption.length > 0;
+			}
+			if (Object.prototype.hasOwnProperty.call(overrides, "description")) {
+				self.thumbnailDescription = overrides.description;
+				self.thumbnailShowCaptionDescription = self.thumbnailDescription.length > 0;
+			}
+		},
+		/**
+		 * Update parsed caption markup while retaining the original desktop DOM.
+		 */
+		updateParsedCaption: function () {
+			var self = this,
+				cls = self.cls,
+				sel = self.sel,
+				overrides = self.mobileCaptionOverrides,
+				applyTitle = self.tmpl && self.tmpl.opt && self.tmpl.opt.mobileCaptions && _is.hash(overrides) && Object.prototype.hasOwnProperty.call(overrides, "title"),
+				applyDescription = self.tmpl && self.tmpl.opt && self.tmpl.opt.mobileCaptions && _is.hash(overrides) && Object.prototype.hasOwnProperty.call(overrides, "description"),
+				captionTitle = applyTitle && self.thumbnailShowCaptionTitle && _is.string(self.thumbnailCaption) && self.thumbnailCaption.length > 0,
+				captionDescription = applyDescription && self.thumbnailShowCaptionDescription && _is.string(self.thumbnailDescription) && self.thumbnailDescription.length > 0;
+
+			if (!applyTitle && !applyDescription) return;
+
+			if (!self.$caption.length && (captionTitle || captionDescription)) {
+				var caption = document.createElement("figcaption"),
+					captionInner = document.createElement("div");
+				caption.className = cls.caption.elem;
+				captionInner.className = cls.caption.inner;
+				caption.appendChild(captionInner);
+				self.$inner.append(caption);
+				self.$caption = $(caption).on("click.foogallery", {self: self}, self.onCaptionClick);
+				self.$caption.on("click.foogallery", ".fg-download-button", {self: self}, self.onDownloadClick);
+			}
+			if (!self.$caption.length) return;
+
+			var innerSelector = sel.caption.inner || "." + cls.caption.inner,
+				$inner = self.$caption.find(innerSelector).first();
+			if (!$inner.length) {
+				$inner = $("<div>").addClass(cls.caption.inner).appendTo(self.$caption);
+			}
+
+			if (applyTitle) {
+				var $title = self.$caption.find(sel.caption.title).first();
+				if (captionTitle) {
+					if (!$title.length) {
+						$title = $("<div>").addClass(cls.caption.title);
+						$title.prependTo($inner);
+					}
+					$title.html(self.maxCaptionLength > 0 ? _str.trimTo(self.thumbnailCaption, self.maxCaptionLength) : self.thumbnailCaption);
+				} else {
+					$title.remove();
+				}
+			}
+
+			if (applyDescription) {
+				var $description = self.$caption.find(sel.caption.description).first();
+				if (captionDescription) {
+					if (!$description.length) {
+						$description = $("<div>").addClass(cls.caption.description);
+						var $buttons = $inner.find(sel.caption.buttons || "." + cls.caption.buttons).first();
+						if ($buttons.length) $description.insertBefore($buttons);
+						else $inner.append($description);
+					}
+					$description.html(self.maxDescriptionLength > 0 ? _str.trimTo(self.thumbnailDescription, self.maxDescriptionLength) : self.thumbnailDescription);
+				} else {
+					$description.remove();
+				}
+			}
 		},
 		/**
 		 * @summary Destroy the item preparing it for garbage collection.
@@ -7567,6 +7778,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			var self = this;
 			if (self.isParsed) {
 				self.$anchor.add(self.$caption).off("click.foogallery");
+				if (self._undo.captionExists) self.$caption.html(self._undo.captionHTML);
+				else self.$caption.remove();
 				self.append();
 
 				self.tmpl.items.unobserve(self);
@@ -7689,6 +7902,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			self.$anchor = $(el.querySelector(sel.anchor)).on("click.foogallery", {self: self}, self.onAnchorClick);
 			self.$image = $(el.querySelector(sel.image));
 			self.$caption = $(el.querySelector(sel.caption.elem)).on("click.foogallery", {self: self}, self.onCaptionClick);
+			self._undo.captionExists = self.$caption.length > 0;
+			self._undo.captionHTML = self.$caption.length ? self.$caption.html() : "";
 			self.$caption.on("click.foogallery", ".fg-download-button", {self: self}, self.onDownloadClick);
 			self.$overlay = $(el.querySelector(sel.overlay));
 			self.$wrap = $(el.querySelector(sel.wrap));
@@ -7710,6 +7925,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			self.isError = self.$el.hasClass(cls.error);
 
 			var data = self.$anchor.data();
+			self.mobileCaptionOverrides = self.parseMobileCaptionOverrides(data.mobileCaptions || self.$anchor.attr("data-mobile-captions"));
 			self.id = `${ data.id || data.attachmentId || self.id }`;
 			self.productId = data.productId || self.productId;
 			self.tags = data.tags || self.tags;
@@ -7741,6 +7957,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 
 			self.caption = _.safeParse( data.title || data.captionTitle || self.caption );
 			self.description = _.safeParse( data.description || data.captionDesc || self.description );
+			self.updateThumbnailCaptionValues();
 			self.noLightbox = self.$anchor.hasClass(cls.noLightbox);
 			self.panelHide = self.$anchor.hasClass(cls.panelHide);
 			if (_is.exif(data.exif)){
@@ -7754,7 +7971,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 					self.$caption.find(sel.caption.title).html(title);
 				}
 			}
-			if (self.maxDescriptionLength){
+			if (self.maxDescriptionLength > 0){
 				var desc = _str.trimTo(self.description, self.maxDescriptionLength);
 				if (desc !== self.description) {
 					self.$caption.find(sel.caption.description).html(desc);
@@ -7766,6 +7983,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			if (!self.showCaptionDescription) {
 				self.$caption.find(sel.caption.description).remove();
 			}
+			self.updateParsedCaption();
 
 			// if the image has no src url then set the placeholder
 			var img = $img.get(0);
@@ -7924,6 +8142,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 				attr = self.attr,
 				exif = self.hasExif ? cls.exif : "";
 
+			self.updateThumbnailCaptionValues();
+
 			self.isLoaded = !self.tmpl.opt.lazy;
 			self.isPicture = self.sources.length > 0;
 
@@ -8015,7 +8235,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 				ribbon = document.createElement("div");
 				ribbon.className = self.ribbon.type;
 				var ribbonText = document.createElement("span");
-				ribbonText.innerHTML = self.ribbon.text;
+				ribbonText.innerHTML = _.safeParse(self.ribbon.text);
 				ribbon.appendChild(ribbonText);
 			}
 
@@ -8040,20 +8260,20 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 				"class": cls.caption.inner
 			});
 
-			var captionTitle = null, hasTitle = self.showCaptionTitle && _is.string(self.caption) && self.caption.length > 0;
+			var captionTitle = null, hasTitle = self.thumbnailShowCaptionTitle && _is.string(self.thumbnailCaption) && self.thumbnailCaption.length > 0;
 			if (hasTitle) {
 				captionTitle = document.createElement("div");
 				self._setAttributes(captionTitle, attr.caption.title);
 				captionTitle.className = cls.caption.title;
-				captionTitle.innerHTML = self.maxCaptionLength > 0 ? _str.trimTo(self.caption, self.maxCaptionLength) : self.caption;
+				captionTitle.innerHTML = self.maxCaptionLength > 0 ? _str.trimTo(self.thumbnailCaption, self.maxCaptionLength) : self.thumbnailCaption;
 				captionInner.appendChild(captionTitle);
 			}
-			var captionDesc = null, hasDescription = self.showCaptionDescription && _is.string(self.description) && self.description.length > 0;
+			var captionDesc = null, hasDescription = self.thumbnailShowCaptionDescription && _is.string(self.thumbnailDescription) && self.thumbnailDescription.length > 0;
 			if (hasDescription) {
 				captionDesc = document.createElement("div");
 				self._setAttributes(captionDesc, attr.caption.description);
 				captionDesc.className = cls.caption.description;
-				captionDesc.innerHTML = self.maxDescriptionLength > 0 ? _str.trimTo(self.description, self.maxDescriptionLength) : self.description;
+				captionDesc.innerHTML = self.maxDescriptionLength > 0 ? _str.trimTo(self.thumbnailDescription, self.maxDescriptionLength) : self.thumbnailDescription;
 				captionInner.appendChild(captionDesc);
 			}
 			var captionButtons = null, hasButtons = _is.array(self.buttons) && self.buttons.length > 0;
@@ -8063,7 +8283,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 				_utils.each(self.buttons, function(button){
 					if (_is.hash(button) && _is.string(button.text)){
 						var captionButton = document.createElement("a");
-						captionButton.innerHTML = button.text;
+						captionButton.innerHTML = _.safeParse(button.text);
 						if (_is.string(button.url) && button.url.length > 0){
 							captionButton.href = button.url;
 						}
@@ -8082,7 +8302,8 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 						if (_is.hash(button.attr)){
 							self._setAttributes(captionButton, button.attr);
 						}
-						captionButtons.appendChild(captionButton);
+						// Validate the complete button after custom attributes have been applied.
+						captionButtons.insertAdjacentHTML("beforeend", _.safeParse(captionButton.outerHTML));
 					}
 				});
 				captionInner.appendChild(captionButtons);
@@ -8909,10 +9130,12 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 			self._super();
 		},
 		build: function () {
-			var self = this, items = self.tmpl.items.available();
+			var self = this, items = self.tmpl.items.available(),
+				size = self.size > 0 ? self.size : items.length;
+			// Keep an unlimited page sized to the current matches on every rebuild.
 			self.total = self.size > 0 && items.length > 0 ? Math.ceil(items.length / self.size) : 1;
 			for (var i = 0; i < self.total; i++) {
-				self._pages.push(items.splice(0, self.size));
+				self._pages.push(items.splice(0, size));
 			}
 			if (self.total > 1 && _.paging.hasCtrl(self.type)) {
 				var pos = self.position, top, bottom;
@@ -9117,6 +9340,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 		FooGallery.utils,
 		FooGallery.utils.is
 );
+
 (function($, _, _utils, _is){
 
 	_.Dots = _.Paging.extend({});
@@ -11115,6 +11339,33 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             this.$inner.fgswipe("destroy");
             return this._super();
         },
+        doTransition: function($element, trigger){
+            var element = $element.get(0);
+            if (!element || typeof element.getAnimations !== "function"){
+                return _t.start($element, trigger, null, 350);
+            }
+            return $.Deferred(function(def){
+                requestAnimationFrame(function(){
+                    trigger($element);
+                    var animations = element.getAnimations().filter(function(animation){
+                        var timing = animation.effect && typeof animation.effect.getComputedTiming === "function"
+                            ? animation.effect.getComputedTiming()
+                            : null;
+                        return animation.playState !== "paused"
+                            && timing !== null
+                            && typeof timing.endTime === "number"
+                            && isFinite(timing.endTime);
+                    });
+                    if (animations.length === 0){
+                        def.resolve();
+                        return;
+                    }
+                    Promise.all(animations.map(function(animation){
+                        return animation.finished;
+                    })).then(def.resolve, def.reject);
+                });
+            }).promise();
+        },
         doLoad: function(media, reverseTransition){
             var self = this, states = self.panel.cls.states;
             return $.Deferred(function (def) {
@@ -11123,9 +11374,9 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 media.appendTo(self.$inner);
                 var wait = [];
                 if (self.panel.hasTransition){
-                    wait.push(_t.start(media.$el, function($el){
+                    wait.push(self.doTransition(media.$el, function($el){
                         $el.addClass(states.visible);
-                    }, null, 350));
+                    }));
                 } else {
                     media.$el.addClass(states.visible);
                 }
@@ -11140,9 +11391,9 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 if (media.isCreated){
                     media.$el.toggleClass(states.reverse, !reverseTransition);
                     if (self.panel.hasTransition){
-                        wait.push(_t.start(media.$el, function($el){
+                        wait.push(self.doTransition(media.$el, function($el){
                             $el.removeClass(states.visible);
-                        }, null, 350));
+                        }));
                     } else {
                         media.$el.removeClass(states.visible);
                     }
@@ -12496,7 +12747,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
         var data = this.$el.data("foogalleryLightbox"),
             enabled = this.opt.lightbox.enabled || _is.hash(data) || (this.$el.length > 0 && this.el.hasAttribute("data-foogallery-lightbox"));
 
-        this.opt.lightbox = _obj.extend({}, this.opt.panel, this.opt.lightbox, { enabled: enabled }, data);
+        this.opt.lightbox = _obj.extend({}, this.opt.panel, this.opt.lightbox, { enabled: enabled }, data, this.opt.mobileLightbox);
         this.lightbox = enabled ? new _.Lightbox(this, this.opt.lightbox) : null;
     });
 
@@ -12506,6 +12757,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
     FooGallery.utils.is,
     FooGallery.utils.obj
 );
+
 (function($, _, _utils){
 
 	_.DefaultTemplate = _.Template.extend({});
@@ -12548,7 +12800,13 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 		},
 		onPreInit: function(){
 			var self = this, sel = self.sel,
-				fixed = self.$el.hasClass("fg-fixed");
+				layout = self.template.layout,
+				fixed;
+
+			if (["fixed", "col1", "col2", "col3", "col4", "col5", "col6"].indexOf(layout) !== -1){
+				self.$el.removeClass("fg-fixed fg-col1 fg-col2 fg-col3 fg-col4 fg-col5 fg-col6").addClass("fg-" + layout);
+			}
+			fixed = self.$el.hasClass("fg-fixed");
 
 			self.template.isFitWidth = fixed;
 			self.template.percentPosition = !fixed;
@@ -12607,6 +12865,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 		FooGallery.utils,
 		FooGallery.utils.is
 );
+
 (function($, _, _utils, _is){
 
 	_.Justified = _utils.Class.extend({
@@ -12916,7 +13175,11 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
 	_.ImageViewerTemplate = _.Template.extend({
 		construct: function (options, element) {
 			var self = this,
+				dotsPosition = options && options.template ? options.template.dotsPosition : null,
                 overlay = element.hasClass('fg-overlay-controls');
+			if (["fg-dots-none", "fg-dots-left", "fg-dots-center", "fg-dots-right"].indexOf(dotsPosition) !== -1){
+				element.removeClass("fg-dots-none fg-dots-left fg-dots-center fg-dots-right").addClass(dotsPosition);
+			}
             if ( overlay && _.paging?.contains('dots') ) {
                 var reg = _.paging.registered['dots'];
                 options = _obj.extend({
@@ -13904,6 +14167,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
              * @private
              */
             self._listeners = new _utils.DOMEventListeners();
+            self._generatedControls = [];
             /**
              *
              * @type {FooGallery.utils.Progress}
@@ -14024,7 +14288,9 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 self.previous();
             } );
             if ( self.elem.prev.type !== "button" ) self.elem.prev.type = "button";
-            self.elem.prev.appendChild( _icons.element( "arrow-left" ) );
+            const prevIcon = _icons.element( "arrow-left" );
+            self._generatedControls.push( prevIcon );
+            self.elem.prev.appendChild( prevIcon );
             if ( !self.elem.prev.title?.length ) {
                 self.elem.prev.title = self.i18n.prev;
             }
@@ -14035,7 +14301,9 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                 self.next();
             } );
             if ( self.elem.next.type !== "button" ) self.elem.next.type = "button";
-            self.elem.next.appendChild( _icons.element( "arrow-right" ) );
+            const nextIcon = _icons.element( "arrow-right" );
+            self._generatedControls.push( nextIcon );
+            self.elem.next.appendChild( nextIcon );
             if ( !self.elem.next.title?.length ) {
                 self.elem.next.title = self.i18n.next;
             }
@@ -14060,6 +14328,7 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
                     self.interacted = true;
                     self.goto( self.tmpl.items.get( i ) );
                 } );
+                self._generatedControls.push( bullet );
                 self.elem.bottom.appendChild( bullet );
             }
         },
@@ -14199,6 +14468,12 @@ FooGallery.utils.$, FooGallery.utils, FooGallery.utils.is, FooGallery.utils.fn);
             self.timeouts.clear();
             self._listeners.clear();
             self._centerListeners.clear();
+            self._progress.destroy();
+            // Breakpoint rebuilds reuse the markup, so remove this instance's controls.
+            self._generatedControls.forEach( function( element ){
+                element.remove();
+            } );
+            self._generatedControls = [];
             if ( self.opt.perspective !== 150 ){
                 self.el.style.removeProperty( "--fg-carousel-perspective" );
             }
