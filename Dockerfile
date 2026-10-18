@@ -120,4 +120,13 @@ COPY --from=builder --chown=www-data:www-data \
 # Remover arquivos desnecessários na imagem final
 RUN rm -rf /var/www/html/wp-content/themes/bahia_refactor/node_modules
 
+# Plugins e temas que vem com o core e nao usamos (removidos do repo em 18/10/2026).
+# Tirar so do git nao basta: o entrypoint da imagem oficial completa o wp-content
+# do pod com o que existe em /usr/src/wordpress/wp-content e falta no destino. O
+# twentytwentyfive fica: e o WP_DEFAULT_THEME, o fallback se o tema ativo quebrar.
+RUN rm -rf /usr/src/wordpress/wp-content/plugins/akismet \
+           /usr/src/wordpress/wp-content/plugins/hello.php \
+           /usr/src/wordpress/wp-content/themes/twentytwentythree \
+           /usr/src/wordpress/wp-content/themes/twentytwentyfour
+
 WORKDIR /var/www/html
