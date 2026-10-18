@@ -204,7 +204,13 @@ html{
    barra azul cobria só a metade esquerda e as editorias do fim da linha viravam
    texto branco sobre branco ("o menu some"). Daí o `transform:none`.
    Na linha vermelha, o tema centraliza o filho com `margin:auto`; abaixo de
-   836px isso somava até 18px ao left e abria uma falha branca à esquerda. */
+   836px isso somava até 18px ao left e abria uma falha branca à esquerda.
+
+   A FOLGA DE 30px de cada lado: `50% - 50vw` só acerta a borda se a row estiver
+   centrada na janela. Entre 1141 e ~1165px ela não está (1116px presos a 24px da
+   esquerda) e sobravam até 12px de branco à esquerda. Esticar 30px além da tela
+   cobre esse descentramento; a sobra é cortada pelo mesmo overflow-x:hidden de
+   .td-theme-wrap (conferido: scrollWidth == largura da janela de 768 a 1400). */
 body.td-boxed-layout{
     background-image:none !important;
     background-color:#ffffff !important;
@@ -213,16 +219,16 @@ body.td-boxed-layout{
 .bahia-topo-row > .td-element-style,
 .bahia-menu-row > .td-element-style,
 .bahia-menu-linha > .td-element-style{
-    left:calc(50% - 50vw) !important;
-    width:100vw !important;
+    left:calc(50% - 50vw - 30px) !important;
+    width:calc(100vw + 60px) !important;
     max-width:none !important;
     transform:none !important;
 }
 /* a linha vermelha é o border-top do filho do separador */
 .bahia-menu-linha .td_block_separator > *{
     position:relative;
-    left:calc(50% - 50vw);
-    width:100vw !important;
+    left:calc(50% - 50vw - 30px);
+    width:calc(100vw + 60px) !important;
     max-width:none !important;
     margin-left:0 !important;
     margin-right:0 !important;
