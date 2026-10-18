@@ -54,6 +54,22 @@ function bahia_header_menu_fit_css() {
         margin-left:auto !important;
     }
 }
+/* KAN-28: abaixo de 1141px o cabeçalho de desktop continua na tela, mas a row
+   encolhe (980px, e 740px abaixo de 1019px) e os 10 itens quebravam em duas linhas.
+   Medido: 914px de itens em 895px de coluna (1019-1140) e 743px em 681px
+   (768-1018). Só o respiro lateral de cada item diminui; a fonte fica como está. */
+@media (min-width: 1019px) and (max-width: 1140px){
+    .bahia-menu-row .tdb-menu > li > a{
+        padding-left:9px !important;
+        padding-right:9px !important;
+    }
+}
+@media (min-width: 768px) and (max-width: 1018px){
+    .bahia-menu-row .tdb-menu > li > a{
+        padding-left:6px !important;
+        padding-right:6px !important;
+    }
+}
 CSS;
 }
 
