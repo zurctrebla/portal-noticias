@@ -108,7 +108,8 @@ function bahia_hs_aria_labels($html) {
 /**
  * Troca o <a> único do byline por um link para cada coautor.
  *
- * Escopo: só o post consultado, só quando há 2+ coautores, e só dentro do bloco
+ * Escopo: só o post consultado, só quando há 2+ coautores ou um convidado no lugar do
+ * autor nativo (ver bahia_coautores_substitui), e só dentro do bloco
  * .td-post-author-name (não toca na caixa de autor nem em cards de relacionados).
  */
 function bahia_hs_byline_coautores($html) {
@@ -138,8 +139,10 @@ function bahia_hs_byline_coautores($html) {
         $links[] = '<a href="' . esc_url($url) . '">' . esc_html($ca->display_name) . '</a>';
     }
 
-    if (count($names) < 2) {
-        return $html; // autor único: o markup do tema já está correto
+    // Autor único nativo: o markup do tema já está correto. Coautoria (2+) ou convidado
+    // no lugar do nativo (KAN-30): troca o <a> do nativo pelos links dos autores.
+    if (function_exists('bahia_coautores_substitui') ? !bahia_coautores_substitui($post_id) : count($names) < 2) {
+        return $html;
     }
 
     // O texto do <a> atual é exatamente o que o bahia-coautores.php devolveu.
