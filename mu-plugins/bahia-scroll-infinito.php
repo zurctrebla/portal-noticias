@@ -108,7 +108,11 @@ function bahia_si_render_card() {
 
             <div class="td-module-meta-info">
                 <div class="td-post-author-name">
+                    <?php /* Coautoria (KAN-9): todos os autores, cada um com link. Ver bahia-coautores.php. */
+                    $bahia_autores = function_exists('bahia_coautores_links') ? bahia_coautores_links(get_the_ID()) : '';
+                    if ($bahia_autores !== '') { echo $bahia_autores; } else { ?>
                     <a href="<?php echo esc_url(get_author_posts_url(get_the_author_meta('ID'))); ?>"><?php echo get_the_author_meta('display_name'); ?></a>
+                    <?php } ?>
                     <span> - </span>
                 </div>
 
