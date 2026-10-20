@@ -1,28 +1,28 @@
 <?php
 /**
- * Plugin Name: Bahia.ba - Autoria múltipla no post individual
- * Description: O bahia.ba usa Co-Authors Plus (taxonomia `author`) e há matérias com
- *              mais de um repórter (ex.: post 425868 = 4 autores). O byline do tema
- *              devolve só o autor nativo (o 1º coautor). Este filtro faz o byline do
- *              POST PRINCIPAL exibir todos os coautores ("Por A, B e C") quando houver
- *              2+; posts de autor único ficam intactos.
+ * Plugin Name: Bahia.ba - Autoria pelo Co-Authors Plus (coautores e convidados)
+ * Description: O bahia.ba marca a autoria pelo Co-Authors Plus (taxonomia `author`), mas o
+ *              tema só conhece o autor NATIVO do WordPress (post_author). Duas situações
+ *              saíam erradas no site:
  *
- *              ADAPTAÇÃO PARA O bahia_refactor: o tema monta o byline com the_author()
- *              (single_web.php, single_mobile.php), que aplica o filtro `the_author` —
- *              e NÃO `get_the_author_display_name`, usado pelo Newspaper via
- *              get_the_author_meta('display_name'). Enganchar só naquele filtro seria
- *              um no-op silencioso aqui. Registramos os dois: o do core para o tema
- *              atual e o de meta para qualquer plugin que consulte display_name.
+ *              - coautoria (KAN-9): matéria com 2+ repórteres mostrava só o 1º;
+ *              - convidado (KAN-30): artigo assinado por um autor convidado (guest author,
+ *                sem usuário no WordPress) mostrava o nativo, em geral "Redação".
  *
- *              Escopo restrito (não afeta cards de "relacionados"/próximo-anterior nem
- *              arquivos nem o feed RSS): só age no contexto do post consultado
- *              (get_the_ID() === get_queried_object_id()). Display-time, sem escrever
- *              no banco.
+ *              A regra única está em bahia_coautores_substitui(): quando a lista do
+ *              Co-Authors Plus não é exatamente o autor nativo, ela vale no lugar dele —
+ *              na assinatura da matéria, nos cards (home, editorias, autor, busca, "Ver
+ *              mais") e na caixa de autor do fim da matéria. Post de autor único nativo
+ *              fica intacto. Display-time, sem escrever no banco.
  *
- *              CARDS (KAN-9, v1.2.0): os cards de home, editorias, busca e relacionados
- *              também passam a mostrar todos os coautores, cada um com seu link. Ver
- *              bahia_coautores_card_byline() mais abaixo.
- * Version: 1.2.0
+ *              Mapa de quem pergunta o autor e onde é tratado:
+ *              - assinatura do single: filtros the_author/display_name (prioridade 20)
+ *                + bahia-html-saida.php, que dá um link a cada autor;
+ *              - cards td_module (home e blocos) e caixa de autor/metadado do single:
+ *                filtros do core lidos pela pilha de chamadas (bahia_coautores_contexto);
+ *              - cards tdb_module (editorias, autor, busca): construtor do módulo;
+ *              - loop-archive.php e bahia-scroll-infinito.php: bahia_coautores_links().
+ * Version: 1.3.0
  * Author: Bahia.ba
  */
 
@@ -32,14 +32,9 @@ if (!defined('ABSPATH')) {
 
 /** Nomes dos coautores (na ordem do Co-Authors Plus) para um post. */
 function bahia_get_coauthor_names($post_id) {
-    if (!function_exists('get_coauthors')) {
-        return array();
-    }
     $names = array();
-    foreach (get_coauthors($post_id) as $ca) {
-        if (is_object($ca) && !empty($ca->display_name)) {
-            $names[] = $ca->display_name;
-        }
+    foreach (bahia_coautores_lista($post_id) as $l) {
+        $names[] = $l['nome_cru'];
     }
     return $names;
 }
@@ -54,51 +49,9 @@ function bahia_join_author_names(array $names) {
 }
 
 /**
- * Nomes dos coautores do post principal, ou '' quando não se deve intervir.
- *
- * Guarda o contexto: só o post consultado, fora do admin, com Co-Authors Plus
- * disponível e 2+ coautores. Loops internos (relacionados, next/prev, sidebar)
- * trocam o post corrente e por isso não passam por aqui.
- */
-function bahia_coautores_byline() {
-    if (is_admin() || !is_singular() || !function_exists('get_coauthors')) {
-        return '';
-    }
-    $main_id = (int) get_queried_object_id();
-    if (!$main_id || (int) get_the_ID() !== $main_id) {
-        return '';
-    }
-    $names = bahia_get_coauthor_names($main_id);
-    if (count($names) < 2) {
-        return ''; // autor único: não mexe
-    }
-    return bahia_join_author_names($names);
-}
-
-/**
- * the_author() / get_the_author() — caminho usado pelo byline do bahia_refactor.
- * Não recebe user_id; a guarda de contexto acima é o que delimita o escopo.
- */
-add_filter('the_author', function ($display_name) {
-    $byline = bahia_coautores_byline();
-    return $byline !== '' ? $byline : $display_name;
-}, 20);
-
-/**
- * get_the_author_meta('display_name') — mantido para plugins que consultem por
- * esse caminho. Aqui temos o user_id, então exigimos que seja o autor primário.
- */
-add_filter('get_the_author_display_name', function ($display_name, $user_id) {
-    $main_id = (int) get_queried_object_id();
-    if (!$main_id || (int) $user_id !== (int) get_post_field('post_author', $main_id)) {
-        return $display_name;
-    }
-    $byline = bahia_coautores_byline();
-    return $byline !== '' ? $byline : $display_name;
-}, 20, 2);
-
-/**
- * CARDS — [url, nome escapado] de cada coautor do post, na ordem do Co-Authors Plus.
+ * Autores do post pelo Co-Authors Plus, na ordem dele. Cada item:
+ * url, nome (escapado), nome_cru, nativo (é o próprio post_author?) e obj (o objeto do
+ * Co-Authors Plus: WP_User ou guest author, com description/website/user_email).
  * Memorizado por request: home e arquivos repetem o mesmo post em mais de um bloco.
  */
 function bahia_coautores_lista($post_id) {
@@ -110,35 +63,101 @@ function bahia_coautores_lista($post_id) {
     if (isset($memo[$post_id])) {
         return $memo[$post_id];
     }
+    $post_author = (int) get_post_field('post_author', $post_id);
     $lista = array();
+    // get_author_posts_url() abaixo dispara o filtro author_link deste arquivo, que
+    // consulta esta lista: a trava impede a recursão.
+    $GLOBALS['bahia_coautores_montando'] = true;
     foreach (get_coauthors($post_id) as $ca) {
         if (!is_object($ca) || empty($ca->display_name)) {
             continue;
         }
+        $convidado = isset($ca->type) && $ca->type === 'guest-author';
         $lista[] = array(
-            'url'  => get_author_posts_url(
+            'url'      => get_author_posts_url(
                 isset($ca->ID) ? $ca->ID : 0,
                 isset($ca->user_nicename) ? $ca->user_nicename : ''
             ),
-            'nome' => esc_html($ca->display_name),
+            'nome'     => esc_html($ca->display_name),
+            'nome_cru' => $ca->display_name,
+            'nativo'   => !$convidado && isset($ca->ID) && (int) $ca->ID === $post_author,
+            'obj'      => $ca,
         );
     }
+    $GLOBALS['bahia_coautores_montando'] = false;
     return $memo[$post_id] = $lista;
 }
 
 /**
- * CARDS — "<a urlA>A</a> e <a urlB>B</a>" para post com 2+ coautores, ou ''.
- * Para templates que montam o link do autor na mão (loop-archive.php do tema e
- * bahia-scroll-infinito.php): com '' eles seguem imprimindo o autor nativo.
+ * A autoria do Co-Authors Plus deve substituir a nativa neste post?
+ * Sim com 2+ autores, ou com um só que não seja o post_author (o caso do convidado).
+ */
+function bahia_coautores_substitui($post_id) {
+    $lista = bahia_coautores_lista($post_id);
+    if (count($lista) >= 2) {
+        return true;
+    }
+    return count($lista) === 1 && !$lista[0]['nativo'];
+}
+
+/**
+ * Nomes dos autores do post principal, ou '' quando não se deve intervir.
+ *
+ * Guarda o contexto: só o post consultado, fora do admin. Loops internos (relacionados,
+ * next/prev, sidebar) trocam o post corrente e por isso não passam por aqui.
+ */
+function bahia_coautores_byline() {
+    if (is_admin() || !is_singular()) {
+        return '';
+    }
+    $main_id = (int) get_queried_object_id();
+    if (!$main_id || (int) get_the_ID() !== $main_id) {
+        return '';
+    }
+    if (!bahia_coautores_substitui($main_id)) {
+        return ''; // autor único nativo: não mexe
+    }
+    return bahia_join_author_names(bahia_get_coauthor_names($main_id));
+}
+
+/**
+ * the_author() / get_the_author(). Não recebe user_id; a guarda de contexto acima é o
+ * que delimita o escopo.
+ */
+add_filter('the_author', function ($display_name) {
+    $byline = bahia_coautores_byline();
+    return $byline !== '' ? $byline : $display_name;
+}, 20);
+
+/**
+ * get_the_author_meta('display_name') do autor nativo do post principal — é o que a
+ * assinatura do single (td_module_single_base::get_author) imprime. Os links por autor
+ * entram depois, no bahia-html-saida.php.
+ */
+add_filter('get_the_author_display_name', function ($display_name, $user_id) {
+    $main_id = (int) get_queried_object_id();
+    if (!$main_id || (int) $user_id !== (int) get_post_field('post_author', $main_id)) {
+        return $display_name;
+    }
+    $byline = bahia_coautores_byline();
+    return $byline !== '' ? $byline : $display_name;
+}, 20, 2);
+
+/**
+ * "<a urlA>A</a> e <a urlB>B</a>" (ou o link do convidado sozinho) quando a autoria do
+ * Co-Authors Plus substitui a nativa; '' quando não. Para templates que montam o link do
+ * autor na mão: com '' eles seguem imprimindo o autor nativo.
  */
 function bahia_coautores_links($post_id) {
-    $lista = bahia_coautores_lista($post_id);
-    if (count($lista) < 2) {
+    if (!bahia_coautores_substitui($post_id)) {
         return '';
     }
     $links = array();
-    foreach ($lista as $l) {
+    foreach (bahia_coautores_lista($post_id) as $l) {
         $links[] = '<a href="' . esc_url($l['url']) . '">' . $l['nome'] . '</a>';
+    }
+    if (count($links) === 1) {
+        return $links[0];
     }
     // O "e" vai num span próprio: blocos do tagDiv (busca, por exemplo) aplicam
     // text-transform:capitalize na linha de autoria inteira e ele virava "E".
@@ -147,13 +166,13 @@ function bahia_coautores_links($post_id) {
 }
 
 /**
- * CARDS — o miolo do link de autoria de um card com 2+ coautores, ou ''.
+ * O miolo do link de autoria de um card, ou ''.
  *
- * Os dois módulos de card do tagDiv imprimem <a href="URL">NOME</a> sem gancho no
- * meio. Devolvendo como NOME a string "A</a> e <a href="urlB">B", o HTML final fica
+ * Os módulos de card do tagDiv imprimem <a href="URL">NOME</a> sem gancho no meio.
+ * Devolvendo como NOME a string "A</a> e <a href="urlB">B", o HTML final fica
  * "<a urlA>A</a> e <a urlB>B</a>": válido, um link por autor, separadores fora dos
- * links. Como é montado na hora do card e não num buffer de saída, vale igual na
- * página e no "Ver mais" da home (admin-ajax).
+ * links. A URL do 1º autor é trocada à parte (filtro author_link ou post_author_url),
+ * porque o tema a monta a partir do autor nativo.
  */
 function bahia_coautores_card_html($post_id) {
     $completo = bahia_coautores_links($post_id);
@@ -180,7 +199,9 @@ function bahia_coautores_tdb_module($module, $post = null) {
     }
     $html = bahia_coautores_card_html($module->post['post_id']);
     if ($html !== '') {
+        $lista = bahia_coautores_lista($module->post['post_id']);
         $module->post['post_author_name'] = $html;
+        $module->post['post_author_url']  = esc_url($lista[0]['url']);
     }
     return $module;
 }
@@ -189,48 +210,143 @@ function bahia_coautores_tdb_module($module, $post = null) {
 add_filter('td_wp_booster_module_constructor', 'bahia_coautores_tdb_module', 1, 2);
 
 /**
- * CARDS da home e blocos (td_module do td-composer: flex, mobile, slide).
+ * Quem está pedindo o autor agora, lido da pilha de chamadas: [onde, WP_Post] ou null.
  *
- * Aqui o nome não vem num array: td_module::get_author() chama na hora
- * get_the_author_meta('display_name', post_author), cujo filtro recebe o user_id mas não
- * o post. O post é lido do próprio módulo, pela pilha de chamadas — sem estado global,
- * então nada vaza para foto do autor, caixa de autor, Yoast ou outra consulta ao mesmo
- * usuário. O post individual (td_module_single_base) fica de fora: lá quem age é o
- * bahia_coautores_byline() acima, mais o bahia-html-saida.php.
+ * onde = 'card'  → td_module::get_author() de um card (home e blocos);
+ *        'caixa' → td_module_single_base::get_author_box(), a caixa do fim da matéria;
+ *        'meta'  → td_module_single_base::get_item_scope_meta(), o schema Person oculto.
  *
- * Também desfaz o caso inverso: num post individual, o filtro de prioridade 20 troca o
- * nome de qualquer card cujo autor principal seja o autor da matéria aberta. No card, a
- * resposta certa é sempre a do post do card.
+ * Os filtros do core (display_name, author_link, description...) recebem o user_id mas
+ * não o post; o post vem do próprio módulo. Sem estado global: nada vaza para outras
+ * consultas ao mesmo usuário. A assinatura do single (get_author do single_base) não
+ * entra aqui: é tratada pelo filtro de prioridade 20 + bahia-html-saida.php.
  */
-function bahia_coautores_td_module_byline($display_name, $user_id) {
-    if (!class_exists('td_module', false)) {
-        return $display_name;
+function bahia_coautores_contexto() {
+    if (!empty($GLOBALS['bahia_coautores_montando']) || !class_exists('td_module', false)) {
+        return null;
     }
-
-    $post = null;
-    foreach (debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 8) as $quadro) {
-        if (
-            isset($quadro['function'], $quadro['object'])
-            && $quadro['function'] === 'get_author'
-            && $quadro['object'] instanceof td_module
-        ) {
-            if (!($quadro['object'] instanceof td_module_single_base)) {
-                $post = $quadro['object']->post;
-            }
-            break;
+    foreach (debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 12) as $quadro) {
+        if (!isset($quadro['function'], $quadro['object']) || !($quadro['object'] instanceof td_module)) {
+            continue;
         }
+        $obj    = $quadro['object'];
+        $single = class_exists('td_module_single_base', false) && $obj instanceof td_module_single_base;
+        $onde   = null;
+        if ($quadro['function'] === 'get_author') {
+            $onde = $single ? null : 'card';
+        } elseif ($single && $quadro['function'] === 'get_author_box') {
+            $onde = 'caixa';
+        } elseif ($single && $quadro['function'] === 'get_item_scope_meta') {
+            $onde = 'meta';
+        }
+        if ($onde === null || !($obj->post instanceof WP_Post)) {
+            return null;
+        }
+        return array($onde, $obj->post);
     }
-    if (!($post instanceof WP_Post) || (int) $user_id !== (int) $post->post_author) {
+    return null;
+}
+
+/**
+ * O 1º autor do Co-Authors Plus quando o contexto é card/caixa/meta, o user_id é o autor
+ * nativo do post e a autoria deve ser substituída; senão null.
+ */
+function bahia_coautores_primeiro_no_contexto($user_id, $onde_aceitos) {
+    $ctx = bahia_coautores_contexto();
+    if (!$ctx || !in_array($ctx[0], $onde_aceitos, true)) {
+        return null;
+    }
+    $post = $ctx[1];
+    if ((int) $user_id !== (int) $post->post_author || !bahia_coautores_substitui($post->ID)) {
+        return null;
+    }
+    $lista = bahia_coautores_lista($post->ID);
+    return array('onde' => $ctx[0], 'post' => $post, 'autor' => $lista[0]);
+}
+
+/**
+ * Nome do autor: no card, todos os autores com link; na caixa e no metadado, o 1º autor
+ * (a caixa mostra a foto, a bio e o link de UM autor, então o nome tem que ser o dele).
+ *
+ * No card também desfaz o caso inverso: num post individual, o filtro de prioridade 20
+ * troca o nome de qualquer card cujo autor nativo seja o da matéria aberta.
+ */
+function bahia_coautores_display_name_contexto($display_name, $user_id) {
+    $ctx = bahia_coautores_contexto();
+    if (!$ctx || (int) $user_id !== (int) $ctx[1]->post_author) {
         return $display_name;
     }
-
-    $html = bahia_coautores_card_html($post->ID);
-    if ($html !== '') {
-        return $html;
+    list($onde, $post) = $ctx;
+    if (!bahia_coautores_substitui($post->ID)) {
+        if ($onde !== 'card') {
+            return $display_name;
+        }
+        $usuario = get_userdata($user_id);
+        return ($usuario && $usuario->display_name !== '') ? $usuario->display_name : $display_name;
     }
-
-    // Autor único: o nome cru, desfazendo o que o filtro de prioridade 20 possa ter posto.
-    $usuario = get_userdata($user_id);
-    return ($usuario && $usuario->display_name !== '') ? $usuario->display_name : $display_name;
+    if ($onde === 'card') {
+        return bahia_coautores_card_html($post->ID);
+    }
+    $lista = bahia_coautores_lista($post->ID);
+    return $lista[0]['nome_cru'];
 }
-add_filter('get_the_author_display_name', 'bahia_coautores_td_module_byline', 30, 2);
+add_filter('get_the_author_display_name', 'bahia_coautores_display_name_contexto', 30, 2);
+
+/** Link do autor: o do 1º autor do Co-Authors Plus no card, na caixa e no metadado. */
+add_filter('author_link', function ($link, $author_id) {
+    $p = bahia_coautores_primeiro_no_contexto($author_id, array('card', 'caixa', 'meta'));
+    return $p ? $p['autor']['url'] : $link;
+}, 30, 2);
+
+/**
+ * Bio, site e e-mail (este último só alimenta o avatar) na caixa de autor: os do 1º
+ * autor do Co-Authors Plus. Para convidado vêm do perfil de autor convidado; para
+ * usuário, do próprio usuário.
+ */
+function bahia_coautores_campo_caixa($valor, $user_id, $campo) {
+    $p = bahia_coautores_primeiro_no_contexto($user_id, array('caixa'));
+    if (!$p || $p['autor']['nativo']) {
+        return $valor;
+    }
+    $obj = $p['autor']['obj'];
+    return isset($obj->$campo) ? (string) $obj->$campo : '';
+}
+add_filter('get_the_author_description', function ($v, $user_id) {
+    return bahia_coautores_campo_caixa($v, $user_id, 'description');
+}, 30, 2);
+add_filter('get_the_author_user_url', function ($v, $user_id) {
+    // Convidado guarda o site em `website`; usuário, em `user_url`.
+    $p = bahia_coautores_primeiro_no_contexto($user_id, array('caixa'));
+    if (!$p || $p['autor']['nativo']) {
+        return $v;
+    }
+    $obj = $p['autor']['obj'];
+    $site = isset($obj->website) ? $obj->website : (isset($obj->user_url) ? $obj->user_url : '');
+    return (string) $site;
+}, 30, 2);
+add_filter('get_the_author_user_email', function ($v, $user_id) {
+    return bahia_coautores_campo_caixa($v, $user_id, 'user_email');
+}, 30, 2);
+
+/**
+ * Foto da caixa de autor para convidado: a imagem do perfil de convidado, quando houver.
+ * Sem imagem, o get_avatar segue com o e-mail do convidado (filtro acima), e não com o
+ * do autor nativo.
+ */
+add_filter('pre_get_avatar_data', function ($args, $id_or_email) {
+    $ctx = bahia_coautores_contexto();
+    if (!$ctx || $ctx[0] !== 'caixa' || !bahia_coautores_substitui($ctx[1]->ID)) {
+        return $args;
+    }
+    $lista = bahia_coautores_lista($ctx[1]->ID);
+    $obj   = $lista[0]['obj'];
+    if (!isset($obj->type) || $obj->type !== 'guest-author') {
+        return $args;
+    }
+    $tam = isset($args['size']) ? (int) $args['size'] : 96;
+    $url = get_the_post_thumbnail_url($obj->ID, array($tam * 2, $tam * 2));
+    if ($url) {
+        $args['url'] = $url;
+    }
+    return $args;
+}, 30, 2);
