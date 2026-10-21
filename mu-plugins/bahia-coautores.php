@@ -22,7 +22,7 @@
  *                filtros do core lidos pela pilha de chamadas (bahia_coautores_contexto);
  *              - cards tdb_module (editorias, autor, busca): construtor do módulo;
  *              - loop-archive.php e bahia-scroll-infinito.php: bahia_coautores_links().
- * Version: 1.3.0
+ * Version: 1.4.0
  * Author: Bahia.ba
  */
 
@@ -350,3 +350,94 @@ add_filter('pre_get_avatar_data', function ($args, $id_or_email) {
     }
     return $args;
 }, 30, 2);
+
+/* -------------------------------------------------------------------------
+ *  UMA CAIXA DE AUTOR POR COAUTOR (KAN-21)
+ *
+ *  td_module_single_base::get_author_box() monta a caixa de UM autor, e os filtros
+ *  acima fazem dela a do 1º coautor. Com 2+ autores, a caixa única é trocada, no
+ *  buffer de saída (bahia-html-saida.php), por uma caixa para cada autor, na ordem
+ *  do Co-Authors Plus e com a mesma marcação do tema (o CSS dele vale para todas).
+ *  Autor único, nativo ou convidado, continua com a caixa do tema.
+ * ------------------------------------------------------------------------- */
+
+/** Caixa de um autor da lista de bahia_coautores_lista(), na marcação do tema. */
+function bahia_coautores_caixa_html(array $autor) {
+    $obj       = $autor['obj'];
+    $convidado = isset($obj->type) && $obj->type === 'guest-author';
+    $url       = esc_url($autor['url']);
+
+    if ($convidado) {
+        $foto = get_the_post_thumbnail_url($obj->ID, array(192, 192));
+        $img  = $foto
+            ? '<img alt="' . esc_attr($autor['nome_cru']) . '" src="' . esc_url($foto) . '" class="avatar avatar-96 photo" height="96" width="96" loading="lazy" decoding="async">'
+            : get_avatar(isset($obj->user_email) ? $obj->user_email : '', 96, '', $autor['nome_cru'], array('loading' => 'lazy'));
+        $site = isset($obj->website) ? (string) $obj->website : '';
+        $bio  = isset($obj->description) ? (string) $obj->description : '';
+    } else {
+        $img  = get_avatar((int) $obj->ID, 96, '', $autor['nome_cru'], array('loading' => 'lazy'));
+        $site = (string) get_the_author_meta('user_url', $obj->ID);
+        $bio  = (string) get_the_author_meta('description', $obj->ID);
+    }
+
+    $h  = '<div class="author-box-wrap bahia-author-box">';
+    $h .= '<a href="' . $url . '" aria-label="author-photo">' . $img . '</a>';
+    $h .= '<div class="desc">';
+    $h .= '<div class="td-author-name vcard author"><span class="fn"><a href="' . $url . '">' . $autor['nome'] . '</a></span></div>';
+    if ($site !== '') {
+        $h .= '<div class="td-author-url"><a href="' . esc_url($site) . '">' . esc_html($site) . '</a></div>';
+    }
+    $h .= '<div class="td-author-description">' . $bio . '</div>';
+    $h .= '<div class="td-author-social">';
+    if (!$convidado && class_exists('td_social_icons', false)) {
+        foreach (td_social_icons::$td_social_icons_array as $rede => $nome_rede) {
+            $valor = get_the_author_meta($rede, $obj->ID);
+            if (empty($valor)) {
+                continue;
+            }
+            // Mesmo tratamento do tema: o twitter pode vir como @usuario.
+            if ($rede === 'twitter' && !filter_var($valor, FILTER_VALIDATE_URL)) {
+                $valor = 'https://twitter.com/' . str_replace('@', '', $valor);
+            }
+            $h .= td_social_icons::get_icon($valor, $rede, true);
+        }
+    }
+    $h .= '</div>';
+    $h .= '<div class="clearfix"></div>';
+    $h .= '</div></div>';
+    return $h;
+}
+
+add_filter('bahia_hs_html', 'bahia_coautores_caixas', 15);
+
+function bahia_coautores_caixas($html) {
+    if (!is_string($html) || !is_singular()) {
+        return $html;
+    }
+    $lista = bahia_coautores_lista((int) get_queried_object_id());
+    if (count($lista) < 2) {
+        return $html;
+    }
+    $abre = '<!-- author box --><div class="author-box-wrap">';
+    $ini  = strpos($html, $abre);
+    if ($ini === false) {
+        return $html;
+    }
+    // A caixa do tema termina sempre assim (clearfix, fecha .desc, fecha .author-box-wrap).
+    $fecha = '<div class="clearfix"></div></div></div>';
+    $fim   = strpos($html, $fecha, $ini);
+    if ($fim === false) {
+        return $html;
+    }
+    $fim += strlen($fecha);
+
+    $caixas = '';
+    foreach ($lista as $autor) {
+        $caixas .= bahia_coautores_caixa_html($autor);
+    }
+    // O contêiner herda os 48px que o tema dá embaixo da caixa; entre as caixas, 16px.
+    $estilo = '<style id="bahia-author-boxes">.bahia-author-boxes{margin-bottom:48px}'
+            . '.bahia-author-boxes .author-box-wrap{margin-bottom:16px}'
+            . '.bahia-author-boxes .author-box-wrap:last-child{margin-bottom:0}</style>';
+    return substr_replace($html, '<!-- author box -->' . $estilo . '<div class="bahia-author-boxes">' . $caixas . '</div>', $ini, $fim - $ini);
+}
