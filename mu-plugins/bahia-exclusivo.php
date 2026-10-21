@@ -175,6 +175,37 @@ function bahia_exclusivo_injetar($html) {
 }
 
 /* -------------------------------------------------------------------------
+ *  SELO DENTRO DA MATÉRIA (KAN-17)
+ *
+ *  Na página do texto exclusivo o selo vai logo acima do título. O single é
+ *  montado pelo loop-single.php do td-composer (plugins/ não se edita), e o
+ *  show_category() que ocupa esse lugar sai vazio para os CPTs de editoria —
+ *  daí a injeção pelo mesmo buffer de saída, antes do <header class="td-post-title">
+ *  que fica dentro do .td-post-header.
+ * ------------------------------------------------------------------------- */
+add_filter('bahia_hs_html', 'bahia_exclusivo_single', 20);
+
+function bahia_exclusivo_single($html) {
+    if (!is_singular() || !is_string($html)) {
+        return $html;
+    }
+    $post_id = get_queried_object_id();
+    if (!$post_id || !bahia_exclusivo_e_exclusivo($post_id) || strpos($html, '<div class="bahia-selo-single">') !== false) {
+        return $html;
+    }
+    $cab = strpos($html, '<div class="td-post-header">');
+    if ($cab === false) {
+        return $html;
+    }
+    $titulo = strpos($html, '<header class="td-post-title">', $cab);
+    if ($titulo === false) {
+        return $html;
+    }
+    $selo = '<div class="bahia-selo-single"><span class="bahia-selo bahia-selo-exclusivo">EXCLUSIVO</span></div>';
+    return substr_replace($html, $selo, $titulo, 0);
+}
+
+/* -------------------------------------------------------------------------
  *  CARDS CARREGADOS POR AJAX
  *
  *  O buffer de saída do bahia-html-saida.php cobre o render inicial da página,
@@ -261,6 +292,14 @@ add_action('wp_enqueue_scripts', function () {
 @media (max-width:767px){
     .bahia-selo{font-size:10px;padding:3px 7px;}
     .bahia-selos{gap:3px;}
+}
+
+/* Selo dentro da matéria, acima do título (KAN-17). */
+.bahia-selo-single{display:flex;margin:0 0 14px;}
+.bahia-selo-single .bahia-selo{font-size:13px;padding:6px 10px;}
+@media (max-width:767px){
+    .bahia-selo-single{margin-bottom:10px;}
+    .bahia-selo-single .bahia-selo{font-size:12px;padding:5px 9px;}
 }
 CSS;
 
