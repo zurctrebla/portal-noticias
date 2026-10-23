@@ -54,6 +54,8 @@ define('BAHIA_EDITORIAS_CPT_VER', '1.2.0');
  * 25 do mapa, e sobram 11 no menu — Política, Salvador, Municípios, Justiça, Esporte, Brasil,
  * Entretenimento, Mundo, Artigos, Investimentos e Dendê e Poder.
  *
+ *   23/10 — Bahia VOLTA ao menu (KAN-35), a pedido da redação: 13 ocultos, 12 no menu.
+ *
  * O que NÃO muda, e é o ponto: `public`, `publicly_queryable`, `show_ui` e `has_archive`
  * continuam ligados. Os arquivos seguem no ar, as URLs seguem respondendo, o acervo fica
  * inteiro e as matérias continuam editáveis — o painel só para de OFERECER a editoria no
@@ -79,7 +81,8 @@ function bahia_editorias_map() {
     return array(
         'politica'       => array('label' => 'Política',      'with_front' => true),
         'salvador'       => array('label' => 'Salvador',      'with_front' => true),
-        'bahia'          => array('label' => 'Bahia',         'with_front' => true,  'show_in_menu' => false),
+        // Bahia volta ao menu em 23/10/2026 (KAN-35), a pedido da redação.
+        'bahia'          => array('label' => 'Bahia',         'with_front' => true),
         'municipios'     => array('label' => 'Municípios',    'with_front' => true),
         'justica'        => array('label' => 'Justiça',       'with_front' => true),
         'especial'       => array('label' => 'Especial',      'with_front' => false, 'show_in_menu' => false),

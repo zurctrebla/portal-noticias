@@ -43,9 +43,26 @@ function bahia_editoria_tags_colors() {
         // é o que separa Mundo de Artigos por luminosidade, não só por tom de cinza.
         'mundo'          => array('#ededed', '#13182b'),
         'artigo'         => array('#5b6470', '#ffffff'), // cinza-azulado (6,1:1); #808080 reprovava AA
+        // Bahia (KAN-35): tag BRANCA com letra VERMELHA, pedido da redação ao reabrir a
+        // editoria. A letra é o vermelho de Justiça já escurecido para texto (#d83127,
+        // 4,79:1 sobre branco); o vermelho cru #ff3a2f daria 3,56:1 e reprovaria AA.
+        // A 3ª posição é a COR DE IDENTIDADE: com fundo branco, o fundo não serve de cor
+        // da editoria para hover, setas e véu — ver bahia_editoria_cor_identidade().
+        'bahia'          => array('#ffffff', '#d83127', '#ff3a2f'),
         // DEFAULT (Últimas Notícias / demais editorias): preto
         'DEFAULT'        => array('#111111', '#ffffff'),
     );
+}
+
+/**
+ * Cor que representa a editoria fora do selo (hover do título, setas, véu da foto).
+ * É o fundo do selo, salvo quando o mapa traz uma 3ª cor — caso de selo de fundo
+ * branco, em que o fundo não identificaria editoria nenhuma.
+ */
+function bahia_editoria_cor_identidade($slug) {
+    $cores = bahia_editoria_tags_colors();
+    $c = isset($cores[$slug]) ? $cores[$slug] : $cores['DEFAULT'];
+    return isset($c[2]) ? $c[2] : $c[0];
 }
 
 /**
@@ -211,7 +228,7 @@ CSS;
         if (!isset($colors[$slug])) {
             continue;
         }
-        $cor = $colors[$slug][0];
+        $cor = bahia_editoria_cor_identidade($slug);
         $traco = $ajusta ? bahia_hover_ed_cor_legivel($cor, 3.0) : $cor;
         $cheio = bahia_editoria_tags_bg_legivel($cor, '#ffffff');
         $b = ".td_block_wrap:has(.td-cpt-{$slug})";
