@@ -10,7 +10,7 @@
  *              AJAX bahia_infinite_scroll em functions.php), mas reaproveitando o markup
  *              visual do Newspaper (card `td_module_1` de loop-archive.php). Estratégia
  *              baseada em exclude_ids (post__not_in), do mais recente para o mais antigo.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Bahia.ba
  */
 
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('BAHIA_SI_VER', '1.0.0');
+define('BAHIA_SI_VER', '1.1.0');
 
 /**
  * Slugs das editorias (CPTs com has_archive). Reutiliza o mapa do mu-plugin
@@ -222,6 +222,13 @@ function bahia_si_enqueue() {
     // scroll infinito no mobile), reproduzindo o comportamento da produção.
     if (is_page('ultimas-noticias')) {
         bahia_si_loadmore_enqueue('.td_flex_block_1', __('Ver mais notícias', 'newspaper'));
+        return;
+    }
+
+    // Página de autor (/colunistas/<nome>/): "Ver mais" próprio (KAN-33). Ver
+    // bahia_si_autor_enqueue() no fim do arquivo.
+    if (is_author()) {
+        bahia_si_autor_enqueue();
         return;
     }
 
@@ -768,3 +775,207 @@ function bahia_si_ajax_handler() {
 }
 add_action('wp_ajax_bahia_scroll_infinito', 'bahia_si_ajax_handler');
 add_action('wp_ajax_nopriv_bahia_scroll_infinito', 'bahia_si_ajax_handler');
+
+/* -------------------------------------------------------------------------
+ *  PÁGINA DE AUTOR (KAN-33)
+ *
+ *  /colunistas/<nome>/ é um template do tagDiv com um bloco tdb_loop configurado
+ *  com ajax_pagination=load_more — mas o botão nunca aparecia. O "load more" do
+ *  bloco não usa a query da página: ele monta a própria (td_data_source, com
+ *  autors_id), que só enxerga o post_type 'post' e ignora coautoria. Resultado:
+ *  max_num_pages = 1 no JS do bloco, botão escondido, e a pessoa via só as 8
+ *  primeiras matérias (o Lula tem 283).
+ *
+ *  A query certa já existe e é a da URL paginada (/colunistas/<nome>/page/N/),
+ *  montada pelo bahia-autor-archive.php: editorias + coautoria, com o UNION
+ *  indexado. Então o "Ver mais" aqui busca a PRÓXIMA PÁGINA e acrescenta os
+ *  cards do bloco dela ao bloco desta. Os cards chegam idênticos aos da página
+ *  (mesmo módulo, já com selo EXCLUSIVO, coautores e cores, que entram no buffer
+ *  de saída) e o servidor não ganha consulta nova — cada página ainda passa pelo
+ *  fastcgi_cache.
+ *
+ *  Mesma interface das editorias: botão "Ver mais notícias" no desktop (um
+ *  <a href> real para a página seguinte, rastreável), scroll infinito no celular.
+ * ------------------------------------------------------------------------- */
+function bahia_si_autor_enqueue() {
+    global $wp_query;
+    $max_pages = (int) $wp_query->max_num_pages;
+    if ($max_pages < 2) {
+        return; // tudo cabe na primeira página: nada a carregar
+    }
+
+    // O botão herda o CSS do "load more" nativo (o mesmo da home); aqui só o aviso de
+    // fim e o sumiço do botão no celular, onde o carregamento é por rolagem.
+    wp_register_style('bahia-si-css', false);
+    wp_enqueue_style('bahia-si-css');
+    wp_add_inline_style('bahia-si-css',
+        '.bahia-si-nomore{display:none;clear:both;text-align:center;color:#999;font-family:Roboto,Arial,sans-serif;'
+        . 'font-size:12px;text-transform:uppercase;letter-spacing:.5px;padding:18px 0;}'
+        . '@media (max-width:767px){.tdb_loop .td-load-more-wrap{display:none !important;}}');
+
+    // Carregador de quadradinhos do tagDiv (tdLoadingBox), como no load more da home.
+    $deps = array('jquery');
+    if (defined('TDC_SCRIPTS_URL')) {
+        wp_enqueue_script('bahia-td-loading-box', TDC_SCRIPTS_URL . '/tdLoadingBox.js', array('jquery'), null, true);
+        $deps[] = 'bahia-td-loading-box';
+    }
+
+    wp_register_script('bahia-si-autor', false, $deps, BAHIA_SI_VER, true);
+    wp_enqueue_script('bahia-si-autor');
+    wp_localize_script('bahia-si-autor', 'bahiaSiAutor', array(
+        'maxPages'      => $max_pages,
+        'currentPage'   => max(1, (int) get_query_var('paged')),
+        'pagedTemplate' => bahia_si_pagenum_template(),
+        'mobileQuery'   => '(max-width: 767px)',
+        'scrollOffset'  => 600,
+        'i18n'          => array(
+            'loadMore' => __('Ver mais notícias', 'newspaper'),
+            'noMore'   => __('Você chegou ao fim das notícias.', 'newspaper'),
+            'error'    => __('Erro ao carregar. Toque para tentar novamente.', 'newspaper'),
+        ),
+    ));
+    wp_add_inline_script('bahia-si-autor', bahia_si_autor_js());
+}
+
+function bahia_si_autor_js() {
+    return <<<'JS'
+(function ($) {
+    'use strict';
+    var D = window.bahiaSiAutor;
+    if (!D || !D.pagedTemplate) { return; }
+
+    var state = {
+        loading: false,
+        page: parseInt(D.currentPage, 10) || 1,
+        maxPages: parseInt(D.maxPages, 10) || 1
+    };
+    state.hasMore = state.page < state.maxPages;
+
+    function pageUrl(n) { return D.pagedTemplate.replace('%d', n); }
+    function isMobile() { return window.matchMedia && window.matchMedia(D.mobileQuery).matches; }
+
+    // O bloco de matérias da página: o tdb_loop que tem cards. É o mesmo nas páginas
+    // seguintes, então a mesma regra acha o bloco no HTML buscado.
+    function achaInner(raiz) {
+        var blocos = raiz.querySelectorAll('.tdb_loop');
+        for (var i = 0; i < blocos.length; i++) {
+            var inner = blocos[i].querySelector('.td_block_inner');
+            if (inner && inner.querySelector('.td_module_wrap')) { return inner; }
+        }
+        return null;
+    }
+
+    // As fotos dos cards são aplicadas pelo JS do tagDiv (data-img-url + animação de
+    // entrada) só no carregamento da página; nos cards acrescentados, aplicamos aqui.
+    function revela(card) {
+        card.classList.remove('td-animation-stack');
+        var thumbs = card.querySelectorAll('.entry-thumb[data-img-url]');
+        for (var i = 0; i < thumbs.length; i++) {
+            thumbs[i].style.backgroundImage = 'url("' + thumbs[i].getAttribute('data-img-url') + '")';
+        }
+    }
+
+    var inner, $bloco, $wrap, $btn, $nomore;
+
+    // Botão com a MESMA marcação do "load more" nativo da home (.td-load-more-wrap >
+    // a.td_ajax_load_more, dentro do bloco), para herdar o mesmo CSS. Sem a classe
+    // td_ajax_load_more_js de propósito: com ela o handler do tagDiv capturaria o clique
+    // e faria a consulta errada descrita no cabeçalho.
+    function build() {
+        inner = achaInner(document);
+        if (!inner) { return false; }
+        $bloco = $(inner).closest('.tdb_loop');
+        $bloco.find('.td-load-more-wrap, .td-next-prev-wrap').remove();
+        $wrap = $('<div class="td-load-more-wrap"></div>');
+        $btn = $('<a class="td_ajax_load_more bahia-autor-load-more" rel="next"></a>')
+            .attr('href', pageUrl(state.page + 1))
+            .attr('aria-label', D.i18n.loadMore)
+            .text(D.i18n.loadMore);
+        $nomore = $('<div class="bahia-si-nomore"></div>').text(D.i18n.noMore);
+        $wrap.append($btn);
+        $bloco.append($wrap).append($nomore);
+        return true;
+    }
+
+    // Carregador = o do tagDiv no load more (tdBlockAjaxLoadingStart/End): quadradinhos
+    // na cor do tema, com as classes de animação de entrada e saída.
+    var COR = window.tds_theme_color_site_wide || '#4db2ec';
+    function carregando() {
+        $btn.css('visibility', 'hidden');
+        $bloco.find('.td-loader-gif').remove();
+        $bloco.append('<div class="td-loader-gif td-loader-infinite td-loader-blocks-load-more td-loader-animation-start"></div>');
+        if (window.tdLoadingBox) { tdLoadingBox.init(COR); }
+        setTimeout(function () {
+            $bloco.find('.td-loader-gif').removeClass('td-loader-animation-start').addClass('td-loader-animation-mid');
+        }, 50);
+    }
+    function carregou() {
+        $bloco.find('.td-loader-gif').removeClass('td-loader-animation-mid').addClass('td-loader-animation-end');
+        setTimeout(function () {
+            $bloco.find('.td-loader-gif').remove();
+            if (window.tdLoadingBox) { tdLoadingBox.stop(); }
+        }, 400);
+        $btn.css('visibility', '');
+    }
+
+    function fim() {
+        state.hasMore = false;
+        $wrap.hide();
+        $nomore.fadeIn(300);
+    }
+
+    function loadMore() {
+        if (state.loading || !state.hasMore) { return; }
+        var pedida = state.page + 1;
+        state.loading = true;
+        carregando();
+
+        $.ajax({ url: pageUrl(pedida), dataType: 'html', timeout: 20000 })
+            .done(function (html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var novo = achaInner(doc);
+                var cards = novo ? novo.querySelectorAll(':scope > .td_module_wrap') : [];
+                if (!cards.length) { fim(); return; }
+                for (var i = 0; i < cards.length; i++) {
+                    var card = document.importNode(cards[i], true);
+                    revela(card);
+                    inner.appendChild(card);
+                }
+                state.page = pedida;
+                $btn.attr('href', pageUrl(state.page + 1)).text(D.i18n.loadMore);
+                if (state.page >= state.maxPages) { fim(); return; }
+                if (isMobile()) { setTimeout(maybeLoadOnScroll, 250); }
+            })
+            .fail(function (xhr) {
+                // 404 = passou da última página (o total pode ter mudado desde o carregamento).
+                if (xhr && xhr.status === 404) { fim(); return; }
+                $btn.text(D.i18n.error);
+            })
+            .always(function () {
+                state.loading = false;
+                carregou();
+            });
+    }
+
+    function maybeLoadOnScroll() {
+        if (state.loading || !state.hasMore || !isMobile()) { return; }
+        var fundo = $(window).scrollTop() + $(window).height();
+        // Gatilho perto do fim da LISTA, não da página (abaixo dela ainda há rodapé).
+        // Mede-se pela lista e não pelo botão: no celular o botão fica escondido, e a
+        // posição de elemento escondido sai 0 — o que disparava carga atrás de carga.
+        var $lista = $(inner);
+        var alvo = $lista.offset().top + $lista.outerHeight() - (D.scrollOffset || 600);
+        if (fundo >= alvo) { loadMore(); }
+    }
+
+    $(function () {
+        if (!build()) { return; }
+        if (!state.hasMore) { $wrap.hide(); $nomore.show(); return; }
+        $btn.on('click', function (e) { e.preventDefault(); loadMore(); });
+        var t;
+        $(window).on('scroll.bahiaSiAutor', function () { clearTimeout(t); t = setTimeout(maybeLoadOnScroll, 150); });
+        setTimeout(maybeLoadOnScroll, 500);
+    });
+})(jQuery);
+JS;
+}
