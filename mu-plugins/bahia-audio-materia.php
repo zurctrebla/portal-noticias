@@ -6,33 +6,56 @@
  *              barra em forma de onda que se preenche com o progresso, tempo e
  *              velocidade (1.0x, 1.25x, 1.5x, 2x, 0.75x).
  *
- *              DUAS FONTES DE ÁUDIO, nesta ordem:
+ *              DUAS FONTES DE ÁUDIO:
  *
- *              1) MP3 gerado pelo Amazon Polly (meta `_bahia_audio_url`). Voz neural
- *                 constante em qualquer aparelho. A geração está PRONTA MAS DESLIGADA:
- *                 só roda com BAHIA_AUDIO_POLLY e BAHIA_AUDIO_PREFIX definidos como
- *                 constante (wp-config) ou variável de ambiente do pod. NUNCA por opção
- *                 do banco: o banco é copiado entre produção e homolog, e uma chave
- *                 guardada nele ligaria a geração em homolog, gravando no bucket que é
- *                 COMPARTILHADO com produção.
+ *              1) MP3 do Amazon Polly, GERADO SOB DEMANDA: quando alguém dá play numa
+ *                 matéria que ainda não tem MP3 (ou cujo MP3 é de outro texto, voz ou
+ *                 motor), o navegador pede ao servidor (endpoint REST público, com nonce,
+ *                 travas e teto diário — ver bloco do Polly), o servidor monta o texto,
+ *                 gera no Polly, grava no S3 e devolve a URL. Só o PRIMEIRO ouvinte de cada
+ *                 matéria espera alguns segundos ("preparando áudio…"); os seguintes já
+ *                 recebem o MP3. Custo = só as matérias efetivamente ouvidas: teto de
+ *                 ~US$ 19/mês se TODAS as ~2.300 matérias do mês fossem ouvidas (Camila
+ *                 standard, US$ 4 por milhão de caracteres, ~4,7 milhões/mês).
+ *                 A geração está PRONTA MAS DESLIGADA: só roda com BAHIA_AUDIO_POLLY e
+ *                 BAHIA_AUDIO_PREFIX definidos como constante (wp-config) ou variável de
+ *                 ambiente do pod. NUNCA por opção do banco: o banco é copiado entre
+ *                 produção e homolog, e uma chave guardada nele ligaria a geração em
+ *                 homolog, gravando no bucket que é COMPARTILHADO com produção.
  *
- *              2) Voz do navegador (Web Speech API), enquanto não houver MP3. É um modo
- *                 PROVISÓRIO: funciona desde já e sem custo, mas a voz é a que o aparelho
- *                 tiver e costuma soar robotizada (avaliação em homolog, 23/10/2026). O
- *                 script escolhe a melhor voz pt-BR disponível, mas a qualidade de verdade
- *                 vem do modo 1, Polly neural (Camila, Vitória ou Thiago), que depende da
- *                 permissão IAM polly:SynthesizeSpeech — o usuário bahia-pipeline não tinha
- *                 nem polly:DescribeVoices em 23/10/2026. Se o navegador não tiver síntese
- *                 de voz, o player não aparece.
+ *              2) Voz do navegador (Web Speech API): modo PROVISÓRIO enquanto o Polly
+ *                 estiver desligado, e reserva se a geração falhar ou passar de 25 s. A
+ *                 voz é a que o aparelho tiver e costuma soar robotizada (avaliação em
+ *                 homolog, 23/10/2026); o script escolhe a melhor voz pt-BR disponível.
+ *                 A qualidade de verdade vem do Polly, que depende da permissão IAM
+ *                 polly:SynthesizeSpeech — o usuário bahia-pipeline não tinha nem
+ *                 polly:DescribeVoices em 23/10/2026. Sem Polly e sem síntese de voz no
+ *                 navegador, o player não aparece.
  *
  *              O texto lido é o MESMO nos dois modos e é montado aqui no servidor
  *              (título, subtítulo e o corpo em parágrafos/intertítulos/listas/citações),
- *              sem legendas de foto, posts incorporados, figuras, scripts e anúncios.
+ *              sem legendas de foto, posts incorporados, figuras, scripts e anúncios. O
+ *              endpoint NUNCA aceita texto do cliente.
+ *
+ *              TROCAR A VOZ (do Polly). Escolha da redação em 23/10/2026, depois de ouvir
+ *              amostras reais de Camila standard, neural e generativa: CAMILA STANDARD.
+ *              Configuração por constante (wp-config.php) ou variável de ambiente do pod
+ *              — nunca no banco:
+ *                  BAHIA_AUDIO_POLLY_VOICE   padrão "Camila"
+ *                  BAHIA_AUDIO_POLLY_ENGINE  padrão "standard"
+ *              Vozes pt-BR válidas: Camila [generative, neural, standard], Vitoria
+ *              [neural, standard], Thiago [neural], Carolina [generative], Leo
+ *              [generative], Ricardo [standard]. Combinação inválida cai em
+ *              Camila/standard com aviso no log. Teto de custo se todas as matérias do
+ *              mês fossem ouvidas (~4,7 milhões de caracteres): standard ≈ US$ 19,
+ *              neural ≈ US$ 75, generative ≈ US$ 140 (US$ 4 / 16 / 30 por milhão). Trocar
+ *              voz ou motor invalida os MP3 antigos: cada matéria é regerada na próxima
+ *              vez que alguém der play. Detalhes e passo a passo no bloco do Polly.
  *
  *              O player entra pelo filtro de saída único (bahia-html-saida.php), antes do
  *              </header> do cabeçalho da matéria: o single é montado pelo loop-single.php
  *              do td-composer, que não tem gancho nesse ponto (plugins/ não se edita).
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Bahia.ba
  */
 
@@ -40,7 +63,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('BAHIA_AUDIO_VER', '1.0.0');
+define('BAHIA_AUDIO_VER', '1.1.0');
 
 /* =========================================================================
  *  TEXTO DA MATÉRIA
@@ -164,8 +187,13 @@ function bahia_audio_post_da_pagina() {
     if (is_admin() || !is_singular(bahia_audio_tipos())) {
         return null;
     }
+    // Nunca em prévia/rascunho nem em matéria com senha: o player poderia disparar uma
+    // geração paga de um texto que não está publicado.
+    if (is_preview()) {
+        return null;
+    }
     $post = get_queried_object();
-    if (!$post instanceof WP_Post || $post->post_status !== 'publish') {
+    if (!$post instanceof WP_Post || $post->post_status !== 'publish' || post_password_required($post)) {
         return null;
     }
     /** Permite desligar o player numa matéria específica. */
@@ -203,14 +231,18 @@ function bahia_audio_injetar($html) {
 }
 
 function bahia_audio_player_html(WP_Post $post, array $blocos) {
-    $mp3 = (string) get_post_meta($post->ID, '_bahia_audio_url', true);
-    // O MP3 só vale se for do texto ATUAL (a matéria pode ter sido editada depois).
-    if ($mp3 !== '' && get_post_meta($post->ID, '_bahia_audio_hash', true) !== bahia_audio_hash($blocos)) {
-        $mp3 = '';
-    }
+    // MP3 só vale se for do texto, da voz e do motor ATUAIS; senão, o play pede um novo.
+    list($voz, $motor) = bahia_audio_voz_motor();
+    $mp3 = bahia_audio_em_dia($post->ID, bahia_audio_hash($blocos), $voz, $motor)
+        ? (string) get_post_meta($post->ID, '_bahia_audio_url', true) : '';
+    $gerar = $mp3 === '' && bahia_audio_polly_ativo();
     $dados = array(
         'blocos' => $blocos,
         'mp3'    => $mp3 !== '' ? esc_url_raw($mp3) : '',
+        'gerar'  => $gerar,
+        'api'    => $gerar ? esc_url_raw(rest_url('bahia/v1/audio/' . $post->ID)) : '',
+        'nonce'  => $gerar ? wp_create_nonce('bahia_audio_' . $post->ID) : '',
+        'espera' => 25, // segundos até desistir do MP3 e usar a voz do navegador
     );
     $json = wp_json_encode($dados, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP);
 
@@ -227,7 +259,8 @@ function bahia_audio_player_html(WP_Post $post, array $blocos) {
     $pausa = '<svg class="bahia-audio__ico-pausa" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9.3 8.3h1.9v7.4H9.3zm3.5 0h1.9v7.4h-1.9z" fill="currentColor"/></svg>';
 
     return '<div class="bahia-audio" hidden>'
-        . '<div class="bahia-audio__topo"><span class="bahia-audio__rotulo">ouça este conteúdo</span></div>'
+        . '<div class="bahia-audio__topo"><span class="bahia-audio__rotulo">ouça este conteúdo</span>'
+        . '<span class="bahia-audio__aviso" role="status" aria-live="polite"></span></div>'
         . '<div class="bahia-audio__barra">'
         . '<button type="button" class="bahia-audio__play" aria-label="Ouvir esta matéria" aria-pressed="false">' . $play . $pausa . '</button>'
         . '<div class="bahia-audio__onda" role="slider" tabindex="0" aria-label="Progresso do áudio" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">'
@@ -274,7 +307,26 @@ function bahia_audio_css() {
 .bahia-audio__ondas--feito{color:#15559e;clip-path:inset(0 100% 0 0);transition:clip-path .25s linear;}
 .bahia-audio__tempo{flex:0 0 auto;min-width:34px;text-align:right;font-size:11px;color:#555;font-variant-numeric:tabular-nums;}
 .bahia-audio__vel{flex:0 0 auto;background:#15559e !important;color:#fff !important;font-size:11px !important;font-weight:700;padding:4px 6px !important;border-radius:3px;min-width:38px;}
-.bahia-audio.is-carregando .bahia-audio__play{opacity:.5;}
+/* Preparando o MP3 (primeiro ouvinte): o círculo do play gira e o aviso aparece no topo. */
+.bahia-audio__aviso{font-size:11px;color:#555;text-align:right;margin-left:10px;}
+.bahia-audio.is-preparando .bahia-audio__play{cursor:progress;}
+.bahia-audio.is-preparando .bahia-audio__play svg{animation:bahia-audio-gira 1s linear infinite;}
+.bahia-audio.is-preparando .bahia-audio__ico-play path{opacity:.35;}
+.bahia-audio.is-preparando .bahia-audio__ico-play circle{stroke-dasharray:48 18;}
+@keyframes bahia-audio-gira{to{transform:rotate(360deg);}}
+@media (prefers-reduced-motion:reduce){.bahia-audio.is-preparando .bahia-audio__play svg{animation:none;}}
+/* Modo escuro (KAN-15 põe a classe bahia-dark no <html>). Cores próprias, sem depender
+   do arquivo do modo escuro; contraste medido sobre o fundo #121417 da paleta escura:
+   rótulo, ícone e onda tocada 8,98:1; tempo 9,62:1; onda base 3,26:1; botão de
+   velocidade 9,2:1 (texto escuro sobre azul claro). */
+html.bahia-dark .bahia-audio__topo,html.bahia-dark .bahia-audio__barra{border-bottom-color:#3a424c;}
+html.bahia-dark .bahia-audio__rotulo{color:#8ab8f2;}
+html.bahia-dark .bahia-audio__tempo,html.bahia-dark .bahia-audio__aviso{color:#b4bcc6;}
+html.bahia-dark .bahia-audio button{color:#8ab8f2;}
+html.bahia-dark .bahia-audio__ondas{color:#5d6876;}
+html.bahia-dark .bahia-audio__ondas--feito{color:#8ab8f2;}
+html.bahia-dark .bahia-audio__vel{background:#8ab8f2 !important;color:#0f1115 !important;}
+html.bahia-dark .bahia-audio button:focus-visible,html.bahia-dark .bahia-audio__onda:focus-visible{outline-color:#8ab8f2;}
 @media (max-width:767px){
   .bahia-audio{margin:12px 0 2px;}
   .bahia-audio__barra{gap:8px;}
@@ -292,8 +344,8 @@ function bahia_audio_js() {
     var dados;
     try { dados = JSON.parse(el.querySelector('.bahia-audio__dados').textContent); } catch (e) { return; }
     var temSintese = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
-    var modo = dados.mp3 ? 'mp3' : (temSintese ? 'voz' : '');
-    if (!modo) { return; } // sem MP3 e sem voz no navegador: nada a oferecer
+    // Sem MP3, sem Polly ligado e sem voz no navegador: nada a oferecer.
+    if (!dados.mp3 && !dados.gerar && !temSintese) { return; }
     el.hidden = false;
 
     var btPlay = el.querySelector('.bahia-audio__play');
@@ -301,9 +353,12 @@ function bahia_audio_js() {
     var onda = el.querySelector('.bahia-audio__onda');
     var feito = el.querySelector('.bahia-audio__ondas--feito');
     var tempo = el.querySelector('.bahia-audio__tempo');
+    var aviso = el.querySelector('.bahia-audio__aviso');
     var VELS = [1, 1.25, 1.5, 2, 0.75];
     var iVel = 0;
     var tocando = false;
+    // motor: '' (nada escolhido), 'mp3', 'voz' ou 'preparando' (esperando o servidor gerar)
+    var motor = dados.mp3 ? 'mp3' : '';
 
     function fmt(s) {
         s = Math.max(0, Math.round(s || 0));
@@ -321,30 +376,104 @@ function bahia_audio_js() {
         btPlay.setAttribute('aria-pressed', t ? 'true' : 'false');
         btPlay.setAttribute('aria-label', t ? 'Pausar a leitura' : 'Ouvir esta matéria');
     }
+    function avisa(txt) { aviso.textContent = txt || ''; }
 
-    /* ---------------- modo MP3 ---------------- */
-    var audio, motor;
-    if (modo === 'mp3') {
+    /* ---------------- MP3 ---------------- */
+    // O <audio> é criado já no primeiro clique e "destravado" com um som vazio: no iPhone,
+    // tocar depois da espera do servidor exige que o elemento tenha sido iniciado por um
+    // gesto do usuário.
+    var audio = null;
+    var MUDO = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+    function criaAudio() {
+        if (audio) { return audio; }
         audio = new Audio();
         audio.preload = 'none';
-        audio.src = dados.mp3;
         audio.addEventListener('timeupdate', function () {
+            if (motor !== 'mp3') { return; }
             pinta(audio.duration ? audio.currentTime / audio.duration : 0, audio.currentTime);
         });
-        audio.addEventListener('ended', function () { estado(false); pinta(1, audio.duration); });
-        audio.addEventListener('pause', function () { estado(false); });
-        audio.addEventListener('play', function () { estado(true); });
+        audio.addEventListener('ended', function () { if (motor === 'mp3') { estado(false); pinta(1, audio.duration); } });
+        audio.addEventListener('pause', function () { if (motor === 'mp3') { estado(false); } });
+        audio.addEventListener('play', function () { if (motor === 'mp3') { estado(true); } });
         audio.addEventListener('error', function () {
-            // MP3 indisponível: cai para a voz do navegador, se houver.
-            if (temSintese && motor !== 'voz') { motor = 'voz'; modo = 'voz'; iniciaVoz(); if (tocando) { tocaVoz(); } }
+            if (motor !== 'mp3' || !audio.getAttribute('src') || audio.getAttribute('src') === MUDO) { return; }
+            reserva('Áudio indisponível; lendo com a voz do navegador.');
         });
+        return audio;
+    }
+    function destrava() {
+        var a = criaAudio();
+        if (a.getAttribute('src')) { return; }
+        a.src = MUDO;
+        var p = a.play();
+        if (p && p.catch) { p.then(function () { a.pause(); }).catch(function () {}); }
+    }
+    function tocaMp3(url) {
+        var a = criaAudio();
         motor = 'mp3';
+        el.classList.remove('is-preparando');
+        if (a.getAttribute('src') !== url) { a.src = url; }
+        a.playbackRate = VELS[iVel];
+        var p = a.play();
+        if (p && p.catch) {
+            p.catch(function () {
+                // Navegador recusou tocar sem novo gesto: fica pronto para o próximo clique.
+                estado(false);
+                avisa('Áudio pronto: toque no play.');
+            });
+        }
     }
 
-    /* ---------------- modo voz do navegador ---------------- */
+    /* ---------------- geração sob demanda ---------------- */
+    var pedido = null;
+    function prepara() {
+        motor = 'preparando';
+        el.classList.add('is-preparando');
+        btPlay.setAttribute('aria-label', 'Preparando o áudio');
+        avisa('preparando áudio…');
+        var limite = Date.now() + (dados.espera || 25) * 1000;
+        var meu = pedido = {};
+        function tenta() {
+            if (pedido !== meu) { return; }
+            if (Date.now() > limite) { return reserva('O áudio demorou; lendo com a voz do navegador.'); }
+            var x = new XMLHttpRequest();
+            x.open('POST', dados.api, true);
+            x.setRequestHeader('Content-Type', 'application/json');
+            x.timeout = Math.max(3000, limite - Date.now());
+            x.onload = function () {
+                if (pedido !== meu) { return; }
+                var r = null;
+                try { r = JSON.parse(x.responseText); } catch (e) {}
+                if (x.status === 200 && r && r.url) { pedido = null; avisa(''); return tocaMp3(r.url); }
+                // 202: outra pessoa já está gerando este áudio — consulta de novo em 2 s.
+                if (x.status === 202) { return setTimeout(tenta, 2000); }
+                reserva('Áudio indisponível agora; lendo com a voz do navegador.');
+            };
+            x.onerror = function () {
+                if (pedido === meu) { reserva('Áudio indisponível agora; lendo com a voz do navegador.'); }
+            };
+            // O servidor segue gerando (ignore_user_abort): o próximo ouvinte já recebe o MP3.
+            x.ontimeout = function () {
+                if (pedido === meu) { reserva('O áudio demorou; lendo com a voz do navegador.'); }
+            };
+            x.send(JSON.stringify({ nonce: dados.nonce }));
+        }
+        tenta();
+    }
+    function reserva(msg) {
+        pedido = null;
+        el.classList.remove('is-preparando');
+        if (!temSintese) { motor = ''; estado(false); avisa('Áudio indisponível no momento.'); return; }
+        motor = 'voz';
+        avisa(msg);
+        iniciaVoz();
+        tocaVoz();
+    }
+
+    /* ---------------- voz do navegador ---------------- */
     // Frases curtas: o Chrome corta falas longas (~15 s) e pause()/resume() é instável
     // nos navegadores. Pausar = cancelar e lembrar a frase; retomar = falar dela em diante.
-    var frases = [], acum = [], total = 0, iFrase = 0, voz = null, falando = null;
+    var frases = [], acum = [], total = 0, iFrase = 0, voz = null, falando = null, vozPronta = false;
     var CPS = 14.5; // caracteres por segundo a 1x (estimativa do tempo)
 
     function fatia(texto) {
@@ -363,10 +492,16 @@ function bahia_audio_js() {
         return out;
     }
     function iniciaVoz() {
+        if (vozPronta || !temSintese) { return; }
+        vozPronta = true;
         frases = [];
         (dados.blocos || []).forEach(function (b) { frases = frases.concat(fatia(b)); });
         acum = []; total = 0;
         frases.forEach(function (f) { acum.push(total); total += f.length; });
+        escolheVoz();
+        if (window.speechSynthesis.addEventListener) {
+            window.speechSynthesis.addEventListener('voiceschanged', escolheVoz);
+        }
     }
     // Escolha da voz: o navegador lista dezenas de vozes em português e a primeira costuma
     // ser a pior. Pontua cada uma e fica com a melhor que o aparelho tiver.
@@ -427,24 +562,29 @@ function bahia_audio_js() {
         estado(false);
     }
 
-    if (modo === 'voz') {
+    // Antes do primeiro play: com o Polly desligado, mostra a duração estimada da leitura.
+    if (!dados.mp3 && !dados.gerar && temSintese) {
         iniciaVoz();
-        motor = 'voz';
-        escolheVoz();
-        if (window.speechSynthesis.addEventListener) {
-            window.speechSynthesis.addEventListener('voiceschanged', escolheVoz);
-        }
         pinta(0, 0);
-        tempo.textContent = fmt(total / CPS); // duração estimada antes de começar
+        tempo.textContent = fmt(total / CPS);
     }
 
     /* ---------------- controles ---------------- */
     btPlay.addEventListener('click', function () {
+        if (motor === 'preparando') { return; } // já pedido; não sobrepõe a voz do navegador
         if (motor === 'mp3') {
-            if (audio.paused) { audio.playbackRate = VELS[iVel]; audio.play(); } else { audio.pause(); }
+            var a = criaAudio();
+            if (!a.getAttribute('src') || a.getAttribute('src') === MUDO) { return tocaMp3(dados.mp3); }
+            if (a.paused) { a.playbackRate = VELS[iVel]; a.play(); } else { a.pause(); }
             return;
         }
-        if (tocando) { paraVoz(); } else { window.speechSynthesis.cancel(); tocaVoz(); }
+        if (motor === 'voz') {
+            if (tocando) { paraVoz(); } else { window.speechSynthesis.cancel(); tocaVoz(); }
+            return;
+        }
+        // Primeiro play sem MP3 válido: gera no servidor (Polly ligado) ou usa a voz.
+        if (dados.gerar && dados.api) { destrava(); return prepara(); }
+        if (temSintese) { motor = 'voz'; iniciaVoz(); window.speechSynthesis.cancel(); tocaVoz(); }
     });
 
     btVel.addEventListener('click', function () {
@@ -453,16 +593,20 @@ function bahia_audio_js() {
         var txt = (r % 1 === 0 ? r.toFixed(1) : String(r)) + 'x';
         btVel.textContent = txt;
         btVel.setAttribute('aria-label', 'Velocidade de leitura: ' + txt);
-        if (motor === 'mp3') { audio.playbackRate = r; return; }
-        if (tocando) { falando = null; window.speechSynthesis.cancel(); tocaVoz(); } // reinicia a frase na nova velocidade
+        if (motor === 'mp3' && audio) { audio.playbackRate = r; return; }
+        if (motor === 'voz' && tocando) { falando = null; window.speechSynthesis.cancel(); tocaVoz(); } // reinicia a frase na nova velocidade
     });
 
     function salta(fracao) {
         fracao = Math.max(0, Math.min(1, fracao));
         if (motor === 'mp3') {
-            if (audio.duration) { audio.currentTime = fracao * audio.duration; }
+            if (audio && audio.duration) { audio.currentTime = fracao * audio.duration; }
             return;
         }
+        // Na voz do navegador o salto escolhe a frase; antes do primeiro play com Polly
+        // ligado, não há o que saltar ainda.
+        if (motor !== 'voz' && (motor !== '' || dados.gerar)) { return; }
+        iniciaVoz();
         var alvo = fracao * total, i = 0;
         while (i + 1 < acum.length && acum[i + 1] <= alvo) { i++; }
         iFrase = i;
@@ -480,23 +624,77 @@ function bahia_audio_js() {
     });
 
     // Sair da página não pode deixar a voz falando sozinha.
-    window.addEventListener('pagehide', function () { if (motor === 'voz') { window.speechSynthesis.cancel(); } });
+    window.addEventListener('pagehide', function () { if (temSintese) { window.speechSynthesis.cancel(); } });
 })();
 JS;
 }
 
 /* =========================================================================
- *  GERAÇÃO NO AMAZON POLLY (preparada, DESLIGADA por padrão)
+ *  GERAÇÃO NO AMAZON POLLY — SOB DEMANDA (preparada, DESLIGADA por padrão)
  *
- *  Para ligar, no ambiente de PRODUÇÃO (manifesto do pod ou wp-config):
- *      BAHIA_AUDIO_POLLY=1
- *      BAHIA_AUDIO_PREFIX=audio/prod/
- *  e dar ao usuário da AWS a permissão polly:SynthesizeSpeech (a permissão de gravar
- *  no bucket o Offload Media já tem). Credenciais: BAHIA_POLLY_KEY/BAHIA_POLLY_SECRET
- *  se definidas; senão, as do WP Offload Media.
+ *  COMO FUNCIONA
+ *    O MP3 é gerado quando alguém dá PLAY numa matéria sem MP3 válido (texto, voz e
+ *    motor atuais). O player chama POST /wp-json/bahia/v1/audio/<id>; o servidor monta o
+ *    texto (nunca aceita texto do cliente), chama o Polly, grava no S3 e devolve a URL.
+ *    Só o primeiro ouvinte espera (alguns segundos; o player mostra "preparando áudio…" e,
+ *    passados 25 s ou havendo erro, lê com a voz do navegador). Editar a matéria muda o
+ *    texto e invalida o MP3: a próxima escuta regera.
+ *    Custo = só as matérias ouvidas. Teto, se TODAS as ~2.300 matérias do mês fossem
+ *    ouvidas (~4,7 milhões de caracteres): ~US$ 19/mês com Camila standard.
  *
- *  Homolog NÃO deve ligar (ou, se ligar, com outro prefixo, ex. audio/hml/): o bucket é
- *  compartilhado com produção (ver HANDOVER, bucket-compartilhado).
+ *  PROTEÇÕES (o endpoint é público e cada geração custa dinheiro)
+ *    - só matéria publicada, de tipo editorial, sem senha; nunca prévia/rascunho;
+ *    - nonce por matéria, emitido na página;
+ *    - uma geração por matéria por vez (trava atômica em wp_options; quem chega durante a
+ *      geração recebe 202 e o player consulta de novo em 2 s — sem stampede);
+ *    - teto diário de gerações (BAHIA_AUDIO_COTA_DIARIA, padrão 150 ≈ 300 mil caracteres
+ *      ≈ US$ 1,20/dia em standard); ao bater, responde 429 e registra no error_log;
+ *    - teto de tamanho por matéria (BAHIA_AUDIO_MAX_CHARS, padrão 20000).
+ *
+ *  LIGAR EM PRODUÇÃO
+ *    1. IAM: dar polly:SynthesizeSpeech à credencial do site — a do WP Offload Media
+ *       (que já grava no bucket) ou uma dedicada em BAHIA_POLLY_KEY / BAHIA_POLLY_SECRET
+ *       (essa precisa também de s3:PutObject e s3:PutObjectAcl no prefixo do áudio).
+ *    2. No ambiente de PRODUÇÃO (variável de ambiente do pod ou wp-config.php):
+ *           BAHIA_AUDIO_POLLY=true
+ *           BAHIA_AUDIO_PREFIX=audio/prod/
+ *    Homolog NÃO deve ligar (ou, se ligar, com prefixo próprio, ex. audio/hml/): o bucket
+ *    de mídia é compartilhado com produção (ver HANDOVER, bucket-compartilhado).
+ *
+ *  TROCAR A VOZ
+ *    Escolha da redação em 23/10/2026, depois de ouvir amostras reais de Camila standard,
+ *    neural e generativa: CAMILA STANDARD. Voz e motor vêm de constante ou variável de
+ *    ambiente — nunca do banco:
+ *        BAHIA_AUDIO_POLLY_VOICE   padrão "Camila"
+ *        BAHIA_AUDIO_POLLY_ENGINE  padrão "standard"
+ *    Vozes pt-BR do Polly (describe-voices, 23/10/2026) e motores de cada uma:
+ *        Camila    generative, neural, standard
+ *        Vitoria   neural, standard
+ *        Thiago    neural
+ *        Carolina  generative
+ *        Leo       generative
+ *        Ricardo   standard
+ *    Combinação inválida cai em Camila/standard e registra aviso no log, sem quebrar nada.
+ *    Exemplos:
+ *        wp-config.php:   define('BAHIA_AUDIO_POLLY_ENGINE', 'neural');
+ *        pod (env):       BAHIA_AUDIO_POLLY_VOICE=Camila  BAHIA_AUDIO_POLLY_ENGINE=neural
+ *    Teto de custo por motor (tabela da AWS, por milhão de caracteres), se todas as
+ *    matérias do mês fossem ouvidas (~4,7 milhões de caracteres):
+ *        standard   US$ 4   → ≈ US$ 19/mês   (padrão)
+ *        neural     US$ 16  → ≈ US$ 75/mês
+ *        generative US$ 30  → ≈ US$ 140/mês
+ *    Cada MP3 registra voz e motor (metas _bahia_audio_voz e _bahia_audio_motor), além do
+ *    hash do texto: trocar voz ou motor faz cada matéria ser regerada na próxima escuta.
+ *    MP3 do standard sai a 22050 Hz (máximo do motor); neural e generativa, a 24000 Hz.
+ *
+ *  OPCIONAIS
+ *    - BAHIA_AUDIO_GERAR_AO_PUBLICAR=true: volta a gerar no WP-cron ao publicar/atualizar
+ *      (custo de TODAS as matérias, não só das ouvidas). Desligado por padrão.
+ *    - Pré-gerar em lote (ex. depois de trocar a voz, para ninguém esperar):
+ *          wp bahia-audio regerar --desde=2026-10-01 --dry-run   # conta e estima o custo
+ *          wp bahia-audio regerar --desde=2026-10-01 --limite=500
+ *      Custo = caracteres regerados × preço do motor; um mês de acervo (~4,7 M
+ *      caracteres) ≈ US$ 19 em standard. Use sempre --desde e --dry-run.
  * ========================================================================= */
 
 /** Lê uma configuração de constante ou variável de ambiente — nunca do banco. */
@@ -508,10 +706,13 @@ function bahia_audio_cfg($nome, $padrao = '') {
     return ($v === false || $v === '') ? $padrao : $v;
 }
 
+function bahia_audio_cfg_bool($nome) {
+    $v = bahia_audio_cfg($nome, false);
+    return $v === true || $v === 1 || $v === '1' || strtolower((string) $v) === 'true';
+}
+
 function bahia_audio_polly_ativo() {
-    $liga = bahia_audio_cfg('BAHIA_AUDIO_POLLY', false);
-    $liga = ($liga === true || $liga === 1 || $liga === '1' || $liga === 'true');
-    return $liga && bahia_audio_prefixo() !== '';
+    return bahia_audio_cfg_bool('BAHIA_AUDIO_POLLY') && bahia_audio_prefixo() !== '';
 }
 
 /** Prefixo do objeto no bucket, por AMBIENTE. Vazio = geração desligada. */
@@ -520,16 +721,201 @@ function bahia_audio_prefixo() {
     return $p === '' ? '' : $p . '/';
 }
 
-function bahia_audio_hash(array $blocos) {
-    return md5(bahia_audio_cfg('BAHIA_POLLY_VOICE', 'Camila') . '|' . implode("\n", $blocos));
+/** Vozes pt-BR do Polly e os motores de cada uma (describe-voices, 23/10/2026). */
+function bahia_audio_vozes_polly() {
+    return array(
+        'Camila'   => array('generative', 'neural', 'standard'),
+        'Vitoria'  => array('neural', 'standard'),
+        'Thiago'   => array('neural'),
+        'Carolina' => array('generative'),
+        'Leo'      => array('generative'),
+        'Ricardo'  => array('standard'),
+    );
 }
 
-/** Agenda a geração quando uma matéria é publicada ou atualizada. */
+/**
+ * Voz e motor em uso: [voz, motor]. Lidos de BAHIA_AUDIO_POLLY_VOICE/_ENGINE (constante
+ * ou ambiente) e validados contra bahia_audio_vozes_polly(). Combinação inválida volta a
+ * Camila/standard com aviso no log — nunca derruba a página nem a geração.
+ */
+function bahia_audio_voz_motor() {
+    $vozes = bahia_audio_vozes_polly();
+    $pedida = trim((string) bahia_audio_cfg('BAHIA_AUDIO_POLLY_VOICE', 'Camila'));
+    $motor = strtolower(trim((string) bahia_audio_cfg('BAHIA_AUDIO_POLLY_ENGINE', 'standard')));
+    // Aceita "camila", "Vitória" etc.: normaliza para o nome que o Polly espera.
+    $voz = null;
+    foreach (array_keys($vozes) as $nome) {
+        if (strcasecmp(remove_accents($pedida), $nome) === 0) {
+            $voz = $nome;
+        }
+    }
+    if ($voz === null || !in_array($motor, $vozes[$voz], true)) {
+        static $avisou = false;
+        if (!$avisou) {
+            error_log('[bahia-audio] voz/motor inválidos (' . $pedida . '/' . $motor . '); usando Camila/standard.');
+            $avisou = true;
+        }
+        return array('Camila', 'standard');
+    }
+    return array($voz, $motor);
+}
+
+/** Hash do TEXTO lido. */
+function bahia_audio_hash(array $blocos) {
+    return md5(implode("\n", $blocos));
+}
+
+/** O MP3 da matéria está em dia com o texto, a voz e o motor atuais? */
+function bahia_audio_em_dia($post_id, $hash, $voz, $motor) {
+    return get_post_meta($post_id, '_bahia_audio_url', true)
+        && get_post_meta($post_id, '_bahia_audio_hash', true) === $hash
+        && get_post_meta($post_id, '_bahia_audio_voz', true) === $voz
+        && get_post_meta($post_id, '_bahia_audio_motor', true) === $motor;
+}
+
+/** Matéria que pode ter áudio gerado: publicada, editorial, sem senha. */
+function bahia_audio_post_geravel($post_id) {
+    $post = get_post((int) $post_id);
+    if (!$post || $post->post_status !== 'publish' || !empty($post->post_password)) {
+        return null;
+    }
+    return in_array($post->post_type, bahia_audio_tipos(), true) ? $post : null;
+}
+
+/* ---------------- endpoint público do player ---------------- */
+
+add_action('rest_api_init', function () {
+    register_rest_route('bahia/v1', '/audio/(?P<id>\d+)', array(
+        'methods'             => 'POST',
+        'callback'            => 'bahia_audio_rest',
+        'permission_callback' => '__return_true', // público; a proteção está no callback
+        'args'                => array('id' => array('validate_callback' => function ($v) { return ctype_digit((string) $v); })),
+    ));
+});
+
+/**
+ * POST /wp-json/bahia/v1/audio/<id>  corpo: {"nonce": "..."}
+ *   200 {url}  MP3 pronto (já existia ou acabou de ser gerado)
+ *   202        outra requisição está gerando este áudio: tente de novo em ~2 s
+ *   403/404    nonce inválido / matéria que não pode ter áudio
+ *   429        teto diário de gerações atingido
+ *   503        geração desligada neste ambiente ou falha no Polly/S3
+ */
+function bahia_audio_rest(WP_REST_Request $req) {
+    $id = (int) $req['id'];
+    $nonce = (string) $req->get_param('nonce');
+    if (!wp_verify_nonce($nonce, 'bahia_audio_' . $id)) {
+        return new WP_REST_Response(array('erro' => 'nonce'), 403);
+    }
+    $post = bahia_audio_post_geravel($id);
+    if (!$post) {
+        return new WP_REST_Response(array('erro' => 'materia'), 404);
+    }
+    if (!bahia_audio_polly_ativo()) {
+        return new WP_REST_Response(array('erro' => 'desligado'), 503);
+    }
+    $r = bahia_audio_gerar_sob_demanda($post);
+    if (is_string($r)) {
+        return new WP_REST_Response(array('url' => $r), 200, array('Cache-Control' => 'no-store'));
+    }
+    $cod = $r->get_error_code();
+    $status = $cod === 'gerando' ? 202 : ($cod === 'cota' ? 429 : 503);
+    return new WP_REST_Response(array('erro' => $cod), $status, array('Cache-Control' => 'no-store'));
+}
+
+/**
+ * Devolve a URL do MP3 em dia, gerando-o se preciso, com trava por matéria e teto diário.
+ *
+ * @return string|WP_Error  URL, ou WP_Error 'gerando' | 'cota' | falha
+ */
+function bahia_audio_gerar_sob_demanda(WP_Post $post) {
+    list($voz, $motor) = bahia_audio_voz_motor();
+    $blocos = bahia_audio_blocos($post);
+    $hash = bahia_audio_hash($blocos);
+    if (bahia_audio_em_dia($post->ID, $hash, $voz, $motor)) {
+        return (string) get_post_meta($post->ID, '_bahia_audio_url', true);
+    }
+    if (!bahia_audio_trava($post->ID)) {
+        return new WP_Error('gerando', 'Já há uma geração em andamento para esta matéria.');
+    }
+    // A partir daqui, o cliente pode desistir (fallback de 25 s): a geração continua e
+    // fica pronta para o próximo ouvinte.
+    ignore_user_abort(true);
+    try {
+        // Conferido de novo DENTRO da trava: quem esperou o 202 não gera em dobro.
+        wp_cache_delete($post->ID, 'post_meta');
+        if (bahia_audio_em_dia($post->ID, $hash, $voz, $motor)) {
+            return (string) get_post_meta($post->ID, '_bahia_audio_url', true);
+        }
+        if (!bahia_audio_cota_consome()) {
+            return new WP_Error('cota', 'Teto diário de gerações atingido.');
+        }
+        $r = bahia_audio_gerar($post->ID);
+        if (is_wp_error($r)) {
+            return $r;
+        }
+        return (string) get_post_meta($post->ID, '_bahia_audio_url', true);
+    } finally {
+        bahia_audio_destrava($post->ID);
+    }
+}
+
+/**
+ * Trava atômica por matéria: add_option() falha se a linha já existe (chave única em
+ * wp_options), então só uma requisição ganha. Trava com mais de 120 s é tida como órfã
+ * (processo morto) e é retomada.
+ */
+function bahia_audio_trava($post_id) {
+    $nome = '_bahia_audio_trava_' . (int) $post_id;
+    if (add_option($nome, time(), '', 'no')) {
+        return true;
+    }
+    global $wpdb;
+    $desde = (int) $wpdb->get_var($wpdb->prepare("SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", $nome));
+    if ($desde && time() - $desde > 120) {
+        // Retoma só se ninguém retomou antes (UPDATE condicionado ao valor lido).
+        return (bool) $wpdb->query($wpdb->prepare(
+            "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s",
+            time(), $nome, $desde
+        ));
+    }
+    return false;
+}
+
+function bahia_audio_destrava($post_id) {
+    delete_option('_bahia_audio_trava_' . (int) $post_id);
+}
+
+/**
+ * Consome uma geração da cota do dia (contador atômico em wp_options). Ao estourar,
+ * registra uma vez no error_log e devolve false.
+ */
+function bahia_audio_cota_consome() {
+    global $wpdb;
+    $teto = max(0, (int) bahia_audio_cfg('BAHIA_AUDIO_COTA_DIARIA', 150));
+    $nome = '_bahia_audio_cota_' . wp_date('Ymd');
+    $wpdb->query($wpdb->prepare(
+        "INSERT INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, '1', 'no')
+         ON DUPLICATE KEY UPDATE option_value = option_value + 1",
+        $nome
+    ));
+    $usado = (int) $wpdb->get_var($wpdb->prepare("SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", $nome));
+    if ($usado > $teto) {
+        if ($usado === $teto + 1) {
+            error_log('[bahia-audio] teto diário de ' . $teto . ' gerações atingido (BAHIA_AUDIO_COTA_DIARIA).');
+        }
+        return false;
+    }
+    return true;
+}
+
+/* ---------------- geração ao publicar (opcional, desligada) ---------------- */
+
 add_action('save_post', function ($post_id, $post) {
-    if (!bahia_audio_polly_ativo() || wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
+    if (!bahia_audio_cfg_bool('BAHIA_AUDIO_GERAR_AO_PUBLICAR') || !bahia_audio_polly_ativo()) {
         return;
     }
-    if ($post->post_status !== 'publish' || !in_array($post->post_type, bahia_audio_tipos(), true)) {
+    if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id) || !bahia_audio_post_geravel($post_id)) {
         return;
     }
     // Um minuto de folga: edições seguidas viram uma geração só.
@@ -540,8 +926,8 @@ add_action('save_post', function ($post_id, $post) {
 add_action('bahia_audio_gerar', 'bahia_audio_gerar');
 
 /**
- * Gera o MP3 da matéria no Polly e grava no bucket. Idempotente: se o texto não mudou
- * desde a última geração (hash), não chama o Polly de novo — não paga duas vezes.
+ * Gera o MP3 da matéria no Polly e grava no bucket. Idempotente: se texto, voz e motor
+ * não mudaram desde a última geração, não chama o Polly de novo — não paga duas vezes.
  *
  * @return true|WP_Error
  */
@@ -549,13 +935,14 @@ function bahia_audio_gerar($post_id) {
     if (!bahia_audio_polly_ativo()) {
         return new WP_Error('desligado', 'Geração de áudio desligada neste ambiente.');
     }
-    $post = get_post($post_id);
-    if (!$post || $post->post_status !== 'publish') {
-        return new WP_Error('post', 'Matéria inexistente ou não publicada.');
+    $post = bahia_audio_post_geravel($post_id);
+    if (!$post) {
+        return new WP_Error('post', 'Matéria inexistente, não publicada ou com senha.');
     }
+    list($voz, $motor) = bahia_audio_voz_motor();
     $blocos = bahia_audio_blocos($post);
     $hash = bahia_audio_hash($blocos);
-    if (get_post_meta($post_id, '_bahia_audio_hash', true) === $hash && get_post_meta($post_id, '_bahia_audio_url', true)) {
+    if (bahia_audio_em_dia($post_id, $hash, $voz, $motor)) {
         return true;
     }
     $texto = implode("\n\n", $blocos);
@@ -568,6 +955,8 @@ function bahia_audio_gerar($post_id) {
     if (is_wp_error($cred)) {
         return bahia_audio_falha($post_id, $cred);
     }
+    $cred['voz'] = $voz;
+    $cred['motor'] = $motor;
 
     $mp3 = '';
     foreach (bahia_audio_partes($texto, 2800) as $parte) {
@@ -578,18 +967,80 @@ function bahia_audio_gerar($post_id) {
         $mp3 .= $r; // quadros MP3 concatenam sem recodificar
     }
 
-    $chave = bahia_audio_prefixo() . get_post_time('Y/m', true, $post) . '/' . $post_id . '-' . substr($hash, 0, 10) . '.mp3';
+    // Nome leva texto+voz+motor: arquivo novo a cada troca, sem colisão com o cache da CDN.
+    $marca = substr(md5($hash . '|' . $voz . '|' . $motor), 0, 10);
+    $chave = bahia_audio_prefixo() . get_post_time('Y/m', true, $post) . '/' . $post_id . '-' . $marca . '.mp3';
     $url = bahia_audio_s3_put($chave, $mp3, $cred);
     if (is_wp_error($url)) {
         return bahia_audio_falha($post_id, $url);
     }
     update_post_meta($post_id, '_bahia_audio_url', esc_url_raw($url));
     update_post_meta($post_id, '_bahia_audio_hash', $hash);
+    update_post_meta($post_id, '_bahia_audio_voz', $voz);
+    update_post_meta($post_id, '_bahia_audio_motor', $motor);
+    update_post_meta($post_id, '_bahia_audio_caracteres', mb_strlen($texto));
     update_post_meta($post_id, '_bahia_audio_gerado', gmdate('c'));
     delete_post_meta($post_id, '_bahia_audio_erro');
     // O arquivo anterior NÃO é apagado: o bucket é compartilhado entre ambientes e
     // apagar ali já custou arquivo de produção (portão de contagem para apagar).
     return true;
+}
+
+/**
+ * Pré-geração em lote (opcional): agenda no WP-cron, espaçadas, as matérias publicadas
+ * desde $desde cujo MP3 não está em dia. Em $simular, só conta e estima o custo.
+ *
+ * @return array{matérias:int, caracteres:int, custo_usd:float, voz:string, motor:string}
+ */
+function bahia_audio_regerar_lote($desde, $limite = 500, $simular = true) {
+    global $wpdb;
+    list($voz, $motor) = bahia_audio_voz_motor();
+    $preco = array('standard' => 4, 'neural' => 16, 'generative' => 30);
+    $tipos = bahia_audio_tipos();
+    $in = implode(',', array_fill(0, count($tipos), '%s'));
+    $ids = $wpdb->get_col($wpdb->prepare(
+        "SELECT ID FROM {$wpdb->posts} WHERE post_status = 'publish' AND post_type IN ($in) AND post_date >= %s ORDER BY post_date DESC LIMIT %d",
+        array_merge($tipos, array($desde, (int) $limite))
+    ));
+    $n = 0; $chars = 0; $quando = time() + 60;
+    foreach ($ids as $id) {
+        $blocos = bahia_audio_blocos($id);
+        if (count($blocos) < 2 || bahia_audio_em_dia($id, bahia_audio_hash($blocos), $voz, $motor)) {
+            continue;
+        }
+        $n++;
+        $chars += mb_strlen(implode("\n\n", $blocos));
+        if (!$simular && bahia_audio_polly_ativo()) {
+            wp_schedule_single_event($quando, 'bahia_audio_gerar', array((int) $id));
+            $quando += 20; // espaça as chamadas: sem rajada no Polly nem no PHP-FPM
+        }
+    }
+    return array(
+        'matérias'   => $n,
+        'caracteres' => $chars,
+        'custo_usd'  => round($chars / 1000000 * $preco[$motor], 2),
+        'voz'        => $voz,
+        'motor'      => $motor,
+    );
+}
+
+if (defined('WP_CLI') && WP_CLI) {
+    /**
+     * wp bahia-audio regerar --desde=AAAA-MM-DD [--limite=500] [--dry-run]
+     */
+    WP_CLI::add_command('bahia-audio regerar', function ($args, $assoc) {
+        $desde = isset($assoc['desde']) ? $assoc['desde'] : '';
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $desde)) {
+            WP_CLI::error('Informe --desde=AAAA-MM-DD (nunca o acervo inteiro sem querer).');
+        }
+        $simular = isset($assoc['dry-run']);
+        if (!$simular && !bahia_audio_polly_ativo()) {
+            WP_CLI::error('Geração desligada neste ambiente (BAHIA_AUDIO_POLLY / BAHIA_AUDIO_PREFIX).');
+        }
+        $r = bahia_audio_regerar_lote($desde . ' 00:00:00', isset($assoc['limite']) ? (int) $assoc['limite'] : 500, $simular);
+        WP_CLI::success(sprintf('%s%d matérias, %d caracteres, ~US$ %.2f (%s/%s).',
+            $simular ? '[simulação] ' : 'Agendadas: ', $r['matérias'], $r['caracteres'], $r['custo_usd'], $r['voz'], $r['motor']));
+    });
 }
 
 function bahia_audio_falha($post_id, WP_Error $e) {
@@ -637,7 +1088,6 @@ function bahia_audio_credenciais() {
         'key'          => $key,
         'secret'       => $sec,
         'polly_region' => bahia_audio_cfg('BAHIA_POLLY_REGION', 'us-east-1'),
-        'voz'          => bahia_audio_cfg('BAHIA_POLLY_VOICE', 'Camila'),
         'bucket'       => $s3['bucket'],
         's3_region'    => !empty($s3['region']) ? $s3['region'] : 'us-east-1',
         'entrega'      => $entrega,
@@ -646,15 +1096,25 @@ function bahia_audio_credenciais() {
 
 /** Uma chamada ao SynthesizeSpeech. Devolve os bytes do MP3. */
 function bahia_audio_polly($texto, array $cred) {
+    /**
+     * Ponto de simulação para testes: um filtro que devolva bytes (string) ou WP_Error
+     * substitui a chamada à AWS. Sem filtro registrado, nada muda.
+     */
+    $simulado = apply_filters('bahia_audio_polly_simulado', null, $texto, $cred);
+    if ($simulado !== null) {
+        return $simulado;
+    }
     $host = 'polly.' . $cred['polly_region'] . '.amazonaws.com';
+    $motor = isset($cred['motor']) ? $cred['motor'] : 'standard';
     $corpo = wp_json_encode(array(
-        'Engine'       => 'neural',
+        'Engine'       => $motor,
         'LanguageCode' => 'pt-BR',
         'OutputFormat' => 'mp3',
-        'SampleRate'   => '24000',
+        // MP3: o motor standard aceita até 22050 Hz; neural e generativo, 24000 Hz.
+        'SampleRate'   => $motor === 'standard' ? '22050' : '24000',
         'Text'         => $texto,
         'TextType'     => 'text',
-        'VoiceId'      => $cred['voz'],
+        'VoiceId'      => isset($cred['voz']) ? $cred['voz'] : 'Camila',
     ));
     $cab = bahia_audio_sigv4('POST', $host, '/v1/speech', '', array('content-type' => 'application/json'), $corpo, $cred['polly_region'], 'polly', $cred['key'], $cred['secret']);
     $r = wp_remote_post('https://' . $host . '/v1/speech', array('headers' => $cab, 'body' => $corpo, 'timeout' => 60));
@@ -674,6 +1134,11 @@ function bahia_audio_polly($texto, array $cred) {
  * Devolve a URL pública pelo domínio de entrega do Offload Media.
  */
 function bahia_audio_s3_put($chave, $bytes, array $cred) {
+    /** Ponto de simulação para testes: um filtro que devolva URL (string) ou WP_Error. */
+    $simulado = apply_filters('bahia_audio_s3_simulado', null, $chave, $bytes, $cred);
+    if ($simulado !== null) {
+        return $simulado;
+    }
     $host = 's3.' . $cred['s3_region'] . '.amazonaws.com';
     $caminho = '/' . $cred['bucket'] . '/' . implode('/', array_map('rawurlencode', explode('/', $chave)));
     // Mesmo conjunto de cabeçalhos assinados que o S3SignatureV4 do SDK assinaria
