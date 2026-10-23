@@ -168,7 +168,9 @@ function bahia_hover_ed_css() {
     $hover = '';
 
     foreach (array_keys($labels) as $slug) {
-        $base = isset($cores[$slug]) ? $cores[$slug][0] : $cores['DEFAULT'][0];
+        $base = function_exists('bahia_editoria_cor_identidade')
+            ? bahia_editoria_cor_identidade($slug)
+            : (isset($cores[$slug]) ? $cores[$slug][0] : $cores['DEFAULT'][0]);
 
         // --- item 3: cor do título no hover -------------------------------
         // O demo usa `body .tdi_NN .td_module_wrap:hover .td-module-title a` com
