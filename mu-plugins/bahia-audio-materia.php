@@ -16,9 +16,14 @@
  *                 guardada nele ligaria a geração em homolog, gravando no bucket que é
  *                 COMPARTILHADO com produção.
  *
- *              2) Voz do navegador (Web Speech API), enquanto não houver MP3. Funciona
- *                 desde já, sem custo; a qualidade da voz depende do aparelho. Se o
- *                 navegador não tiver síntese de voz, o player não aparece.
+ *              2) Voz do navegador (Web Speech API), enquanto não houver MP3. É um modo
+ *                 PROVISÓRIO: funciona desde já e sem custo, mas a voz é a que o aparelho
+ *                 tiver e costuma soar robotizada (avaliação em homolog, 23/10/2026). O
+ *                 script escolhe a melhor voz pt-BR disponível, mas a qualidade de verdade
+ *                 vem do modo 1, Polly neural (Camila, Vitória ou Thiago), que depende da
+ *                 permissão IAM polly:SynthesizeSpeech — o usuário bahia-pipeline não tinha
+ *                 nem polly:DescribeVoices em 23/10/2026. Se o navegador não tiver síntese
+ *                 de voz, o player não aparece.
  *
  *              O texto lido é o MESMO nos dois modos e é montado aqui no servidor
  *              (título, subtítulo e o corpo em parágrafos/intertítulos/listas/citações),
@@ -363,13 +368,29 @@ function bahia_audio_js() {
         acum = []; total = 0;
         frases.forEach(function (f) { acum.push(total); total += f.length; });
     }
+    // Escolha da voz: o navegador lista dezenas de vozes em português e a primeira costuma
+    // ser a pior. Pontua cada uma e fica com a melhor que o aparelho tiver.
+    //   + vozes neurais/naturais/online/premium/aprimoradas (Edge, Chrome, Apple baixadas)
+    //   + Google português do Brasil, Microsoft Francisca/Antonio/Thalita, Apple Luciana/Felipe
+    //   - vozes "novidade" da Apple (Eddy, Flo, Grandma, Rocko...), que são as robóticas
+    //   + pt-BR antes de pt-PT; online (localService=false) leva vantagem de desempate.
+    var VOZ_BOA = /natural|neural|online|premium|enhanced|aprimorad|melhorad/i;
+    var VOZ_CONHECIDA = /google portugu[eê]s do brasil|francisca|antonio|thalita|luciana|felipe|fernanda|camila|vit[oó]ria|thiago/i;
+    var VOZ_NOVIDADE = /\b(eddy|flo|grandma|grandpa|reed|rocko|sandy|shelley|albert|bad news|bahh|bells|boing|bubbles|cellos|wobble|jester|organ|superstar|trinoids|whisper|zarvox|fred|junior|kathy|ralph)\b/i;
+    function nota(v) {
+        var n = 0;
+        if (/^pt[-_]BR/i.test(v.lang)) { n += 30; } else if (/^pt/i.test(v.lang)) { n += 5; } else { return -1000; }
+        if (VOZ_BOA.test(v.name)) { n += 100; }
+        if (/google/i.test(v.name)) { n += 80; }
+        if (VOZ_CONHECIDA.test(v.name)) { n += 60; }
+        if (VOZ_NOVIDADE.test(v.name)) { n -= 200; }
+        if (v.localService === false) { n += 10; }
+        return n;
+    }
     function escolheVoz() {
-        var vs = window.speechSynthesis.getVoices() || [];
-        var br = vs.filter(function (v) { return /^pt[-_]BR/i.test(v.lang); });
-        var pt = br.length ? br : vs.filter(function (v) { return /^pt/i.test(v.lang); });
-        // Preferência por vozes "naturais"/online quando o navegador oferece.
-        var boa = pt.filter(function (v) { return /natural|online|google|luciana|francisca|thalita|antonio/i.test(v.name); });
-        voz = (boa[0] || pt[0]) || null;
+        var vs = (window.speechSynthesis.getVoices() || []).slice();
+        vs.sort(function (a, b) { return nota(b) - nota(a); });
+        voz = (vs[0] && nota(vs[0]) > -1000) ? vs[0] : null;
     }
     function progressoVoz(extra) {
         var chars = (acum[iFrase] || (iFrase >= frases.length ? total : 0)) + (extra || 0);
@@ -382,7 +403,8 @@ function bahia_audio_js() {
         var u = new SpeechSynthesisUtterance(frases[iFrase]);
         u.lang = voz ? voz.lang : 'pt-BR';
         if (voz) { u.voice = voz; }
-        u.rate = VELS[iVel];
+        u.rate = VELS[iVel]; // 1.0 por padrão; muda só pelo botão de velocidade
+        u.pitch = 1;
         u.onboundary = function (ev) { if (falando === u && ev.charIndex) { progressoVoz(ev.charIndex); } };
         u.onend = function () {
             if (falando !== u) { return; } // cancelada por pausa/velocidade/salto
